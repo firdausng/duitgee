@@ -3,48 +3,103 @@
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  */
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "duitgee-app",
-	"main": ".svelte-kit/cloudflare/_worker.js",
-	"compatibility_date": "2025-11-01",
-	"compatibility_flags": [
-		"nodejs_als"
-	],
-	"assets": {
-		"binding": "ASSETS",
-		"directory": ".svelte-kit/cloudflare"
-	},
-	"observability": {
-		"enabled": true
-	}
-	/**
-	 * Smart Placement
-	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
-	 */
-	// "placement": { "mode": "smart" }
-	/**
-	 * Bindings
-	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
-	 * databases, object storage, AI inference, real-time communication and more.
-	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
-	 */
-	/**
-	 * Environment Variables
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-	 */
-	// "vars": { "MY_VARIABLE": "production_value" }
-	/**
-	 * Note: Use secrets to store sensitive data.
-	 * https://developers.cloudflare.com/workers/configuration/secrets/
-	 */
-	/**
-	 * Static Assets
-	 * https://developers.cloudflare.com/workers/static-assets/binding/
-	 */
-	// "assets": { "directory": "./public/", "binding": "ASSETS" }
-	/**
-	 * Service Bindings (communicate between multiple Workers)
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-	 */
-	// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "duitgee-app",
+  "account_id": "87ba40df1ff57ea6c9ccc98c368c3b99",
+  "main": ".svelte-kit/cloudflare/_worker.js",
+  "compatibility_date": "2025-11-01",
+  "compatibility_flags": [
+    "nodejs_als"
+  ],
+  "workers_dev": true,
+  "preview_urls": true,
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".svelte-kit/cloudflare"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "placement": {
+    "mode": "smart"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_id": "74afa6fa-30aa-4279-953a-f55a1d46b7e0",
+      "database_name": "duitgee",
+      "migrations_dir": "migrations"
+    },
+    {
+      "binding": "AUTH_DB",
+      "database_id": "8350c8b7-dcb7-4349-ba04-2d94b22fba03",
+      "database_name": "duitgee-auth",
+      "migrations_dir": "auth-migrations"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "145768d744d94a52be422f635bebb851"
+    }
+  ],
+  "vars": {
+    "ADMIN_EMAILS": "mail4frenz@gmail.com",
+    "BASE_PATH": "http://localhost:5173",
+    "BETTER_AUTH_URL": "http://localhost:5173",
+    "CALLBACK_PATH": "/vaults",
+    "ENVIRONMENT": "development",
+    "EMAIL_FROM": "support@mail.duitgee.com",
+    "VAULT_LIMIT": 5
+  },
+  "env": {
+    "staging": {
+      "vars": {
+        "ADMIN_EMAILS": "mail4frenz@gmail.com",
+        "BASE_PATH": "https://duitgee.com",
+        "BETTER_AUTH_URL": "https://duitgee.com",
+        "CALLBACK_PATH": "/vaults",
+        "ENVIRONMENT": "staging",
+        "EMAIL_FROM": "support@mail.duitgee.com",
+        "VAULT_LIMIT": 5
+      }
+    },
+    "production": {
+      "routes": [
+        {
+          "pattern": "duitgee.com",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "ADMIN_EMAILS": "mail4frenz@gmail.com",
+        "BASE_PATH": "https://duitgee.com",
+        "BETTER_AUTH_URL": "https://duitgee.com",
+        "CALLBACK_PATH": "/vaults",
+        "ENVIRONMENT": "production",
+        "EMAIL_FROM": "support@mail.duitgee.com",
+        "VAULT_LIMIT": 5
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_id": "be0c9a11-0acf-4ce6-9508-a7b650c1ce6f",
+          "database_name": "duitgee",
+          "migrations_dir": "migrations"
+        },
+        {
+          "binding": "AUTH_DB",
+          "database_id": "7fda852c-4b07-4149-99c4-4f130dcc606e",
+          "database_name": "duitgee-auth",
+          "migrations_dir": "auth-migrations"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "KV",
+          "id": "6d7a242513654de8be683bd8c3c5cd97"
+        }
+      ]
+    }
+  }
 }
