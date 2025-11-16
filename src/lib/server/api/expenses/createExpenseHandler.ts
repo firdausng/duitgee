@@ -1,6 +1,6 @@
 import {drizzle} from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
-import type {CreateExpense} from "$lib/server/schemas/expenses";
+import type {CreateExpense} from "$lib/schemas/expenses";
 import {createId} from "@paralleldrive/cuid2";
 import {categoryData} from "$lib/configurations/categories";
 import {initialAuditFields} from "$lib/server/utils/audit";

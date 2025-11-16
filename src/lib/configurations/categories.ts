@@ -1,4 +1,4 @@
-import type {Category, CategoryGroup} from "$lib/server/schemas/categories";
+import type {Category, CategoryGroup} from "$lib/schemas/categories";
 
 export const categoryData: CategoryData = {
     categoryGroups: [

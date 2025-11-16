@@ -1,29 +1,29 @@
 import * as v from 'valibot';
-import {createSelectSchema} from "drizzle-valibot";
-import {expenses} from "$lib/server/db/schema";
+// import {createSelectSchema} from "drizzle-valibot";
+// import {expenses} from "$lib/server/db/schema";
 
-export const expenseSchema = createSelectSchema(expenses);
+// export const expenseSchema = createSelectSchema(expenses);
 
-// export const expenseSchema = v.object({
-//     id: v.string(), // cuid-like id
-//     note: v.optional(v.string()), // nullable in DB
-//     amount: v.number(), // real, required
-//     categoryName: v.string(), // notNull
-//     paidBy: v.optional(v.nullable(v.string())), // optional - vault-level expense
-//     vaultId: v.string(), // required, FK
-//     date: v.string(), // ISO string date
-//
-//     // Payment info
-//     paymentType: v.optional(v.nullable(v.string())),
-//
-//     // Audit fields
-//     createdAt: v.string(),
-//     createdBy: v.string(), // required
-//     updatedAt: v.string(),
-//     updatedBy: v.optional(v.nullable(v.string())),
-//     deletedAt: v.optional(v.nullable(v.string())),
-//     deletedBy: v.optional(v.nullable(v.string())),
-// });
+export const expenseSchema = v.object({
+    id: v.string(), // cuid-like id
+    note: v.optional(v.string()), // nullable in DB
+    amount: v.number(), // real, required
+    categoryName: v.string(), // notNull
+    paidBy: v.optional(v.nullable(v.string())), // optional - vault-level expense
+    vaultId: v.string(), // required, FK
+    date: v.string(), // ISO string date
+
+    // Payment info
+    paymentType: v.optional(v.nullable(v.string())),
+
+    // Audit fields
+    createdAt: v.string(),
+    createdBy: v.string(), // required
+    updatedAt: v.string(),
+    updatedBy: v.optional(v.nullable(v.string())),
+    deletedAt: v.optional(v.nullable(v.string())),
+    deletedBy: v.optional(v.nullable(v.string())),
+});
 
 export type Expense = v.InferOutput<typeof expenseSchema>;
 

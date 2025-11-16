@@ -11,7 +11,6 @@ export const vaults = sqliteTable('vaults', {
     color: text('color').notNull().default('#3B82F6'),
     icon: text('icon').default('🏦'),
     iconType: text('icon_type').default('emoji'),
-    creatorId: text('creator_id').notNull(),
     isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(true), // false for shared vaults
     teamId: text('team_id'),
     organizationId: text('organization_id'),

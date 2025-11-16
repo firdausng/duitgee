@@ -3,7 +3,7 @@ import * as v from "valibot";
 import {describeRoute, resolver} from "hono-openapi";
 import {vValidator} from "@hono/valibot-validator";
 import {getVaults} from "$lib/server/api/vaults/getVaultsHandler";
-import {createVaultSchema} from "$lib/server/schemas/vaults";
+import {createVaultSchema} from "$lib/schemas/vaults";
 import {createVault} from "$lib/server/api/vaults/createVaultHandler";
 import {getVault} from "$lib/server/api/vaults/getVaultHandler";
 
@@ -34,13 +34,13 @@ export const vaultsApi = new Hono<App.Api>()
             },
         }),
         async (c) => {
-            const session = c.get('currentSession');
+            const session = c.get('currentSession') as App.AuthSession;
 
             try {
-                const vaults = await getVaults(session.user.id, c.env);
+                const data = await getVaults(session, c.env);
                 return c.json({
                     success: true,
-                    data: vaults
+                    data: data.vaults
                 });
             } catch (error) {
                 console.error({

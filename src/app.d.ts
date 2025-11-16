@@ -39,6 +39,20 @@ declare global {
             banExpires?: Date | null | undefined,
         }
 
+        interface Session {
+            id: string
+            createdAt: Date
+            updatedAt: Date
+            userId: string
+            expiresAt: Date
+            token: string
+            ipAddress?: string | null | undefined
+            userAgent?: string | null | undefined
+            activeOrganizationId?: string | null | undefined,
+            activeTeamId?: string | null | undefined,
+            impersonatedBy?: string | null | undefined ,
+        }
+
         interface GetVaultExpensesOptions {
             page?: number;
             limit?: number;

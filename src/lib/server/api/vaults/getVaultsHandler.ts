@@ -10,13 +10,12 @@ export const getVaults = async (
     const client = drizzle(env.DB, { schema });
 
     // Get vault details
-    const vault = await client
+    const vaultList = await client
         .select()
         .from(vaults)
-        .where(eq(vaults.organizationId, session.session.activeOrganizationId))
-        .limit(1);
+        .where(eq(vaults.organizationId, session.session.activeOrganizationId));
 
     return {
-        vault: vault[0],
+        vaults: vaultList,
     };
 };

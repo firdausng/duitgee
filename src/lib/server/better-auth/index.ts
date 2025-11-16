@@ -1,10 +1,11 @@
 import {drizzle} from "drizzle-orm/d1";
 import {drizzleAdapter} from 'better-auth/adapters/drizzle';
 import { betterAuth} from 'better-auth';
-import {betterAuthOptions, plugins} from './options';
+import {betterAuthOptions} from './options';
 import * as schema from "../db/better-auth-schema";
 import {admin, bearer, organization, anonymous, type UserWithRole} from "better-auth/plugins";
 import MailService from "$lib/server/mail/mailService";
+import {plugins} from "$lib/better-auth";
 
 export const authConfig = (env: Cloudflare.Env) => {
     const db = drizzle(env.AUTH_DB, {schema});
@@ -63,19 +64,7 @@ export const authConfig = (env: Cloudflare.Env) => {
             user: {
                 create: {
                     after: async (user: UserWithRole, context) => {
-                        const name = user.email.split("@")[0];
-                        const data = await authConfig(env).api.createOrganization({
-                            body: {
-                                name: name, // required
-                                slug: name, // required
-                                // logo: "https://example.com/logo.png",
-                                // metadata,
-                                userId: user.id, // server-only
-                                keepCurrentActiveOrganization: false,
-                            },
-                            // This endpoint requires session cookies.
-                            headers:  context?.request?.headers,
-                        });
+
                     }
                 }
             }

@@ -1,7 +1,7 @@
 import {drizzle} from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
 import {createId} from "@paralleldrive/cuid2";
-import type {CreateVault} from "$lib/server/schemas/vaults";
+import type {CreateVault} from "$lib/schemas/vaults";
 import {authConfig} from "$lib/server/better-auth";
 import {vaults} from "$lib/server/db/schema";
 import {formatISO} from "date-fns";
@@ -18,7 +18,6 @@ export const createVault = async (
     const vaultData = {
         id: createId(),
         ...data,
-        ownerId: session.user.id,
     };
 
     const team = await authServer.api.createTeam({

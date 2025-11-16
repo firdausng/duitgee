@@ -8,6 +8,13 @@
       "when": 1763291161491,
       "tag": "0000_boring_mojo",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1763328791174,
+      "tag": "0001_flaky_stingray",
+      "breakpoints": true
     }
   ]
 }

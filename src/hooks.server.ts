@@ -1,6 +1,6 @@
 import {sequence} from "@sveltejs/kit/hooks";
 import {
-    setupServicesHandler,
+    setupServicesHandler,checkSessionHandler
 } from "$lib/server/hooks";
 
-export const handle = sequence(setupServicesHandler);
+export const handle = sequence(setupServicesHandler, checkSessionHandler);
