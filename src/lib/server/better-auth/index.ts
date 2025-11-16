@@ -1,9 +1,9 @@
 import {drizzle} from "drizzle-orm/d1";
 import {drizzleAdapter} from 'better-auth/adapters/drizzle';
 import { betterAuth} from 'better-auth';
-import {betterAuthOptions} from './options';
+import {betterAuthOptions, plugins} from './options';
 import * as schema from "../db/better-auth-schema";
-import {admin, bearer, organization, type UserWithRole} from "better-auth/plugins";
+import {admin, bearer, organization, anonymous, type UserWithRole} from "better-auth/plugins";
 import MailService from "$lib/server/mail/mailService";
 
 export const authConfig = (env: Cloudflare.Env) => {
@@ -12,27 +12,7 @@ export const authConfig = (env: Cloudflare.Env) => {
     return betterAuth({
         database: drizzleAdapter(db, {provider: 'sqlite'}),
         ...betterAuthOptions,
-        plugins: [
-            bearer(),
-            admin(),
-            organization({
-                teams: {
-                    enabled: true,
-                    //maximumTeams: 10, // Optional: limit teams per organization
-                    allowRemovingAllTeams: false, // Optional: prevent removing the last team
-                },
-                allowUserToCreateOrganization: async (user: UserWithRole) => {
-                    // const subscription = await getSubscription(user.email);
-
-                    return user.role === "admin";
-                },
-                organizationLimit: async (user: UserWithRole) => {
-                    // const subscription = await getSubscription(user.email);
-
-                    return user.role === "admin";
-                },
-            }),
-        ],
+        plugins: plugins,
         baseURL: env.BETTER_AUTH_URL,
         secret: env.BETTER_AUTH_SECRET,
         emailAndPassword: {
