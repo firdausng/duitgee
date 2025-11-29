@@ -7,10 +7,11 @@ import {UTCDate} from "@date-fns/utc";
 
 export const acceptVaultInvitation = async ( // Renamed for clarity
     invitationId: string,
-    userId: string,
+    session: App.AuthSession,
     env: Cloudflare.Env,
 ) => {
     const client = drizzle(env.DB, { schema });
+    const { userId, name, email } = session.user;
 
     const [invite] = await client
         .select()
@@ -60,6 +61,7 @@ export const acceptVaultInvitation = async ( // Renamed for clarity
         .set({
             status: 'active',
             joinedAt: formatISO(new UTCDate()),
+            displayName: name || email,
         })
         .where(eq(vaultMembers.id, existingMember.id))
         .returning();

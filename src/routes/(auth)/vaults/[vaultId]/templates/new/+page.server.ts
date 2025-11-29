@@ -3,7 +3,7 @@ import { valibot } from 'sveltekit-superforms/adapters';
 import { fail, redirect } from '@sveltejs/kit';
 import { createExpenseTemplateSchema } from '$lib/schemas/expenseTemplates';
 
-export const load = async ({ params }) => {
+export const load = async ({ params, fetch }) => {
 	const vaultId = params.vaultId;
 
 	const form = await superValidate(
@@ -16,9 +16,24 @@ export const load = async ({ params }) => {
 		})
 	);
 
+	// Fetch vault data (includes members)
+	let members: Array<{ userId: string; displayName: string }> = [];
+	try {
+		const response = await fetch(`/api/getVault?vaultId=${vaultId}`);
+		if (response.ok) {
+			const result = await response.json();
+			if (result.success && result.data) {
+				members = result.data.members || [];
+			}
+		}
+	} catch (error) {
+		console.error('Failed to fetch vault:', error);
+	}
+
 	return {
 		form,
-		vaultId
+		vaultId,
+		members
 	};
 };
 

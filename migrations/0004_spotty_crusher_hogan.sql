@@ -1,0 +1,1 @@
+ALTER TABLE `vault_members` ADD `display_name` text;

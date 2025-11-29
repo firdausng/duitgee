@@ -8,6 +8,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { CategoryCombobox } from '$lib/components/ui/category-combobox';
+	import { MemberCombobox } from '$lib/components/ui/member-combobox';
 	import { categoryData } from '$lib/configurations/categories';
 
 	let { data } = $props();
@@ -116,24 +117,17 @@
 				/>
 
 				<!-- Paid By -->
-				<div class="space-y-2">
-					<Label for="paidBy">Paid By</Label>
-					<Input
-						id="paidBy"
-						name="paidBy"
-						type="text"
-						bind:value={$form.paidBy}
-						disabled={$delayed}
-						placeholder="Leave empty for vault-level expense"
-						class={$errors.paidBy ? 'border-destructive' : ''}
-					/>
-					{#if $errors.paidBy}
-						<p class="text-sm text-destructive">{$errors.paidBy}</p>
-					{/if}
-					<p class="text-xs text-muted-foreground">
-						Leave empty if this is a shared vault expense
-					</p>
-				</div>
+				<MemberCombobox
+					name="paidBy"
+					label="Paid By"
+					members={data.members}
+					bind:value={$form.paidBy}
+					disabled={$delayed}
+					error={$errors.paidBy}
+					required={false}
+					allowEmpty={true}
+					emptyLabel="Vault-level expense (no specific person)"
+				/>
 
 				<!-- Date -->
 				<div class="space-y-2">

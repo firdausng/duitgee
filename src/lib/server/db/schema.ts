@@ -31,6 +31,7 @@ export const vaultMembers = sqliteTable('vault_members', {
     id: text('id').primaryKey().$defaultFn(() => createId()),
     vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
     userId: text('user_id').notNull(),
+    displayName: text('display_name'),
     role: text('role').notNull().default('member'), // 'owner', 'admin', 'member'
     invitedBy: text('invited_by'),
     status: text('status').notNull().default('pending'), // 'pending', 'active', 'declined', 'removed'

@@ -123,7 +123,7 @@ The API follows RPC (Remote Procedure Call) style with CQRS (Command Query Respo
 
 *Vaults API:*
 - `GET /api/getVaults` - Get user's vaults list
-- `GET /api/getVault?id=xxx` - Get single vault by ID
+- `GET /api/getVault?vaultId=xxx` - Get single vault by ID with all members
 - `POST /api/createVault` - Create a new vault
 - `POST /api/updateVault` - Update an existing vault
 - `POST /api/deleteVault` - Soft delete a vault

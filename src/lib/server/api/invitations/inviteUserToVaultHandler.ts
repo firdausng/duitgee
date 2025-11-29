@@ -8,6 +8,7 @@ import {UTCDate} from "@date-fns/utc";
 export const inviteUserToVault = async (
     vaultId: string,
     inviteeId: string,
+    inviteeDisplayName: string,
     role: 'admin' | 'member',
     session: App.AuthSession,
     env: Cloudflare.Env,
@@ -33,6 +34,7 @@ export const inviteUserToVault = async (
         .values({
             vaultId,
             userId: inviteeId,
+            displayName: inviteeDisplayName,
             role,
             invitedBy: session.user.id,
             status: 'pending',

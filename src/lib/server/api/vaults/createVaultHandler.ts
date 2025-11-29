@@ -32,6 +32,7 @@ export const createVault = async (
         .values({
             vaultId: newVault.id,
             userId: session.user.id,
+            displayName: session.user.name || session.user.email,
             role: 'owner',
             invitedBy: session.user.id,
             status: 'active',

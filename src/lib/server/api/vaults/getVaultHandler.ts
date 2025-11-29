@@ -10,17 +10,49 @@ export const getVault = async (
 ) => {
     const client = drizzle(env.DB, { schema });
 
-    const [vault] = await client
+    // Get vault with all members in a single query
+    const results = await client
         .select()
         .from(vaults)
-        .innerJoin(vaultMembers, eq(vaults.id, vaultMembers.vaultId))
+        .leftJoin(vaultMembers, eq(vaults.id, vaultMembers.vaultId))
         .where(and(
-            eq(vaultMembers.userId, authSession.user.id),
             eq(vaults.id, vaultId),
-            eq(vaultMembers.status, 'active'),
             isNull(vaults.deletedAt)
-        ))
-        .limit(1);
+        ));
 
-    return vault;
+    if (!results || results.length === 0) {
+        return null;
+    }
+
+    // Check if current user is an active member
+    const userMembership = results.find(
+        r => r.vault_members?.userId === authSession.user.id &&
+             r.vault_members?.status === 'active'
+    );
+
+    if (!userMembership) {
+        throw new Error('You do not have access to this vault');
+    }
+
+    // Get the vault data (same for all rows)
+    const vaultData = results[0].vaults;
+
+    // Get current user's membership
+    const currentMembership = userMembership.vault_members;
+
+    // Extract all active members
+    const members = results
+        .filter(r => r.vault_members && r.vault_members.status === 'active')
+        .map(r => ({
+            userId: r.vault_members!.userId,
+            displayName: r.vault_members!.displayName || r.vault_members!.userId,
+            role: r.vault_members!.role,
+            joinedAt: r.vault_members!.joinedAt
+        }));
+
+    return {
+        vaults: vaultData,
+        vaultMembers: currentMembership,
+        members
+    };
 };

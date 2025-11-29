@@ -48,10 +48,25 @@ export const load = async ({ params, url, platform, fetch }) => {
 		}
 	}
 
+	// Fetch vault data (includes members)
+	let members: Array<{ userId: string; displayName: string }> = [];
+	try {
+		const response = await fetch(`/api/getVault?vaultId=${vaultId}`);
+		if (response.ok) {
+			const result = await response.json();
+			if (result.success && result.data) {
+				members = result.data.members || [];
+			}
+		}
+	} catch (error) {
+		console.error('Failed to fetch vault:', error);
+	}
+
 	return {
 		form,
 		vaultId,
-		template
+		template,
+		members
 	};
 };
 

@@ -15,7 +15,7 @@ export type VaultWithMember = {
         deletedAt: string | null;
         deletedBy: string | null;
     };
-    vault_members: {
+    vaultMembers: {
         id: string;
         vaultId: string;
         userId: string;
@@ -27,4 +27,10 @@ export type VaultWithMember = {
         updatedAt: string | null;
         deletedAt: string | null;
     };
+    members: Array<{
+        userId: string;
+        displayName: string;
+        role: string;
+        joinedAt: string | null;
+    }>;
 };
