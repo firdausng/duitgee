@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/server/db/schema';
 import { expenseTemplates } from '$lib/server/db/schema';
-import { eq, isNull, and } from 'drizzle-orm';
+import { eq, isNull, and, desc, asc } from 'drizzle-orm';
 import type { ListExpenseTemplatesQuery } from '$lib/schemas/expenseTemplates';
 import { checkVaultPermission } from '$lib/server/utils/vaultPermissions';
 
@@ -29,7 +29,7 @@ export const getExpenseTemplates = async (
 				isNull(expenseTemplates.deletedAt)
 			)
 		)
-		.orderBy(expenseTemplates.name);
+		.orderBy(desc(expenseTemplates.updatedAt), asc(expenseTemplates.name));
 
 	return { templates };
 };
