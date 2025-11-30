@@ -14,7 +14,15 @@
         vaultId: string;
         note: string | null;
         amount: number;
-        categoryName: string | null;
+        category: {
+            name: string;
+            description: string;
+            icon: string;
+            iconType: string;
+            color: string;
+            isPublic: boolean,
+            group: string;
+        }
         paidBy: string | null;
         date: string;
         createdAt: string | null;
@@ -183,63 +191,66 @@
                         <Button onclick={handleCreateExpense}>Create your first expense</Button>
                     </div>
                 {:else}
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead>
-                                <tr class="border-b">
-                                    <th class="text-left py-3 px-4 font-medium text-sm text-muted-foreground">Date</th>
-                                    <th class="text-left py-3 px-4 font-medium text-sm text-muted-foreground">Description</th>
-                                    <th class="text-left py-3 px-4 font-medium text-sm text-muted-foreground">Category</th>
-                                    <th class="text-right py-3 px-4 font-medium text-sm text-muted-foreground">Amount</th>
-                                    <th class="text-right py-3 px-4 font-medium text-sm text-muted-foreground">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {#each expenses as expense (expense.id)}
-                                    <tr class="border-b hover:bg-accent/50 transition-colors">
-                                        <td class="py-3 px-4 text-sm">{formatDate(expense.date)}</td>
-                                        <td class="py-3 px-4">
-                                            <div class="font-medium">{expense.note || 'No description'}</div>
-                                            {#if expense.paidBy}
-                                                <div class="text-xs text-muted-foreground">Paid by: {expense.paidBy}</div>
-                                            {/if}
-                                        </td>
-                                        <td class="py-3 px-4">
-                                            {#if expense.categoryName}
-                                                <span class="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium">
-                                                    {expense.categoryName}
-                                                </span>
-                                            {:else}
-                                                <span class="text-sm text-muted-foreground">-</span>
-                                            {/if}
-                                        </td>
-                                        <td class="py-3 px-4 text-right font-semibold">{formatCurrency(expense.amount)}</td>
-                                        <td class="py-3 px-4 text-right">
-                                            <div class="flex justify-end gap-2">
-                                                <button
-                                                    class="p-1.5 hover:bg-accent rounded-md transition-colors"
-                                                    onclick={() => handleEditExpense(expense.id)}
-                                                    aria-label="Edit expense"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    class="p-1.5 hover:bg-destructive/10 text-destructive rounded-md transition-colors"
-                                                    onclick={() => handleDeleteExpense(expense.id)}
-                                                    aria-label="Delete expense"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                                                    </svg>
-                                                </button>
+                    <div class="space-y-3">
+                        {#each expenses as expense (expense.id)}
+                            <div class="border rounded-lg p-4 hover:shadow-md transition-shadow bg-card">
+                                <div class="flex items-start justify-between gap-4">
+                                    <!-- Left section: Content -->
+                                    <div class="flex-1 min-w-0">
+                                        <!-- Amount and Date -->
+                                        <div class="flex items-start justify-between gap-2 mb-2">
+                                            <div class="text-2xl font-bold">
+                                                {formatCurrency(expense.amount)}
                                             </div>
-                                        </td>
-                                    </tr>
-                                {/each}
-                            </tbody>
-                        </table>
+                                            <div class="text-sm text-muted-foreground whitespace-nowrap">
+                                                {formatDate(expense.date)}
+                                            </div>
+                                        </div>
+
+                                        <!-- Description -->
+                                        <div class="font-medium mb-1 truncate">
+                                            {expense.note || 'No description'}
+                                        </div>
+
+                                        <!-- Category and Paid By -->
+                                        <div class="flex flex-wrap items-center gap-2 text-sm">
+                                            {#if expense.category.name}
+                                                <span class="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium">
+                                                    {expense.category.name}
+                                                </span>
+                                            {/if}
+                                            {#if expense.paidBy}
+                                                <span class="text-xs text-muted-foreground">
+                                                    Paid by: {expense.paidBy}
+                                                </span>
+                                            {/if}
+                                        </div>
+                                    </div>
+
+                                    <!-- Right section: Actions -->
+                                    <div class="flex flex-col gap-1 flex-shrink-0">
+                                        <button
+                                            class="p-2 hover:bg-accent rounded-md transition-colors"
+                                            onclick={() => handleEditExpense(expense.id)}
+                                            aria-label="Edit expense"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            class="p-2 hover:bg-destructive/10 text-destructive rounded-md transition-colors"
+                                            onclick={() => handleDeleteExpense(expense.id)}
+                                            aria-label="Delete expense"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {/each}
                     </div>
                 {/if}
             </CardContent>
