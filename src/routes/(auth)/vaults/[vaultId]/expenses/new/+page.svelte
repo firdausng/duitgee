@@ -116,7 +116,7 @@
 		</Card>
 
 		{#if templates.length > 0}
-			<!-- Templates List -->
+			<!-- Templates Grid -->
 			<div class="mb-4 flex items-center justify-between">
 				<h2 class="text-lg font-semibold">Or choose a template</h2>
 				<Button variant="outline" onclick={handleCreateTemplate} size="sm">
@@ -127,42 +127,27 @@
 				</Button>
 			</div>
 
-			<div class="grid gap-4">
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 				{#each templates as template (template.id)}
-					<Card class="hover:shadow-md transition-shadow">
-						<CardContent class="flex items-center justify-between py-4">
-							<div class="flex items-center gap-4 flex-1">
+					<Card class="hover:shadow-md transition-shadow flex flex-col">
+						<CardContent class="flex flex-col h-full py-4">
+							<div class="flex items-start gap-3 mb-4">
 								<div
-									class="text-3xl w-12 h-12 rounded-lg flex items-center justify-center bg-primary/10"
+									class="text-3xl w-12 h-12 rounded-lg flex items-center justify-center bg-primary/10 flex-shrink-0"
 								>
 									{template.icon || '📝'}
 								</div>
-								<div class="flex-1">
-									<h3 class="font-semibold">{template.name}</h3>
+								<div class="flex-1 min-w-0">
+									<h3 class="font-semibold truncate">{template.name}</h3>
 									{#if template.description}
-										<p class="text-sm text-muted-foreground">{template.description}</p>
+										<p class="text-sm text-muted-foreground line-clamp-2">{template.description}</p>
 									{/if}
-									<div class="flex gap-4 mt-2 text-xs text-muted-foreground">
-										{#if template.defaultAmount}
-											<span class="font-medium">${template.defaultAmount.toFixed(2)}</span>
-										{/if}
-										{#if template.defaultCategoryName}
-											<span class="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 text-primary">
-												{template.defaultCategoryName}
-											</span>
-										{/if}
-										{#if template.usageCount > 0}
-											<span>Used {template.usageCount} times</span>
-										{/if}
-									</div>
 								</div>
-							</div>
-							<div class="flex gap-2">
 								<Button
 									variant="ghost"
 									size="sm"
 									onclick={() => handleEditTemplate(template.id)}
-									class="px-3"
+									class="px-2 -mt-1 -mr-2 flex-shrink-0"
 								>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
@@ -174,7 +159,29 @@
 									</svg>
 									<span class="sr-only">Edit</span>
 								</Button>
-								<Button onclick={() => handleUseTemplate(template.id)}>
+							</div>
+
+							<div class="flex flex-wrap gap-2 mb-4 text-xs">
+								{#if template.defaultAmount}
+									<span class="inline-flex items-center px-2 py-1 rounded-md bg-muted font-medium">
+										${template.defaultAmount.toFixed(2)}
+									</span>
+								{/if}
+								{#if template.defaultCategoryName}
+									<span class="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary">
+										{template.defaultCategoryName}
+									</span>
+								{/if}
+							</div>
+
+							{#if template.usageCount > 0}
+								<p class="text-xs text-muted-foreground mb-3">
+									Used {template.usageCount} {template.usageCount === 1 ? 'time' : 'times'}
+								</p>
+							{/if}
+
+							<div class="mt-auto">
+								<Button onclick={() => handleUseTemplate(template.id)} class="w-full">
 									Use Template
 								</Button>
 							</div>
