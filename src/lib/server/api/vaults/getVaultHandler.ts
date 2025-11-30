@@ -12,7 +12,10 @@ export const getVault = async (
 
     // Get vault with all members in a single query
     const results = await client
-        .select()
+        .select({
+            vaults: vaults,
+            vaultMembers: vaultMembers
+        })
         .from(vaults)
         .leftJoin(vaultMembers, eq(vaults.id, vaultMembers.vaultId))
         .where(and(
@@ -26,8 +29,8 @@ export const getVault = async (
 
     // Check if current user is an active member
     const userMembership = results.find(
-        r => r.vault_members?.userId === authSession.user.id &&
-             r.vault_members?.status === 'active'
+        r => r.vaultMembers?.userId === authSession.user.id &&
+             r.vaultMembers?.status === 'active'
     );
 
     if (!userMembership) {
@@ -38,16 +41,16 @@ export const getVault = async (
     const vaultData = results[0].vaults;
 
     // Get current user's membership
-    const currentMembership = userMembership.vault_members;
+    const currentMembership = userMembership.vaultMembers;
 
     // Extract all active members
     const members = results
-        .filter(r => r.vault_members && r.vault_members.status === 'active')
+        .filter(r => r.vaultMembers && r.vaultMembers.status === 'active')
         .map(r => ({
-            userId: r.vault_members!.userId,
-            displayName: r.vault_members!.displayName || r.vault_members!.userId,
-            role: r.vault_members!.role,
-            joinedAt: r.vault_members!.joinedAt
+            userId: r.vaultMembers!.userId,
+            displayName: r.vaultMembers!.displayName || r.vaultMembers!.userId,
+            role: r.vaultMembers!.role,
+            joinedAt: r.vaultMembers!.joinedAt
         }));
 
     return {

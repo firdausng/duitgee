@@ -131,7 +131,7 @@ export const expensesApi = new Hono<App.Api>()
             const session = c.get('currentSession');
             const data = c.req.valid('json');
 
-            const expense = await createExpense(session.user.id, data, c.env);
+            const expense = await createExpense(session, data, c.env);
 
             return c.json({
                 success: true,

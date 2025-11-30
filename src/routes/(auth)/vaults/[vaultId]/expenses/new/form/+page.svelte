@@ -11,13 +11,48 @@
 	import { MemberCombobox } from '$lib/components/ui/member-combobox';
 	import { FloatingActionButton } from '$lib/components/ui/floating-action-button';
 	import { categoryData } from '$lib/configurations/categories';
+    import {ofetch} from "ofetch";
 
 	let { data } = $props();
-
+    let isLoading = $state(false)
 	let formElement: HTMLFormElement | undefined = $state();
 
 	const { form, errors, enhance, delayed } = superForm(data.form, {
-		validators: valibotClient(createExpenseSchema)
+		validators: valibotClient(createExpenseSchema),
+        SPA: true,
+        async onUpdate({ form }) {
+            if (!form.valid) {
+                throw new Error('Form is not valid');
+            }
+
+            isLoading = true;
+
+            try {
+                const response = await ofetch('/api/createExpense', {
+                    method: 'POST',
+                    body: form.data,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.success === false) {
+                    throw new Error('Failed to create template');
+                }
+
+                // console.log(response, params)
+
+                // Redirect back to the expense creation flow
+                await goto(`/vaults/${data.vaultId}`);
+            } catch (error: any) {
+                console.error({
+                    ...error,
+                    message: '[expense:new:action] Failed to create expense'
+                });
+            }finally {
+                isLoading = false;
+            }
+        }
 	});
 
 	function handleBack() {

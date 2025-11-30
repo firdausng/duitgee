@@ -1,8 +1,6 @@
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
-import { fail, redirect } from '@sveltejs/kit';
 import { createExpenseSchema } from '$lib/schemas/expenses';
-import { formatISO } from 'date-fns';
 import { UTCDate } from '@date-fns/utc';
 
 export const load = async ({ params, url, platform, fetch }) => {
@@ -70,34 +68,3 @@ export const load = async ({ params, url, platform, fetch }) => {
 	};
 };
 
-export const actions = {
-	default: async ({ request, params, fetch }) => {
-		const form = await superValidate(request, valibot(createExpenseSchema));
-
-		if (!form.valid) {
-			return fail(400, { form });
-		}
-
-		try {
-			const response = await fetch('/api/createExpense', {
-				method: 'POST',
-				body: JSON.stringify(form.data),
-				headers: {
-					'Content-Type': 'application/json'
-				}
-			});
-
-			if (!response.ok) {
-				throw new Error('Failed to create expense');
-			}
-
-			return redirect(303, `/vaults/${params.vaultId}`);
-		} catch (error) {
-			console.error('Failed to create expense:', error);
-			return fail(500, {
-				form,
-				error: 'Failed to create expense. Please try again.'
-			});
-		}
-	}
-};

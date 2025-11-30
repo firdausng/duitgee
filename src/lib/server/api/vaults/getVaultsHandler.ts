@@ -10,7 +10,10 @@ export const getVaults = async (
     const client = drizzle(env.DB, { schema });
 
     const vaultList = await client
-        .select()
+        .select({
+            vaults: vaults,
+            vaultMembers: vaultMembers
+        })
         .from(vaults)
         .innerJoin(vaultMembers, eq(vaults.id, vaultMembers.vaultId))
         .where(and(
