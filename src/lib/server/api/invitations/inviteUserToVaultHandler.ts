@@ -1,19 +1,37 @@
 import {drizzle} from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
+import * as authSchema from "$lib/server/db/better-auth-schema";
 import {invitation, vaultMembers} from "$lib/server/db/schema";
+import {user} from "$lib/server/db/better-auth-schema";
 import {createId} from "@paralleldrive/cuid2";
 import {formatISO} from "date-fns";
 import {UTCDate} from "@date-fns/utc";
+import {eq} from "drizzle-orm";
 
 export const inviteUserToVault = async (
     vaultId: string,
-    inviteeId: string,
-    inviteeDisplayName: string,
+    inviteeEmail: string,
     role: 'admin' | 'member',
     session: App.AuthSession,
     env: Cloudflare.Env,
 ) => {
     const client = drizzle(env.DB, { schema });
+    const authClient = drizzle(env.AUTH_DB, { schema: authSchema });
+
+    const invitees = await authClient
+        .select({
+            id: user.id,
+            name: user.name,
+            email: user.email
+        })
+        .from(user)
+        .where(eq(user.email, inviteeEmail))
+        .limit(1);
+
+    if (!invitees) {
+        throw new Error('User do not exist');
+    }
+
     const invitationId = createId();
 
     const [newInvitation] = await client
@@ -22,7 +40,7 @@ export const inviteUserToVault = async (
             id: invitationId,
             vaultId,
             role,
-            inviteeId,
+            inviteeId: invitees.id,
             inviterId: session.user.id,
             status: 'pending',
         })
@@ -33,8 +51,8 @@ export const inviteUserToVault = async (
         .insert(vaultMembers)
         .values({
             vaultId,
-            userId: inviteeId,
-            displayName: inviteeDisplayName,
+            userId: invitees.id,
+            displayName: invitees.name ?? invitees.email,
             role,
             invitedBy: session.user.id,
             status: 'pending',

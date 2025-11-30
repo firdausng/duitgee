@@ -43,7 +43,7 @@ export const invitationsApi = new Hono<App.Api>()
             try {
                 const result = await inviteUserToVault(
                     data.vaultId,
-                    data.inviteeId,
+                    data.inviteeEmail,
                     data.role,
                     session,
                     c.env
