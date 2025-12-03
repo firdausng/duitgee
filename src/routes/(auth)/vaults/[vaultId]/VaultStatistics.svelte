@@ -1,30 +1,6 @@
 <script lang="ts">
     import { Card } from "$lib/components/ui/card";
-
-    type VaultStatistics = {
-        total: {
-            amount: number;
-            count: number;
-        };
-        byTemplate: Array<{
-            templateId: string | null;
-            templateName: string;
-            templateIcon: string;
-            totalAmount: number;
-            count: number;
-        }>;
-        byCategory: Array<{
-            categoryName: string;
-            totalAmount: number;
-            count: number;
-        }>;
-        byMember: Array<{
-            userId: string | null;
-            displayName: string;
-            totalAmount: number;
-            count: number;
-        }>;
-    };
+    import type { VaultStatistics } from "./types";
 
     type Props = {
         statistics: VaultStatistics | null;

@@ -1,77 +1,27 @@
 <script lang="ts">
     import {goto} from "$app/navigation";
-    import { useSearchParams } from "runed/kit";
+    import {useSearchParams} from "runed/kit";
     import {ofetch} from "ofetch";
-    import { resource } from "runed";
+    import {resource} from "runed";
     import type {VaultWithMember} from "$lib/schemas/read/vaultWithMember";
-    import { Button } from "$lib/components/ui/button";
-    import { Card, CardContent } from "$lib/components/ui/card";
+    import {Button} from "$lib/components/ui/button";
+    import {Card, CardContent} from "$lib/components/ui/card";
     import {filterSchema} from "./schemas";
+    import type {Expense, VaultStatistics} from "./types";
     import VaultHeader from "./VaultHeader.svelte";
     import ExpenseFilters from "./ExpenseFilters.svelte";
-    import VaultStatistics from "./VaultStatistics.svelte";
+    import VaultStatisticsComponent from "./VaultStatistics.svelte";
     import ExpenseList from "./ExpenseList.svelte";
     import InviteForm from "./InviteForm.svelte";
 
-    let { data } = $props();
-    let { url, vaultId } = data;
+    let {data} = $props();
+    let {vaultId} = data;
 
-    // Initialize filter from URL query params, default to 'today'
     const params = useSearchParams(filterSchema);
 
     // Refetch keys to trigger data reload (e.g., after delete/update)
     let refetchKey = $state(0);
     let vaultRefetchKey = $state(0);
-
-    type Expense = {
-        id: string;
-        vaultId: string;
-        note: string | null;
-        amount: number;
-        category: {
-            name: string;
-            description: string;
-            icon: string;
-            iconType: string;
-            color: string;
-            isPublic: boolean,
-            group: string;
-        }
-        paidBy: string | null;
-        paidByName: string | null;
-        date: string;
-        createdAt: string | null;
-        createdBy: string;
-        updatedAt: string | null;
-        updatedBy: string | null;
-        deletedAt: string | null;
-        deletedBy: string | null;
-    };
-
-    type VaultStatistics = {
-        total: {
-            amount: number;
-            count: number;
-        };
-        byTemplate: Array<{
-            templateId: string | null;
-            templateName: string;
-            templateIcon: string;
-            totalAmount: number;
-            count: number;
-        }>;
-        byCategory: Array<{
-            categoryName: string;
-            totalAmount: number;
-            count: number;
-        }>;
-        byMember: Array<{
-            userId: string | null;
-            displayName: string;
-            totalAmount: number;
-            count: number;
-        }>;
-    };
 
     // UI state
     let showInviteForm = $state(false);
@@ -149,9 +99,7 @@
     const vaultResource = resource(
         () => [vaultId, vaultRefetchKey] as const,
         async ([id]) => {
-            const response = await ofetch<{success: boolean, data: VaultWithMember}>(
-                `/api/getVault?vaultId=${id}`
-            );
+            const response = await ofetch<{ success: boolean, data: VaultWithMember }>(`/api/getVault?vaultId=${id}`);
             return response.data;
         }
     );
@@ -170,9 +118,7 @@
             if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
             if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
 
-            const response = await ofetch<{expenses: Expense[], pagination: any}>(
-                `/api/getExpenses?${urlParams.toString()}`
-            );
+            const response = await ofetch<{ expenses: Expense[], pagination: any }>(`/api/getExpenses?${urlParams.toString()}`);
             return response.expenses || [];
         }
     );
@@ -182,14 +128,12 @@
         () => [vaultId, filterType, params.startDate, params.endDate, refetchKey] as const,
         async ([id, filter, startDate, endDate]) => {
             const dateRange = getDateRange();
-            const urlParams = new URLSearchParams({ vaultId: id });
+            const urlParams = new URLSearchParams({vaultId: id});
 
             if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
             if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
 
-            const response = await ofetch<{success: boolean, data: VaultStatistics}>(
-                `/api/getVaultStatistics?${urlParams.toString()}`
-            );
+            const response = await ofetch<{ success: boolean, data: VaultStatistics }>(`/api/getVaultStatistics?${urlParams.toString()}`);
             return response.data;
         }
     );
@@ -216,8 +160,8 @@
         try {
             await ofetch('/api/deleteExpense', {
                 method: 'POST',
-                body: JSON.stringify({ id: expenseId, vaultId }),
-                headers: { 'Content-Type': 'application/json' }
+                body: JSON.stringify({id: expenseId, vaultId}),
+                headers: {'Content-Type': 'application/json'}
             });
 
             // Trigger refetch of expenses and statistics
@@ -272,7 +216,7 @@
                     inviteeEmail: inviteEmail.trim(),
                     role: inviteRole
                 },
-                headers: { 'Content-Type': 'application/json' }
+                headers: {'Content-Type': 'application/json'}
             });
 
             if (response.success) {
@@ -297,7 +241,7 @@
         try {
             await ofetch('/api/setDefaultVault', {
                 method: 'POST',
-                body: JSON.stringify({ vaultId }),
+                body: JSON.stringify({vaultId}),
                 headers: {
                     'Content-Type': 'application/json'
                 }
@@ -314,7 +258,7 @@
 </script>
 
 <svelte:head>
-	<title>{currentVault?.vaults.name || 'Vault'} - DuitGee</title>
+    <title>{currentVault?.vaults.name || 'Vault'} - DuitGee</title>
 </svelte:head>
 
 <div class="container mx-auto py-8 px-4 max-w-7xl">
@@ -329,8 +273,10 @@
         <Card class="border-destructive">
             <CardContent class="flex flex-col items-center justify-center py-16 px-4">
                 <div class="rounded-full bg-destructive/10 p-6 mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-destructive" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                     </svg>
                 </div>
                 <h2 class="text-2xl font-semibold mb-2">Vault not found</h2>
@@ -345,52 +291,52 @@
     {:else}
         <!-- Vault Header -->
         <VaultHeader
-            vault={currentVault}
-            onSetDefaultVault={handleSetDefaultVault}
-            onToggleInviteForm={toggleInviteForm}
-            onCreateExpense={handleCreateExpense}
+                vault={currentVault}
+                onSetDefaultVault={handleSetDefaultVault}
+                onToggleInviteForm={toggleInviteForm}
+                onCreateExpense={handleCreateExpense}
         />
 
         <!-- Expense Filters -->
         <ExpenseFilters
-            filterType={filterType}
-            startDate={params.startDate}
-            endDate={params.endDate}
-            onFilterChange={(filter) => { params.filter = filter; }}
-            onApplyCustomFilter={() => {}}
-            onStartDateChange={(value) => params.startDate = value}
-            onEndDateChange={(value) => params.endDate = value}
+                filterType={filterType}
+                startDate={params.startDate}
+                endDate={params.endDate}
+                onFilterChange={(filter) => { params.filter = filter; }}
+                onApplyCustomFilter={() => {}}
+                onStartDateChange={(value) => params.startDate = value}
+                onEndDateChange={(value) => params.endDate = value}
         />
 
         <!-- Vault Statistics -->
-        <VaultStatistics
-            statistics={statistics}
-            isLoading={isLoadingStats}
-            formatCurrency={formatCurrency}
+        <VaultStatisticsComponent
+                statistics={statistics}
+                isLoading={isLoadingStats}
+                formatCurrency={formatCurrency}
         />
 
         <!-- Invite User Form -->
         <InviteForm
-            show={showInviteForm}
-            email={inviteEmail}
-            role={inviteRole}
-            isInviting={isInviting}
-            onEmailChange={(value) => inviteEmail = value}
-            onRoleChange={(role) => inviteRole = role}
-            onSubmit={handleInviteUser}
-            onCancel={toggleInviteForm}
+                show={showInviteForm}
+                email={inviteEmail}
+                role={inviteRole}
+                isInviting={isInviting}
+                onEmailChange={(value) => inviteEmail = value}
+                onRoleChange={(role) => inviteRole = role}
+                onSubmit={handleInviteUser}
+                onCancel={toggleInviteForm}
         />
 
         <!-- Expenses List -->
         <ExpenseList
-            expenses={expenses}
-            isLoading={isLoadingExpenses}
-            filterType={filterType}
-            formatCurrency={formatCurrency}
-            formatDate={formatDate}
-            onEditExpense={handleEditExpense}
-            onDeleteExpense={handleDeleteExpense}
-            onCreateExpense={handleCreateExpense}
+                expenses={expenses}
+                isLoading={isLoadingExpenses}
+                filterType={filterType}
+                formatCurrency={formatCurrency}
+                formatDate={formatDate}
+                onEditExpense={handleEditExpense}
+                onDeleteExpense={handleDeleteExpense}
+                onCreateExpense={handleCreateExpense}
         />
     {/if}
 </div>
