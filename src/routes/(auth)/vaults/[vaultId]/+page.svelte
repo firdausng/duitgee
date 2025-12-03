@@ -1,8 +1,8 @@
 <script lang="ts">
-	import {onMount} from "svelte";
     import {goto} from "$app/navigation";
     import { useSearchParams } from "runed/kit";
     import {ofetch} from "ofetch";
+    import { resource } from "runed";
     import type {VaultWithMember} from "$lib/schemas/read/vaultWithMember";
     import { Button } from "$lib/components/ui/button";
     import { Card, CardContent } from "$lib/components/ui/card";
@@ -18,6 +18,10 @@
 
     // Initialize filter from URL query params, default to 'today'
     const params = useSearchParams(filterSchema);
+
+    // Refetch keys to trigger data reload (e.g., after delete/update)
+    let refetchKey = $state(0);
+    let vaultRefetchKey = $state(0);
 
     type Expense = {
         id: string;
@@ -69,12 +73,7 @@
         }>;
     };
 
-    let currentVault = $state<VaultWithMember>();
-    let expenses = $state<Expense[]>([]);
-    let statistics = $state<VaultStatistics | null>(null);
-    let isLoadingVault = $state(true);
-    let isLoadingExpenses = $state(true);
-    let isLoadingStats = $state(true);
+    // UI state
     let showInviteForm = $state(false);
     let inviteEmail = $state('');
     let inviteRole = $state<'admin' | 'member'>('member');
@@ -146,70 +145,62 @@
         }
     }
 
-    async function loadExpenses() {
-        isLoadingExpenses = true;
-        try {
+    // Resource for vault data
+    const vaultResource = resource(
+        () => [vaultId, vaultRefetchKey] as const,
+        async ([id]) => {
+            const response = await ofetch<{success: boolean, data: VaultWithMember}>(
+                `/api/getVault?vaultId=${id}`
+            );
+            return response.data;
+        }
+    );
+
+    // Resource for expenses - auto-refetches when filter changes
+    const expensesResource = resource(
+        () => [vaultId, filterType, params.startDate, params.endDate, refetchKey] as const,
+        async ([id, filter, startDate, endDate]) => {
             const dateRange = getDateRange();
-            const params = new URLSearchParams({
-                vaultId,
+            const urlParams = new URLSearchParams({
+                vaultId: id,
                 page: '1',
                 limit: '50'
             });
 
-            if (dateRange.startDate) params.append('startDate', dateRange.startDate);
-            if (dateRange.endDate) params.append('endDate', dateRange.endDate);
+            if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
+            if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
 
-            const response = await ofetch<{expenses: Expense[], pagination: any}>(`/api/getExpenses?${params.toString()}`);
-            expenses = response.expenses || [];
-        } catch (error) {
-            console.error('Failed to fetch expenses:', error);
-        } finally {
-            isLoadingExpenses = false;
+            const response = await ofetch<{expenses: Expense[], pagination: any}>(
+                `/api/getExpenses?${urlParams.toString()}`
+            );
+            return response.expenses || [];
         }
-    }
+    );
 
-    async function loadStatistics() {
-        isLoadingStats = true;
-        try {
+    // Resource for statistics - auto-refetches when filter changes
+    const statisticsResource = resource(
+        () => [vaultId, filterType, params.startDate, params.endDate, refetchKey] as const,
+        async ([id, filter, startDate, endDate]) => {
             const dateRange = getDateRange();
-            const params = new URLSearchParams({ vaultId });
+            const urlParams = new URLSearchParams({ vaultId: id });
 
-            if (dateRange.startDate) params.append('startDate', dateRange.startDate);
-            if (dateRange.endDate) params.append('endDate', dateRange.endDate);
+            if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
+            if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
 
-            const response = await ofetch<{success: boolean, data: VaultStatistics}>(`/api/getVaultStatistics?${params.toString()}`);
-            statistics = response.data;
-        } catch (error) {
-            console.error('Failed to fetch statistics:', error);
-        } finally {
-            isLoadingStats = false;
+            const response = await ofetch<{success: boolean, data: VaultStatistics}>(
+                `/api/getVaultStatistics?${urlParams.toString()}`
+            );
+            return response.data;
         }
-    }
+    );
 
-    async function handleFilterChange() {
-        await Promise.all([
-            loadExpenses(),
-            loadStatistics()
-        ]);
-    }
-
-    onMount(async()=>{
-        // Load vault data
-        try {
-            const response = await ofetch<{success: boolean, data: VaultWithMember}>(`/api/getVault?vaultId=${vaultId}`);
-            currentVault = response.data;
-        } catch (error) {
-            console.error('Failed to fetch vault:', error);
-        } finally {
-            isLoadingVault = false;
-        }
-
-        // Load expenses and statistics
-        await Promise.all([
-            loadExpenses(),
-            loadStatistics()
-        ]);
-    });
+    // Derive data from resources
+    const currentVault = $derived(vaultResource.current);
+    const expenses = $derived(expensesResource.current || []);
+    const statistics = $derived(statisticsResource.current || null);
+    const isLoadingVault = $derived(vaultResource.loading);
+    const isLoadingExpenses = $derived(expensesResource.loading);
+    const isLoadingStats = $derived(statisticsResource.loading);
 
     function handleCreateExpense() {
         goto(`/vaults/${vaultId}/expenses/new`);
@@ -229,11 +220,8 @@
                 headers: { 'Content-Type': 'application/json' }
             });
 
-            // Refresh expenses and statistics with current filter
-            await Promise.all([
-                loadExpenses(),
-                loadStatistics()
-            ]);
+            // Trigger refetch of expenses and statistics
+            refetchKey++;
         } catch (error) {
             console.error('Failed to delete expense:', error);
             alert('Failed to delete expense. Please try again.');
@@ -315,8 +303,8 @@
                 }
             });
 
-            // Reload vault data to update isDefault status
-            // await loadVault();
+            // Trigger refetch of vault data to update isDefault status
+            vaultRefetchKey++;
         } catch (error) {
             console.error('Failed to set default vault:', error);
             alert('Failed to set default vault. Please try again.');
@@ -368,8 +356,8 @@
             filterType={filterType}
             startDate={params.startDate}
             endDate={params.endDate}
-            onFilterChange={(filter) => { params.filter = filter; handleFilterChange(); }}
-            onApplyCustomFilter={handleFilterChange}
+            onFilterChange={(filter) => { params.filter = filter; }}
+            onApplyCustomFilter={() => {}}
             onStartDateChange={(value) => params.startDate = value}
             onEndDateChange={(value) => params.endDate = value}
         />
