@@ -16,7 +16,10 @@ export const getExpenses = async (
     const { page = 1, limit = 10, startDate, endDate, } = options || {};
     const offset = (page - 1) * limit;
 
-    let whereClause = and(eq(expenses.vaultId, vaultId));
+    let whereClause = and(
+        eq(expenses.vaultId, vaultId),
+        isNull(expenses.deletedAt)
+    );
 
     if (startDate && endDate) {
         whereClause = and(
