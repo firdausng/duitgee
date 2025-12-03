@@ -1,15 +1,20 @@
 <script lang="ts">
 	import {onMount} from "svelte";
     import {goto} from "$app/navigation";
+    import { useSearchParams } from "runed/kit";
     import {ofetch} from "ofetch";
     import type {VaultWithMember} from "$lib/schemas/read/vaultWithMember";
     import { Button } from "$lib/components/ui/button";
     import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
     import { Input } from "$lib/components/ui/input";
     import { Label } from "$lib/components/ui/label";
+    import {filterSchema} from "./schemas";
 
     let { data } = $props();
     let { url, vaultId } = data;
+
+    // Initialize filter from URL query params, default to 'today'
+    const params = useSearchParams(filterSchema);
 
     type Expense = {
         id: string;
@@ -72,10 +77,8 @@
     let inviteRole = $state<'admin' | 'member'>('member');
     let isInviting = $state(false);
 
-    // Filter state
-    let filterType = $state<'all' | 'today' | 'week' | 'month' | 'year' | 'custom'>('today');
-    let customStartDate = $state('');
-    let customEndDate = $state('');
+    // Filter state - derived from URL query params
+    let filterType = $derived(params.filter);
 
     function getDateRange(): { startDate?: string; endDate?: string } {
         const now = new Date();
@@ -128,10 +131,10 @@
             }
 
             case 'custom': {
-                if (!customStartDate || !customEndDate) return {};
+                if (!params.startDate || !params.endDate) return {};
                 return {
-                    startDate: new Date(customStartDate).toISOString(),
-                    endDate: new Date(customEndDate).toISOString()
+                    startDate: new Date(params.startDate).toISOString(),
+                    endDate: new Date(params.endDate).toISOString()
                 };
             }
 
@@ -310,7 +313,7 @@
             });
 
             // Reload vault data to update isDefault status
-            await loadVault();
+            // await loadVault();
         } catch (error) {
             console.error('Failed to set default vault:', error);
             alert('Failed to set default vault. Please try again.');
@@ -411,7 +414,7 @@
                 <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                         <button
                             class="shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 {filterType === 'today' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
-                            onclick={() => { filterType = 'today'; handleFilterChange(); }}
+                            onclick={() => { params.filter = 'today'; handleFilterChange(); }}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
@@ -420,7 +423,7 @@
                         </button>
                         <button
                             class="shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 {filterType === 'week' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
-                            onclick={() => { filterType = 'week'; handleFilterChange(); }}
+                            onclick={() => { params.filter = 'week'; handleFilterChange(); }}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
@@ -429,7 +432,7 @@
                         </button>
                         <button
                             class="shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 {filterType === 'month' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
-                            onclick={() => { filterType = 'month'; handleFilterChange(); }}
+                            onclick={() => { params.filter = 'month'; handleFilterChange(); }}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
@@ -438,7 +441,7 @@
                         </button>
                         <button
                             class="shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 {filterType === 'year' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
-                            onclick={() => { filterType = 'year'; handleFilterChange(); }}
+                            onclick={() => { params.filter = 'year'; handleFilterChange(); }}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
@@ -447,7 +450,7 @@
                         </button>
                         <button
                             class="shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 {filterType === 'custom' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
-                            onclick={() => { filterType = 'custom'; }}
+                            onclick={() => { params.filter = 'custom'; }}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z" />
@@ -456,7 +459,7 @@
                         </button>
                         <button
                             class="shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 {filterType === 'all' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
-                            onclick={() => { filterType = 'all'; handleFilterChange(); }}
+                            onclick={() => { params.filter = 'all'; handleFilterChange(); }}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" />
@@ -473,7 +476,7 @@
                             <Input
                                 id="startDate"
                                 type="datetime-local"
-                                bind:value={customStartDate}
+                                bind:value={params.startDate}
                                 class="h-9 text-sm"
                             />
                         </div>
@@ -482,7 +485,7 @@
                             <Input
                                 id="endDate"
                                 type="datetime-local"
-                                bind:value={customEndDate}
+                                bind:value={params.endDate}
                                 class="h-9 text-sm"
                             />
                         </div>
