@@ -22,7 +22,6 @@
 		validators: valibotClient(createExpenseTemplateSchema),
         SPA: true,
         async onUpdate({ form }) {
-            console.log('Updating form', form);
             if (!form.valid) {
                 throw new Error('Form is not valid');
             }
