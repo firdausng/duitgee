@@ -2,6 +2,7 @@
     import { Button } from "$lib/components/ui/button";
     import { Input } from "$lib/components/ui/input";
     import { Label } from "$lib/components/ui/label";
+    import { slide, scale } from "svelte/transition";
 
     type FilterType = 'all' | 'today' | 'week' | 'month' | 'year' | 'custom';
 
@@ -87,7 +88,7 @@
 
         <!-- Custom Date Range -->
         {#if filterType === 'custom'}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pl-12">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pl-12" transition:slide={{ duration: 300 }}>
                 <div class="space-y-1.5">
                     <Label for="startDate" class="text-xs">Start Date & Time</Label>
                     <Input

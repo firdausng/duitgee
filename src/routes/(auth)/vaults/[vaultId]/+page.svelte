@@ -13,6 +13,7 @@
     import VaultStatisticsComponent from "./VaultStatistics.svelte";
     import ExpenseList from "./ExpenseList.svelte";
     import InviteForm from "./InviteForm.svelte";
+    import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
 
     let {data} = $props();
     let {vaultId} = data;
@@ -261,7 +262,7 @@
     <title>{currentVault?.vaults.name || 'Vault'} - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-8 px-4 max-w-7xl">
+<div class="container mx-auto py-8 px-4 max-w-7xl relative">
     {#if isLoadingVault}
         <!-- Loading State -->
         <div class="flex flex-col items-center justify-center py-16">
@@ -289,6 +290,7 @@
             </CardContent>
         </Card>
     {:else}
+        <LoadingOverlay show={isLoadingStats} />
         <!-- Vault Header -->
         <VaultHeader
                 vault={currentVault}

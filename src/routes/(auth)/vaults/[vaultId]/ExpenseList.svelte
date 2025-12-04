@@ -2,6 +2,7 @@
     import { Button } from "$lib/components/ui/button";
     import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
     import type { Expense } from "./types";
+    import { scale } from "svelte/transition";
 
     type FilterType = 'all' | 'today' | 'week' | 'month' | 'year' | 'custom';
 
@@ -52,7 +53,7 @@
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         {:else if expenses.length === 0}
-            <div class="text-center py-12">
+            <div class="text-center py-12" in:scale={{ start: 0.95, duration: 400 }}>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-muted-foreground mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z" />
                 </svg>
@@ -60,7 +61,7 @@
                 <Button onclick={onCreateExpense}>Create your first expense</Button>
             </div>
         {:else}
-            <div class="space-y-2">
+            <div class="space-y-2" in:scale={{ start: 0.95, duration: 400 }}>
                 {#each expenses as expense (expense.id)}
                     <div class="border rounded-lg p-3 hover:shadow-md transition-shadow bg-card">
                         <div class="flex items-start justify-between gap-3">
