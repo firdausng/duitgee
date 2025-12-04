@@ -59,7 +59,6 @@
             </div>
         </div>
 
-
         <!-- Expenses by Category -->
         <div class:[mb-6]={showFilterByCategory}  class="pb-2">
             {#if showFilterByCategory}
@@ -79,7 +78,6 @@
                 {/each}
             </div>
         </div>
-
 
         <!-- gride item itself  -->
         <div class:[mb-6]={showFilterByMember}  class="pb-2">
