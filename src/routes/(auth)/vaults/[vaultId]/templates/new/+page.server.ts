@@ -11,7 +11,8 @@ export const load = async ({ params, fetch }) => {
 				vaultId,
 				name: '',
 				icon: '📝',
-				iconType: 'emoji'
+				iconType: 'emoji',
+                defaultPaidBy: '__creator__'
 			}
 		})
 	);

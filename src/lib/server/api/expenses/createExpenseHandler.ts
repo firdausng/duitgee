@@ -38,15 +38,15 @@ export const createExpense = async (
         .returning();
 
     // Update template usage if template was used
-    // if (templateId) {
-    //     await client
-    //         .update(expenseTemplates)
-    //         .set({
-    //             usageCount: sql`${expenseTemplates.usageCount} + 1`,
-    //             lastUsedAt: formatISO(new UTCDate())
-    //         })
-    //         .where(eq(expenseTemplates.id, templateId));
-    // }
+    if (templateId) {
+        await client
+            .update(expenseTemplates)
+            .set({
+                usageCount: sql`${expenseTemplates.usageCount} + 1`,
+                lastUsedAt: formatISO(new UTCDate())
+            })
+            .where(eq(expenseTemplates.id, templateId));
+    }
 
     return expense[0];
 };

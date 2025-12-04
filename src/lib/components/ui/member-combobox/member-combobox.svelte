@@ -37,7 +37,7 @@
 		allowEmpty = true,
 		emptyLabel = 'Vault-level expense (no specific person)',
 		allowCreator = false,
-		creatorLabel = 'Me (Expense Creator)'
+		creatorLabel = 'Expense Creator'
 	}: Props = $props();
 
 	let searchQuery = $state('');
