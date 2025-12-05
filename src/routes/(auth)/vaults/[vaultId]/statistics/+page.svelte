@@ -12,6 +12,7 @@
     import type {Expense, VaultStatistics} from "../types";
     import ExpenseFilters from "../ExpenseFilters.svelte";
     import {filterSchema} from "../schemas";
+    import {cn} from "$lib/utils";
 
     let {data} = $props();
     let {vaultId} = data;
@@ -36,32 +37,6 @@
     let filterType = $derived(params.filterType || 'template');
     let filterId = $derived(params.filterId);
     let dateFilter = $derived(params.dateFilter || 'all');
-
-    // Derive filter name from URL or from actual expense data
-    let filterName = $derived.by(() => {
-        // Try URL parameter first (decode it in case it has special characters)
-        if (params.filterName) {
-            try {
-                return decodeURIComponent(params.filterName);
-            } catch {
-                return params.filterName;
-            }
-        }
-
-        // Try to derive from expenses data
-        const firstExpense = expenses[0];
-        if (!firstExpense) return 'All Expenses';
-
-        switch (filterType) {
-            case 'category':
-                return firstExpense.category.name;
-            case 'member':
-                return firstExpense.paidByName || 'Vault Expenses';
-            case 'template':
-            default:
-                return 'Template Expenses';
-        }
-    });
 
     function getDateRange(): { startDate?: string; endDate?: string } {
         const now = new Date();
@@ -187,6 +162,32 @@
     const isLoadingExpenses = $derived(expensesResource.loading);
     const isLoadingStats = $derived(statisticsResource.loading);
 
+    // Derive filter name from URL or from actual expense data (must be after expenses is defined)
+    const filterName = $derived.by(() => {
+        // Try URL parameter first (decode it in case it has special characters)
+        if (params.filterName) {
+            try {
+                return decodeURIComponent(params.filterName);
+            } catch {
+                return params.filterName;
+            }
+        }
+
+        // Try to derive from expenses data
+        const firstExpense = expenses[0];
+        if (!firstExpense) return 'All Expenses';
+
+        switch (filterType) {
+            case 'category':
+                return firstExpense.category.name;
+            case 'member':
+                return firstExpense.paidByName || 'Vault Expenses';
+            case 'template':
+            default:
+                return 'Template Expenses';
+        }
+    });
+
     // Calculate filtered statistics
     const filteredTotal = $derived.by(() => {
         if (!expenses.length) return { amount: 0, count: 0 };
@@ -246,6 +247,25 @@
 
     function handleEditExpense(expenseId: string) {
         goto(`/vaults/${vaultId}/expenses/${expenseId}/edit`);
+    }
+
+    function handleFilterChange(type: 'template' | 'category' | 'member', id: string | null, name: string) {
+        // Navigate to same page with different filter
+        const searchParams = new URLSearchParams();
+        searchParams.set('filterType', type);
+        if (id) searchParams.set('filterId', id);
+        searchParams.set('filterName', name);
+
+        // Preserve current date filter
+        if (dateFilter && dateFilter !== 'all') {
+            searchParams.set('dateFilter', dateFilter);
+            if (dateFilter === 'custom' && params.startDate && params.endDate) {
+                searchParams.set('startDate', params.startDate);
+                searchParams.set('endDate', params.endDate);
+            }
+        }
+
+        goto(`/vaults/${vaultId}/statistics?${searchParams.toString()}`);
     }
 </script>
 
@@ -313,45 +333,157 @@
             onEndDateChange={(value) => params.endDate = value || undefined}
         />
 
-        <!-- Statistics Summary -->
-        <Card class="mb-6">
-            <CardHeader>
-                <CardTitle>Summary</CardTitle>
-                <CardDescription>Filtered expenses for {filterName}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <p class="text-sm text-muted-foreground mb-1">Total Amount</p>
-                        <p class="text-3xl font-bold">{formatCurrency(filteredTotal.amount)}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-muted-foreground mb-1">Total Expenses</p>
-                        <p class="text-3xl font-bold">{filteredTotal.count}</p>
-                    </div>
-                </div>
-
-                {#if statistics}
-                    <div class="mt-6 pt-6 border-t">
-                        <p class="text-sm text-muted-foreground mb-3">Percentage of Total</p>
-                        <div class="space-y-2">
-                            <div class="flex justify-between text-sm">
-                                <span>Amount:</span>
-                                <span class="font-semibold">
-                                    {statistics.total.amount > 0 ? ((filteredTotal.amount / statistics.total.amount) * 100).toFixed(1) : 0}%
-                                </span>
-                            </div>
-                            <div class="flex justify-between text-sm">
-                                <span>Count:</span>
-                                <span class="font-semibold">
-                                    {statistics.total.count > 0 ? ((filteredTotal.count / statistics.total.count) * 100).toFixed(1) : 0}%
-                                </span>
+        <!-- Filter Selection -->
+        {#if statistics}
+            <Accordion type="multiple" class="mb-6">
+                <AccordionItem value="filter-selection" class="border rounded-lg px-4">
+                    <AccordionTrigger class="hover:no-underline py-3">
+                        <div class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
+                            </svg>
+                            <div class="text-left">
+                                <h3 class="text-sm font-semibold">Switch Filter</h3>
+                                <p class="text-xs text-muted-foreground">View statistics by template, category, or member</p>
                             </div>
                         </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <div class="space-y-4 pb-4">
+                            <!-- Templates -->
+                            {#if statistics.byTemplate.length > 0}
+                                <div>
+                                    <h4 class="text-sm font-semibold mb-2 text-muted-foreground">By Template</h4>
+                                    <div class="flex flex-wrap gap-2">
+                                        {#each statistics.byTemplate as template}
+                                            <button
+                                                type="button"
+                                                onclick={() => handleFilterChange('template', template.templateId, template.templateName)}
+                                                class={cn(
+                                                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                                                    filterType === 'template' && filterId === template.templateId
+                                                        ? "bg-primary text-primary-foreground"
+                                                        : "bg-muted hover:bg-muted/80"
+                                                )}
+                                            >
+                                                <span>{template.templateIcon}</span>
+                                                <span>{template.templateName}</span>
+                                                <span class="text-xs opacity-75">({template.count})</span>
+                                            </button>
+                                        {/each}
+                                    </div>
+                                </div>
+                            {/if}
+
+                            <!-- Categories -->
+                            {#if statistics.byCategory.length > 0}
+                                <div>
+                                    <h4 class="text-sm font-semibold mb-2 text-muted-foreground">By Category</h4>
+                                    <div class="flex flex-wrap gap-2">
+                                        {#each statistics.byCategory as category}
+                                            <button
+                                                type="button"
+                                                onclick={() => handleFilterChange('category', null, category.categoryName)}
+                                                class={cn(
+                                                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                                                    filterType === 'category' && filterName === category.categoryName
+                                                        ? "bg-primary text-primary-foreground"
+                                                        : "bg-muted hover:bg-muted/80"
+                                                )}
+                                            >
+                                                <span>{category.categoryName}</span>
+                                                <span class="text-xs opacity-75">({category.count})</span>
+                                            </button>
+                                        {/each}
+                                    </div>
+                                </div>
+                            {/if}
+
+                            <!-- Members -->
+                            {#if statistics.byMember.length > 0}
+                                <div>
+                                    <h4 class="text-sm font-semibold mb-2 text-muted-foreground">By Member</h4>
+                                    <div class="flex flex-wrap gap-2">
+                                        {#each statistics.byMember as member}
+                                            <button
+                                                type="button"
+                                                onclick={() => handleFilterChange('member', member.userId, member.displayName)}
+                                                class={cn(
+                                                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                                                    filterType === 'member' && filterId === member.userId
+                                                        ? "bg-primary text-primary-foreground"
+                                                        : "bg-muted hover:bg-muted/80"
+                                                )}
+                                            >
+                                                <span>{member.displayName}</span>
+                                                <span class="text-xs opacity-75">({member.count})</span>
+                                            </button>
+                                        {/each}
+                                    </div>
+                                </div>
+                            {/if}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+        {/if}
+
+        <!-- Statistics Summary -->
+        <Accordion type="multiple" class="mb-6">
+            <AccordionItem value="summary" class="border rounded-lg px-4">
+                <AccordionTrigger class="hover:no-underline py-3">
+                    <div class="flex items-center justify-between w-full pr-2">
+                        <div class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                            </svg>
+                            <div class="text-left">
+                                <h3 class="text-sm font-semibold">Summary</h3>
+                                <p class="text-xs text-muted-foreground">Filtered expenses for {filterName}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-bold">{formatCurrency(filteredTotal.amount)}</p>
+                            <p class="text-xs text-muted-foreground">{filteredTotal.count} expense{filteredTotal.count !== 1 ? 's' : ''}</p>
+                        </div>
                     </div>
-                {/if}
-            </CardContent>
-        </Card>
+                </AccordionTrigger>
+                <AccordionContent>
+                    <div class="pb-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <p class="text-sm text-muted-foreground mb-1">Total Amount</p>
+                                <p class="text-3xl font-bold">{formatCurrency(filteredTotal.amount)}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-muted-foreground mb-1">Total Expenses</p>
+                                <p class="text-3xl font-bold">{filteredTotal.count}</p>
+                            </div>
+                        </div>
+
+                        {#if statistics}
+                            <div class="mt-6 pt-6 border-t">
+                                <p class="text-sm text-muted-foreground mb-3">Percentage of Total</p>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between text-sm">
+                                        <span>Amount:</span>
+                                        <span class="font-semibold">
+                                            {statistics.total.amount > 0 ? ((filteredTotal.amount / statistics.total.amount) * 100).toFixed(1) : 0}%
+                                        </span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span>Count:</span>
+                                        <span class="font-semibold">
+                                            {statistics.total.count > 0 ? ((filteredTotal.count / statistics.total.count) * 100).toFixed(1) : 0}%
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
+                </AccordionContent>
+            </AccordionItem>
+        </Accordion>
 
         <!-- Expenses List -->
         <Card>
