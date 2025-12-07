@@ -27,7 +27,7 @@
     }: Props = $props();
 </script>
 
-<div class="mb-6 pb-4 border">
+<div class="mb-6 pb-4">
     <div class="space-y-3">
         <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
             <button
