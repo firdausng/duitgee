@@ -532,8 +532,10 @@
                     <div class="sm:hidden">
                         {#each expensesByDate as dateGroup (dateGroup.dateKey)}
                             <!-- Date Header -->
-                            <div class="sticky top-0 bg-muted/80 backdrop-blur-sm px-3 py-2 mb-2 rounded-md">
-                                <h3 class="text-sm font-semibold text-foreground">{dateGroup.dateLabel}</h3>
+                            <div class="sticky top-0 flex justify-center mb-2">
+                                <h3 class="text-sm font-semibold text-foreground bg-muted/80 backdrop-blur-sm px-3 py-2 rounded-md inline-block">
+                                    {dateGroup.dateLabel}
+                                </h3>
                             </div>
 
                             <!-- Expenses for this date -->
@@ -560,9 +562,15 @@
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
                                                             <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
                                                         </svg>
-                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-semibold">
-                                                            {expense.category.name}
-                                                        </span>
+                                                        {#if expense.category?.name}
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-semibold">
+                                                                {expense.category.name}
+                                                            </span>
+                                                        {:else}
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-destructive/10 text-destructive text-xs font-semibold">
+                                                                Invalid category
+                                                            </span>
+                                                        {/if}
                                                     </div>
                                                     <div class="flex items-center gap-2 text-muted-foreground">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -616,8 +624,10 @@
                     <div class="hidden sm:block">
                         {#each expensesByDate as dateGroup (dateGroup.dateKey)}
                             <!-- Date Header -->
-                            <div class="sticky top-0 bg-muted/80 backdrop-blur-sm px-4 py-2.5 mb-2 rounded-md">
-                                <h3 class="text-sm font-semibold text-foreground">{dateGroup.dateLabel}</h3>
+                            <div class="sticky top-0 flex justify-center mb-2">
+                                <h3 class="text-sm font-semibold text-foreground bg-muted/80 backdrop-blur-sm px-4 py-2.5 rounded-md inline-block">
+                                    {dateGroup.dateLabel}
+                                </h3>
                             </div>
 
                             <!-- Expenses for this date -->
@@ -644,9 +654,15 @@
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
                                                             <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
                                                         </svg>
-                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-semibold">
-                                                            {expense.category.name}
-                                                        </span>
+                                                        {#if expense.category?.name}
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-semibold">
+                                                                {expense.category.name}
+                                                            </span>
+                                                        {:else}
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-destructive/10 text-destructive text-xs font-semibold">
+                                                                Invalid category
+                                                            </span>
+                                                        {/if}
                                                     </div>
                                                     <div class="flex items-center gap-2 text-muted-foreground">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
