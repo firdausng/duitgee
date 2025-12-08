@@ -128,7 +128,7 @@
 				{/if}
 
                 <!-- Actions - Hidden on mobile, shown on desktop -->
-                <div class="flex gap-3 pt-4">
+                <div class="flex gap-3 ">
                     <Button type="button" variant="outline" onclick={handleBack} disabled={$delayed}>
                         Cancel
                     </Button>
