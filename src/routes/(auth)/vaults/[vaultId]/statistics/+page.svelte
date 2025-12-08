@@ -9,6 +9,8 @@
     import {Card, CardContent, CardHeader, CardTitle, CardDescription} from "$lib/components/ui/card";
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
     import {Accordion, AccordionItem, AccordionTrigger, AccordionContent} from "$lib/components/ui/accordion";
+    import {FloatingActionButton} from "$lib/components/ui/floating-action-button";
+    import {Drawer, DrawerContent, DrawerHeader, DrawerTitle} from "$lib/components/ui/drawer";
     import type {Expense, VaultStatistics} from "../types";
     import ExpenseFilters from "../ExpenseFilters.svelte";
     import {filterSchema} from "../schemas";
@@ -33,6 +35,9 @@
     // Refetch keys to trigger data reload
     let refetchKey = $state(0);
     let vaultRefetchKey = $state(0);
+
+    // Drawer state for filter selection
+    let filterDrawerOpen = $state(false);
 
     // Derived filter values
     let filterType = $derived(params.filterType || 'template');
@@ -290,6 +295,9 @@
             }
         }
 
+        // Close the drawer
+        filterDrawerOpen = false;
+
         goto(`/vaults/${vaultId}/statistics?${searchParams.toString()}`);
     }
 </script>
@@ -342,99 +350,102 @@
             onEndDateChange={(value) => params.endDate = value || undefined}
         />
 
-        <!-- Filter Selection -->
+        <!-- Filter Selection FAB -->
         {#if statistics}
-            <Accordion type="multiple" class="mb-6">
-                <AccordionItem value="filter-selection" class="border rounded-lg px-4">
-                    <AccordionTrigger class="hover:no-underline py-3">
-                        <div class="flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
-                            </svg>
-                            <div class="text-left">
-                                <h3 class="text-sm font-semibold">Switch Filter</h3>
-                                <p class="text-xs text-muted-foreground">View statistics by template, category, or member</p>
+            <FloatingActionButton
+                onclick={() => filterDrawerOpen = true}
+            >
+                {#snippet icon()}
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
+                    </svg>
+                {/snippet}
+                Switch Filter
+            </FloatingActionButton>
+
+            <!-- Filter Selection Drawer -->
+            <Drawer bind:open={filterDrawerOpen}>
+                <DrawerContent>
+                    <DrawerHeader>
+                        <DrawerTitle>Switch Filter</DrawerTitle>
+                        <p class="text-sm text-muted-foreground">View statistics by template, category, or member</p>
+                    </DrawerHeader>
+                    <div class="p-4 space-y-4 overflow-y-auto">
+                        <!-- Templates -->
+                        {#if statistics.byTemplate.length > 0}
+                            <div>
+                                <h4 class="text-sm font-semibold mb-2 text-muted-foreground">By Template</h4>
+                                <div class="flex flex-wrap gap-2">
+                                    {#each statistics.byTemplate as template}
+                                        <button
+                                            type="button"
+                                            onclick={() => handleFilterChange('template', template.templateId, template.templateName)}
+                                            class={cn(
+                                                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                                                filterType === 'template' && filterId === template.templateId
+                                                    ? "bg-primary text-primary-foreground"
+                                                    : "bg-muted hover:bg-muted/80"
+                                            )}
+                                        >
+                                            <span>{template.templateIcon}</span>
+                                            <span>{template.templateName}</span>
+                                            <span class="text-xs opacity-75">({template.count})</span>
+                                        </button>
+                                    {/each}
+                                </div>
                             </div>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <div class="space-y-4 pb-4">
-                            <!-- Templates -->
-                            {#if statistics.byTemplate.length > 0}
-                                <div>
-                                    <h4 class="text-sm font-semibold mb-2 text-muted-foreground">By Template</h4>
-                                    <div class="flex flex-wrap gap-2">
-                                        {#each statistics.byTemplate as template}
-                                            <button
-                                                type="button"
-                                                onclick={() => handleFilterChange('template', template.templateId, template.templateName)}
-                                                class={cn(
-                                                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-                                                    filterType === 'template' && filterId === template.templateId
-                                                        ? "bg-primary text-primary-foreground"
-                                                        : "bg-muted hover:bg-muted/80"
-                                                )}
-                                            >
-                                                <span>{template.templateIcon}</span>
-                                                <span>{template.templateName}</span>
-                                                <span class="text-xs opacity-75">({template.count})</span>
-                                            </button>
-                                        {/each}
-                                    </div>
-                                </div>
-                            {/if}
+                        {/if}
 
-                            <!-- Categories -->
-                            {#if statistics.byCategory.length > 0}
-                                <div>
-                                    <h4 class="text-sm font-semibold mb-2 text-muted-foreground">By Category</h4>
-                                    <div class="flex flex-wrap gap-2">
-                                        {#each statistics.byCategory as category}
-                                            <button
-                                                type="button"
-                                                onclick={() => handleFilterChange('category', null, category.categoryName)}
-                                                class={cn(
-                                                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-                                                    filterType === 'category' && filterName === category.categoryName
-                                                        ? "bg-primary text-primary-foreground"
-                                                        : "bg-muted hover:bg-muted/80"
-                                                )}
-                                            >
-                                                <span>{category.categoryName}</span>
-                                                <span class="text-xs opacity-75">({category.count})</span>
-                                            </button>
-                                        {/each}
-                                    </div>
+                        <!-- Categories -->
+                        {#if statistics.byCategory.length > 0}
+                            <div>
+                                <h4 class="text-sm font-semibold mb-2 text-muted-foreground">By Category</h4>
+                                <div class="flex flex-wrap gap-2">
+                                    {#each statistics.byCategory as category}
+                                        <button
+                                            type="button"
+                                            onclick={() => handleFilterChange('category', null, category.categoryName)}
+                                            class={cn(
+                                                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                                                filterType === 'category' && filterName === category.categoryName
+                                                    ? "bg-primary text-primary-foreground"
+                                                    : "bg-muted hover:bg-muted/80"
+                                            )}
+                                        >
+                                            <span>{category.categoryName}</span>
+                                            <span class="text-xs opacity-75">({category.count})</span>
+                                        </button>
+                                    {/each}
                                 </div>
-                            {/if}
+                            </div>
+                        {/if}
 
-                            <!-- Members -->
-                            {#if statistics.byMember.length > 0}
-                                <div>
-                                    <h4 class="text-sm font-semibold mb-2 text-muted-foreground">By Member</h4>
-                                    <div class="flex flex-wrap gap-2">
-                                        {#each statistics.byMember as member}
-                                            <button
-                                                type="button"
-                                                onclick={() => handleFilterChange('member', member.userId, member.displayName)}
-                                                class={cn(
-                                                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-                                                    filterType === 'member' && filterId === member.userId
-                                                        ? "bg-primary text-primary-foreground"
-                                                        : "bg-muted hover:bg-muted/80"
-                                                )}
-                                            >
-                                                <span>{member.displayName}</span>
-                                                <span class="text-xs opacity-75">({member.count})</span>
-                                            </button>
-                                        {/each}
-                                    </div>
+                        <!-- Members -->
+                        {#if statistics.byMember.length > 0}
+                            <div>
+                                <h4 class="text-sm font-semibold mb-2 text-muted-foreground">By Member</h4>
+                                <div class="flex flex-wrap gap-2">
+                                    {#each statistics.byMember as member}
+                                        <button
+                                            type="button"
+                                            onclick={() => handleFilterChange('member', member.userId, member.displayName)}
+                                            class={cn(
+                                                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                                                filterType === 'member' && filterId === member.userId
+                                                    ? "bg-primary text-primary-foreground"
+                                                    : "bg-muted hover:bg-muted/80"
+                                            )}
+                                        >
+                                            <span>{member.displayName}</span>
+                                            <span class="text-xs opacity-75">({member.count})</span>
+                                        </button>
+                                    {/each}
                                 </div>
-                            {/if}
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
-            </Accordion>
+                            </div>
+                        {/if}
+                    </div>
+                </DrawerContent>
+            </Drawer>
         {/if}
 
         <!-- Statistics Summary -->
