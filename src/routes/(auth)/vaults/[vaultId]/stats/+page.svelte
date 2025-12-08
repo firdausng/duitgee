@@ -8,6 +8,7 @@
     import {Button} from "$lib/components/ui/button";
     import {Card, CardContent} from "$lib/components/ui/card";
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
+    import {Accordion, AccordionItem, AccordionTrigger, AccordionContent} from "$lib/components/ui/accordion";
     import type {Expense, VaultStatistics} from "../types";
     import {cn} from "$lib/utils";
     import {format, parseISO} from "date-fns";
@@ -269,35 +270,44 @@
     }
 
     // All tabs use date-grouped view
-    const allExpensesByDate = $derived.by(() => {
+    const filteredExpenses = $derived.by(() => {
         // Filter expenses based on filterType and selectedId
         const currentFilterType = filterType;
         const currentSelectedId = selectedId;
-        let filteredExpenses = allExpenses;
+        let filtered = allExpenses;
 
         if (currentSelectedId) {
             switch (currentFilterType) {
                 case 'category':
-                    filteredExpenses = allExpenses.filter(expense => expense.category?.name === currentSelectedId);
+                    filtered = allExpenses.filter(expense => expense.category?.name === currentSelectedId);
                     break;
                 case 'template':
                     if (currentSelectedId === 'no-template') {
-                        filteredExpenses = allExpenses.filter(expense =>
+                        filtered = allExpenses.filter(expense =>
                             expense.templateId === null || expense.templateId === undefined
                         );
                     } else {
-                        filteredExpenses = allExpenses.filter(expense =>
+                        filtered = allExpenses.filter(expense =>
                             String(expense.templateId) === String(currentSelectedId)
                         );
                     }
                     break;
                 case 'member':
-                    filteredExpenses = allExpenses.filter(expense => expense.paidBy === currentSelectedId);
+                    filtered = allExpenses.filter(expense => expense.paidBy === currentSelectedId);
                     break;
             }
         }
 
-        return groupExpensesByDate(filteredExpenses);
+        return filtered;
+    });
+
+    const allExpensesByDate = $derived(groupExpensesByDate(filteredExpenses));
+
+    // Calculate total based on filtered expenses
+    const filteredTotal = $derived.by(() => {
+        const total = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+        const count = filteredExpenses.length;
+        return { amount: total, count };
     });
 
     function formatDate(dateString: string): string {
@@ -368,23 +378,17 @@
         <LoadingOverlay show={isLoadingStats || isLoadingExpenses} />
 
         <!-- Header -->
-        <div class="mb-6">
+        <div class="mb-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold">{currentVault.vaults.name}</h1>
+<!--                    <h1 class="text-2xl font-bold">{currentVault.vaults.name}</h1>-->
                     <p class="text-sm text-muted-foreground mt-1">Expense breakdown for {getDateFilterLabel()}</p>
                 </div>
-                <Button variant="outline" onclick={handleBack}>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                    </svg>
-                    Back
-                </Button>
             </div>
         </div>
 
         <!-- Date Filter Tabs -->
-        <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
+        <div class="flex gap-2 mb-2 overflow-x-auto pb-2">
             <button
                 type="button"
                 onclick={() => params.dateFilter = 'today'}
@@ -449,18 +453,20 @@
 
         <!-- Total Card -->
         {#if statistics}
-            <Card class="mb-6 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-                <CardContent class="pt-6">
-                    <div class="text-center">
-                        <p class="text-sm text-muted-foreground mb-2">Total Expenses</p>
-                        <h2 class="text-4xl font-bold mb-1">{formatCurrency(statistics.total.amount)}</h2>
-                        <p class="text-sm text-muted-foreground">{statistics.total.count} transaction{statistics.total.count !== 1 ? 's' : ''}</p>
+            <Card class="mb-2 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                <CardContent class="py-3">
+                    <div class="flex items-center justify-between">
+<!--                        <p class="text-sm text-muted-foreground">Total</p>-->
+                        <div class="flex items-baseline gap-3">
+                            <h2 class="text-xl font-bold">{formatCurrency(filteredTotal.amount)}</h2>
+                            <p class="text-sm text-muted-foreground">({filteredTotal.count} transaction{filteredTotal.count !== 1 ? 's' : ''})</p>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
 
             <!-- Filter Type Tabs -->
-            <div class="flex gap-2 mb-4 border-b">
+            <div class="flex gap-2 mb-2 border-b">
                 <button
                     type="button"
                     onclick={() => { params.filterType = 'category'; params.selectedId = undefined; }}
@@ -475,7 +481,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
                         </svg>
-                        By Category
+                        Category
                     </div>
                 </button>
                 <button
@@ -492,7 +498,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
                         </svg>
-                        By Template
+                        Template
                     </div>
                 </button>
                 <button
@@ -509,7 +515,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                         </svg>
-                        By Member
+                        Member
                     </div>
                 </button>
             </div>
@@ -529,7 +535,7 @@
                             )}
                         >
                             All
-                            <span class="text-xs opacity-75">({statistics?.total.count || 0})</span>
+                            <span class="text-xs opacity-75">({allExpenses.length})</span>
                         </button>
                         {#each filterOptions as option (option.id)}
                             <button
@@ -556,68 +562,95 @@
             {/if}
 
             <!-- Expense List grouped by date -->
-            <div class="space-y-6">
+            <div class="space-y-4">
                 {#each allExpensesByDate as dateGroup (dateGroup.dateKey)}
                     <div>
                         <!-- Date Header -->
-                        <div class="flex justify-center mb-4">
-                            <div class="inline-block px-4 py-2 rounded-lg bg-primary/10 text-primary">
-                                <span class="text-sm font-medium">{dateGroup.dateLabel}</span>
-                            </div>
+                        <div class="sticky top-0 flex justify-center mb-2">
+                            <h3 class="text-sm font-semibold text-foreground bg-muted/80 backdrop-blur-sm px-3 py-2 rounded-md inline-block">
+                                {dateGroup.dateLabel}
+                            </h3>
                         </div>
 
                         <!-- Expenses for this date -->
-                        <div class="space-y-2">
+                        <Accordion type="multiple" class="mb-4">
                             {#each dateGroup.expenses as expense (expense.id)}
-                                <Card class="hover:shadow-md transition-shadow">
-                                    <CardContent class="p-4">
-                                        <div class="flex items-center justify-between">
+                                <AccordionItem value={expense.id} class="border rounded-lg mb-2 px-3">
+                                    <AccordionTrigger class="hover:no-underline py-2">
+                                        <div class="flex items-start justify-between w-full pr-2">
                                             <div class="flex-1 min-w-0">
-                                                <p class="text-base font-medium truncate">
-                                                    {expense.note || 'No description'}
+                                                <p class="text-xs font-medium line-clamp-1 text-left">
+                                                    {expense.note || '-'}
                                                 </p>
-                                                <div class="flex items-center gap-2 mt-1">
-                                                    {#if expense.category?.name}
-                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-primary/10 text-primary">
-                                                            {expense.category.name}
-                                                        </span>
-                                                    {/if}
-                                                    <span class="text-xs text-muted-foreground">
-                                                        {formatDate(expense.date)}
-                                                    </span>
-                                                    {#if expense.paidByName}
-                                                        <span class="text-xs text-muted-foreground">
-                                                            by {expense.paidByName}
-                                                        </span>
-                                                    {/if}
-                                                </div>
                                             </div>
-                                            <div class="text-right ml-4">
-                                                <p class="text-lg font-bold whitespace-nowrap">
-                                                    {formatCurrency(expense.amount)}
-                                                </p>
-                                                <div class="flex gap-2 mt-1 justify-end">
-                                                    <button
-                                                        type="button"
-                                                        onclick={() => handleEditExpense(expense.id)}
-                                                        class="text-xs text-primary hover:underline"
-                                                    >
-                                                        Edit
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onclick={() => handleDeleteExpense(expense.id)}
-                                                        class="text-xs text-destructive hover:underline"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </div>
+                                            <div class="text-right ml-2">
+                                                <p class="text-sm font-bold whitespace-nowrap">{formatCurrency(expense.amount)}</p>
                                             </div>
                                         </div>
-                                    </CardContent>
-                                </Card>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                        <div class="space-y-3 pt-2">
+                                            <!-- Details -->
+                                            <div class="space-y-2 text-sm">
+                                                <div class="flex items-center gap-2">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                                                    </svg>
+                                                    {#if expense.category?.name}
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-semibold">
+                                                            {expense.category.name}
+                                                        </span>
+                                                    {:else}
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-destructive/10 text-destructive text-xs font-semibold">
+                                                            Invalid category
+                                                        </span>
+                                                    {/if}
+                                                </div>
+                                                <div class="flex items-center gap-2 text-muted-foreground">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+                                                    </svg>
+                                                    <span>{formatDate(expense.date)}</span>
+                                                </div>
+                                                {#if expense.paidByName}
+                                                    <div class="flex items-center gap-2 text-muted-foreground">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                                                        </svg>
+                                                        <span>Paid by: {expense.paidByName}</span>
+                                                    </div>
+                                                {/if}
+                                            </div>
+                                            <!-- Actions -->
+                                            <div class="flex gap-2 pt-1">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onclick={() => handleEditExpense(expense.id)}
+                                                    class="flex-1"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                                    </svg>
+                                                    Edit
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onclick={() => handleDeleteExpense(expense.id)}
+                                                    class="flex-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                                    </svg>
+                                                    Delete
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
                             {/each}
-                        </div>
+                        </Accordion>
                     </div>
                 {/each}
             </div>
