@@ -127,6 +127,20 @@
 					<input type="hidden" name="templateId" bind:value={$form.templateId} />
 				{/if}
 
+                <!-- Actions - Hidden on mobile, shown on desktop -->
+                <div class="flex gap-3 pt-4">
+                    <Button type="button" variant="outline" onclick={handleBack} disabled={$delayed}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" disabled={$delayed} class="flex-1">
+                        {#if $delayed}
+                            Creating...
+                        {:else}
+                            Create Expense
+                        {/if}
+                    </Button>
+                </div>
+
 				<!-- Amount -->
 				<div class="space-y-2">
 					<Label for="amount">Amount *</Label>
@@ -200,20 +214,6 @@
 					{#if $errors.date}
 						<p class="text-sm text-destructive">{$errors.date}</p>
 					{/if}
-				</div>
-
-				<!-- Actions - Hidden on mobile, shown on desktop -->
-				<div class="hidden sm:flex gap-3 pt-4">
-					<Button type="submit" disabled={$delayed} class="flex-1">
-						{#if $delayed}
-							Creating...
-						{:else}
-							Create Expense
-						{/if}
-					</Button>
-					<Button type="button" variant="outline" onclick={handleBack} disabled={$delayed}>
-						Cancel
-					</Button>
 				</div>
 
 				<!-- Mobile: Add bottom padding to account for FAB -->
