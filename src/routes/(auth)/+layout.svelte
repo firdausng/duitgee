@@ -24,7 +24,7 @@
 	const navVaultId = $derived(() => {
 		const current = vaultId();
 		if (current && current !== 'new') return current;
-		return data.vaults.length > 0 ? data.vaults[0].id : null;
+		return data.vaults.length > 0 ? data.vaults[0].vaults?.id : null;
 	});
 
 	// Check if current path matches the link
@@ -51,6 +51,7 @@
 		label: string;
 		href: string;
 		isCurrentPage: boolean;
+		truncate?: boolean;
 	};
 
 	const breadcrumbItems = $derived(() => {
@@ -71,9 +72,13 @@
 		});
 
 		// Parse segments
+		let vaultId: string | null = null;
+		let currentSection: string | null = null;
+
 		for (let i = 0; i < segments.length; i++) {
 			const segment = segments[i];
 			const isLast = i === segments.length - 1;
+			const prevSegment = i > 0 ? segments[i - 1] : null;
 
 			if (segment === 'vaults') {
 				items.push({
@@ -81,30 +86,32 @@
 					href: '/vaults',
 					isCurrentPage: isLast
 				});
-			} else if (segments[i - 1] === 'vaults' && segment !== 'new') {
+			} else if (prevSegment === 'vaults' && segment !== 'new') {
 				// This is a vault ID
-				const vault = data.vaults.find(v => v.id === segment);
+				vaultId = segment;
+				const vaultData = data.vaults.find(v => v.vaults?.id === segment);
 				items.push({
-					label: vault?.name || 'Vault',
+					label: vaultData?.vaults?.name || 'Vault',
 					href: `/vaults/${segment}`,
-					isCurrentPage: isLast
+					isCurrentPage: isLast,
+					truncate: true // Enable truncation for vault names
 				});
 			} else if (segment === 'expenses') {
-				const vaultId = segments[i - 1];
+				currentSection = 'expenses';
 				items.push({
 					label: 'Expenses',
 					href: `/vaults/${vaultId}/expenses`,
 					isCurrentPage: isLast
 				});
 			} else if (segment === 'templates') {
-				const vaultId = segments[i - 1];
+				currentSection = 'templates';
 				items.push({
 					label: 'Templates',
 					href: `/vaults/${vaultId}/templates`,
 					isCurrentPage: isLast
 				});
 			} else if (segment === 'statistics') {
-				const vaultId = segments[i - 1];
+				currentSection = 'statistics';
 				items.push({
 					label: 'Statistics',
 					href: `/vaults/${vaultId}/statistics`,
@@ -123,9 +130,33 @@
 					isCurrentPage: isLast
 				});
 			} else if (segment === 'edit') {
+				// For edit pages, show the ID of the resource being edited
+				const resourceId = prevSegment;
+				if (resourceId && resourceId !== 'expenses' && resourceId !== 'templates' && resourceId !== 'vaults') {
+					// This is the resource ID before /edit
+					items.push({
+						label: `#${resourceId.slice(0, 8)}...`,
+						href: '#',
+						isCurrentPage: false
+					});
+				}
 				items.push({
 					label: 'Edit',
 					href: '#',
+					isCurrentPage: isLast
+				});
+			} else if (prevSegment === 'expenses' && segment !== 'new' && segment !== 'edit') {
+				// This is an expense ID
+				items.push({
+					label: `#${segment.slice(0, 8)}...`,
+					href: `/vaults/${vaultId}/expenses/${segment}`,
+					isCurrentPage: isLast
+				});
+			} else if (prevSegment === 'templates' && segment !== 'new' && segment !== 'edit') {
+				// This is a template ID
+				items.push({
+					label: `#${segment.slice(0, 8)}...`,
+					href: `/vaults/${vaultId}/templates/${segment}`,
 					isCurrentPage: isLast
 				});
 			}
@@ -205,18 +236,18 @@
 											</svg>
 											All Vaults
 										</button>
-										{#each data.vaults as vault}
+										{#each data.vaults as vaultItem}
 											<button
-												onclick={() => navigateAndClose(`/vaults/${vault.id}`)}
-												class="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors {vaultId() === vault.id ? 'bg-accent' : ''}"
+												onclick={() => navigateAndClose(`/vaults/${vaultItem.vaults.id}`)}
+												class="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors {vaultId() === vaultItem.vaults.id ? 'bg-accent' : ''}"
 											>
 												<div
 													class="w-8 h-8 rounded-full flex items-center justify-center text-lg"
-													style="background-color: {vault.color || '#3B82F6'}"
+													style="background-color: {vaultItem.vaults.color || '#3B82F6'}"
 												>
-													{vault.icon || '🏦'}
+													{vaultItem.vaults.icon || '🏦'}
 												</div>
-												<span class="truncate">{vault.name}</span>
+												<span class="truncate">{vaultItem.vaults.name}</span>
 											</button>
 										{/each}
 									</nav>
@@ -305,9 +336,13 @@
 							{/if}
 							<Breadcrumb.Item>
 								{#if item.isCurrentPage}
-									<Breadcrumb.Page>{item.label}</Breadcrumb.Page>
+									<Breadcrumb.Page class={item.truncate ? 'max-w-[150px] md:max-w-[250px] truncate' : ''}>
+										{item.label}
+									</Breadcrumb.Page>
 								{:else}
-									<Breadcrumb.Link href={item.href}>{item.label}</Breadcrumb.Link>
+									<Breadcrumb.Link href={item.href} class={item.truncate ? 'max-w-[150px] md:max-w-[250px] truncate inline-block' : ''}>
+										{item.label}
+									</Breadcrumb.Link>
 								{/if}
 							</Breadcrumb.Item>
 						{/each}
