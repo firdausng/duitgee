@@ -12,6 +12,8 @@
 	import { categoryData } from '$lib/configurations/categories';
 	import { ofetch } from 'ofetch';
 	import { Spinner } from '$lib/components/ui/spinner';
+	import { Toaster } from "$lib/components/ui/sonner";
+	import { toast } from "svelte-sonner";
 	import { localDatetimeToUtcIso } from '$lib/utils';
 
 	let { data } = $props();
@@ -25,7 +27,8 @@
 		SPA: true,
 		async onUpdate({ form }) {
 			if (!form.valid) {
-				throw new Error('Form is not valid');
+				toast.error('Please fill in all required fields correctly');
+				return;
 			}
 
 			isLoading = true;
@@ -46,8 +49,11 @@
 				});
 
 				if (response.success === false) {
-					throw new Error('Failed to update expense');
+					toast.error(response.error || 'Failed to update expense');
+					return;
 				}
+
+				toast.success('Expense updated successfully');
 
 				// Redirect back to vault
 				await goto(`/vaults/${data.vaultId}`);
@@ -56,6 +62,8 @@
 					...error,
 					message: '[expense:edit:action] Failed to update expense'
 				});
+				const errorMessage = error?.data?.error || error?.message || 'Failed to update expense. Please try again.';
+				toast.error(errorMessage);
 			} finally {
 				isLoading = false;
 			}
@@ -87,8 +95,11 @@
 			});
 
 			if (response.success === false) {
-				throw new Error('Failed to delete expense');
+				toast.error(response.error || 'Failed to delete expense');
+				return;
 			}
+
+			toast.success('Expense deleted successfully');
 
 			// Redirect back to vault
 			await goto(`/vaults/${data.vaultId}`);
@@ -97,6 +108,8 @@
 				...error,
 				message: '[expense:edit:delete] Failed to delete expense'
 			});
+			const errorMessage = error?.data?.error || error?.message || 'Failed to delete expense. Please try again.';
+			toast.error(errorMessage);
 		} finally {
 			isDeleting = false;
 			showDeleteConfirm = false;
@@ -290,3 +303,5 @@
 		</Card>
 	{/if}
 </div>
+
+<Toaster />

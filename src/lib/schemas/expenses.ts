@@ -22,14 +22,41 @@ export const expenseSchema = v.object({
 export type Expense = v.InferOutput<typeof expenseSchema>;
 
 export const createExpenseSchema = v.object({
-    ...v.pick(expenseSchema, ['note', 'amount', 'categoryName', 'paidBy', 'vaultId', 'date']).entries,
+    note: v.optional(v.string()),
+    amount: v.pipe(
+        v.number('Amount is required'),
+        v.minValue(0.01, 'Amount must be greater than 0')
+    ),
+    categoryName: v.pipe(
+        v.string('Category is required'),
+        v.minLength(1, 'Category is required')
+    ),
+    date: v.pipe(
+        v.string('Date is required'),
+        v.minLength(1, 'Date is required')
+    ),
+    paidBy: v.optional(v.nullable(v.string())),
+    vaultId: v.string(),
     templateId: v.optional(v.string()),
 })
 
 export type CreateExpense = v.InferOutput<typeof createExpenseSchema>;
 
 export const updateExpenseSchema = v.object({
-    ...v.pick(createExpenseSchema, ['note', 'amount', 'categoryName', 'paidBy', 'date']).entries,
+    note: v.optional(v.string()),
+    amount: v.pipe(
+        v.number('Amount is required'),
+        v.minValue(0.01, 'Amount must be greater than 0')
+    ),
+    categoryName: v.pipe(
+        v.string('Category is required'),
+        v.minLength(1, 'Category is required')
+    ),
+    date: v.pipe(
+        v.string('Date is required'),
+        v.minLength(1, 'Date is required')
+    ),
+    paidBy: v.optional(v.nullable(v.string())),
     templateId: v.optional(v.string()),
 })
 
@@ -57,7 +84,20 @@ export type GetExpenseQuery = v.InferOutput<typeof getExpenseQuerySchema>;
 export const updateExpenseRequestSchema = v.object({
     id: v.string(),
     vaultId: v.string(),
-    ...v.partial(v.pick(createExpenseSchema, ['note', 'amount', 'categoryName', 'paidBy', 'date'])).entries
+    note: v.optional(v.string()),
+    amount: v.pipe(
+        v.number('Amount is required'),
+        v.minValue(0.01, 'Amount must be greater than 0')
+    ),
+    categoryName: v.pipe(
+        v.string('Category is required'),
+        v.minLength(1, 'Category is required')
+    ),
+    date: v.pipe(
+        v.string('Date is required'),
+        v.minLength(1, 'Date is required')
+    ),
+    paidBy: v.optional(v.nullable(v.string())),
 });
 export type UpdateExpenseRequest = v.InferOutput<typeof updateExpenseRequestSchema>;
 

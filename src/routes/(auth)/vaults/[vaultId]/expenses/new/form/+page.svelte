@@ -11,6 +11,8 @@
 	import { MemberCombobox } from '$lib/components/ui/member-combobox';
 	import { FloatingActionButton } from '$lib/components/ui/floating-action-button';
 	import { categoryData } from '$lib/configurations/categories';
+    import { Toaster } from "$lib/components/ui/sonner";
+	import { toast } from "svelte-sonner";
 	import { ofetch } from 'ofetch';
 	import { localDatetimeToUtcIso, formatDatetimeLocal } from '$lib/utils';
     import {resolve} from "$app/paths";
@@ -25,7 +27,8 @@
         SPA: true,
         async onUpdate({ form }) {
             if (!form.valid) {
-                throw new Error('Form is not valid');
+                toast.error('Please fill in all required fields correctly');
+                return;
             }
 
             isLoading = true;
@@ -46,10 +49,11 @@
                 });
 
                 if (response.success === false) {
-                    throw new Error('Failed to create template');
+                    toast.error(response.error || 'Failed to create expense');
+                    return;
                 }
 
-                // console.log(response, params)
+                toast.success('Expense created successfully');
 
                 // Redirect back to the expense creation flow
                 await goto(`/vaults/${data.vaultId}`);
@@ -58,6 +62,8 @@
                     ...error,
                     message: '[expense:new:action] Failed to create expense'
                 });
+                const errorMessage = error?.data?.error || error?.message || 'Failed to create expense. Please try again.';
+                toast.error(errorMessage);
             }finally {
                 isLoading = false;
             }
@@ -254,3 +260,5 @@
 	{/if}
 </FloatingActionButton>
 </div>
+
+<Toaster />
