@@ -23,11 +23,15 @@
     // Schema for statistics page query params
     const statisticsParamsSchema = v.object({
         filterType: v.optional(v.picklist(['template', 'category', 'member']), 'template'),
-        filterId: v.optional(v.string()),
-        filterName: v.optional(v.string()),
+        // filterId: v.optional(v.string()),
+        // filterName: v.optional(v.string()),
         dateFilter: v.optional(v.picklist(['all', 'today', 'week', 'month', 'year', 'custom']), 'all'),
-        startDate: v.optional(v.string()),
-        endDate: v.optional(v.string())
+        // startDate: v.optional(v.string()),
+        // endDate: v.optional(v.string()),
+        filterId: v.optional(v.fallback(v.string(), ""), ""),
+        filterName: v.optional(v.fallback(v.string(), ""), ""),
+        startDate: v.optional(v.fallback(v.string(), ""), ""),
+        endDate: v.optional(v.fallback(v.string(), ""), ""),
     });
 
     const params = useSearchParams(statisticsParamsSchema);
