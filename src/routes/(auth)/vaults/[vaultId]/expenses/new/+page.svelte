@@ -71,30 +71,7 @@
 	<title>Select Template - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-8 px-4 max-w-4xl">
-	<!-- Header -->
-	<div class="mb-6">
-		<Button variant="ghost" onclick={handleBack} class="mb-4 -ml-2">
-			<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-				<path
-					fill-rule="evenodd"
-					d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-					clip-rule="evenodd"
-				/>
-			</svg>
-			Back
-		</Button>
-
-		<div class="flex items-center justify-between">
-			<div>
-				<h1 class="text-2xl font-bold">Add Expense</h1>
-				<p class="text-sm text-muted-foreground mt-1">
-					Choose a template to get started quickly, or create from scratch
-				</p>
-			</div>
-		</div>
-	</div>
-
+<div class="container mx-auto py-2 px-4 max-w-4xl">
 	{#if isLoading}
 		<!-- Loading State -->
 		<div class="flex justify-center py-16">
@@ -102,11 +79,10 @@
 		</div>
 	{:else}
 		<!-- Skip Option -->
-		<Card class="mb-6 border-dashed">
-			<CardContent class="flex items-center justify-between py-6">
+		<Card class="border-dashed my-2">
+			<CardContent class="flex items-center justify-between py-2">
 				<div>
 					<h3 class="font-semibold">Start from scratch</h3>
-					<p class="text-sm text-muted-foreground">Create an expense without using a template</p>
 				</div>
 				<Button onclick={handleSkip} variant="outline">
 					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -139,7 +115,7 @@
 						class="hover:shadow-md transition-shadow flex flex-col cursor-pointer"
 						onclick={() => handleUseTemplate(template.id)}
 					>
-						<CardContent class="flex flex-col h-full py-4 relative">
+						<CardContent class="flex flex-col h-full py-2 relative">
 							<!-- Edit Button (Top Right) -->
 							<Button
 								variant="ghost"
@@ -162,7 +138,7 @@
 							</Button>
 
 							<!-- Icon -->
-							<div class="flex justify-center mb-3">
+							<div class="flex justify-center">
 								<div
 									class="text-3xl w-12 h-12 rounded-lg flex items-center justify-center bg-primary/10"
 								>
@@ -171,14 +147,14 @@
 							</div>
 
 							<!-- Name and Description -->
-							<div class="mb-4">
+							<div class="">
 								<h3 class="font-semibold break-words text-center mb-1">{template.name}</h3>
 								{#if template.description}
 									<p class="text-sm text-muted-foreground line-clamp-2 text-center">{template.description}</p>
 								{/if}
 							</div>
 
-							<div class="flex flex-wrap justify-center gap-2 mb-4 text-xs">
+							<div class="flex flex-wrap justify-center gap-2 text-xs">
 								{#if template.defaultAmount}
 									<span class="inline-flex items-center px-2 py-1 rounded-md bg-muted font-medium">
 										${template.defaultAmount.toFixed(2)}
