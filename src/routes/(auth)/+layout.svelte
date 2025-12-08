@@ -7,6 +7,7 @@
 	import { page } from "$app/stores";
     import * as Drawer from "$lib/components/ui/drawer/index.js";
 	import { Separator } from "$lib/components/ui/separator";
+	import * as Breadcrumb from "$lib/components/ui/breadcrumb";
 
 	let { children, data } = $props();
 
@@ -44,6 +45,94 @@
 		goto(href);
 		closeDrawer();
 	}
+
+	// Generate breadcrumb items based on current path
+	type BreadcrumbItem = {
+		label: string;
+		href: string;
+		isCurrentPage: boolean;
+	};
+
+	const breadcrumbItems = $derived(() => {
+		const pathname = $page.url.pathname;
+		const segments = pathname.split('/').filter(Boolean);
+		const items: BreadcrumbItem[] = [];
+
+		// Skip breadcrumb for home/root
+		if (segments.length === 0) {
+			return items;
+		}
+
+		// Add Home
+		items.push({
+			label: 'Home',
+			href: '/',
+			isCurrentPage: false
+		});
+
+		// Parse segments
+		for (let i = 0; i < segments.length; i++) {
+			const segment = segments[i];
+			const isLast = i === segments.length - 1;
+
+			if (segment === 'vaults') {
+				items.push({
+					label: 'Vaults',
+					href: '/vaults',
+					isCurrentPage: isLast
+				});
+			} else if (segments[i - 1] === 'vaults' && segment !== 'new') {
+				// This is a vault ID
+				const vault = data.vaults.find(v => v.id === segment);
+				items.push({
+					label: vault?.name || 'Vault',
+					href: `/vaults/${segment}`,
+					isCurrentPage: isLast
+				});
+			} else if (segment === 'expenses') {
+				const vaultId = segments[i - 1];
+				items.push({
+					label: 'Expenses',
+					href: `/vaults/${vaultId}/expenses`,
+					isCurrentPage: isLast
+				});
+			} else if (segment === 'templates') {
+				const vaultId = segments[i - 1];
+				items.push({
+					label: 'Templates',
+					href: `/vaults/${vaultId}/templates`,
+					isCurrentPage: isLast
+				});
+			} else if (segment === 'statistics') {
+				const vaultId = segments[i - 1];
+				items.push({
+					label: 'Statistics',
+					href: `/vaults/${vaultId}/statistics`,
+					isCurrentPage: isLast
+				});
+			} else if (segment === 'invitations') {
+				items.push({
+					label: 'Invitations',
+					href: '/invitations',
+					isCurrentPage: isLast
+				});
+			} else if (segment === 'new') {
+				items.push({
+					label: 'New',
+					href: '#',
+					isCurrentPage: isLast
+				});
+			} else if (segment === 'edit') {
+				items.push({
+					label: 'Edit',
+					href: '#',
+					isCurrentPage: isLast
+				});
+			}
+		}
+
+		return items;
+	});
 </script>
 
 <div class="min-h-screen bg-background">
@@ -203,6 +292,30 @@
 			</div>
 		</div>
 	</header>
+
+	<!-- Breadcrumb -->
+	{#if breadcrumbItems().length > 0}
+		<div class="border-b bg-background/95">
+			<div class="container max-w-screen-2xl px-4 py-3">
+				<Breadcrumb.Root>
+					<Breadcrumb.List>
+						{#each breadcrumbItems() as item, index}
+							{#if index > 0}
+								<Breadcrumb.Separator />
+							{/if}
+							<Breadcrumb.Item>
+								{#if item.isCurrentPage}
+									<Breadcrumb.Page>{item.label}</Breadcrumb.Page>
+								{:else}
+									<Breadcrumb.Link href={item.href}>{item.label}</Breadcrumb.Link>
+								{/if}
+							</Breadcrumb.Item>
+						{/each}
+					</Breadcrumb.List>
+				</Breadcrumb.Root>
+			</div>
+		</div>
+	{/if}
 
 	<!-- Main Content -->
 	<main>

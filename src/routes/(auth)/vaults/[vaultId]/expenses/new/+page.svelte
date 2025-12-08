@@ -135,13 +135,19 @@
 
 			<div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
 				{#each templates as template (template.id)}
-					<Card class="hover:shadow-md transition-shadow flex flex-col">
+					<Card
+						class="hover:shadow-md transition-shadow flex flex-col cursor-pointer"
+						onclick={() => handleUseTemplate(template.id)}
+					>
 						<CardContent class="flex flex-col h-full py-4 relative">
 							<!-- Edit Button (Top Right) -->
 							<Button
 								variant="ghost"
 								size="sm"
-								onclick={() => handleEditTemplate(template.id)}
+								onclick={(e) => {
+									e.stopPropagation();
+									handleEditTemplate(template.id);
+								}}
 								class="absolute top-2 right-2 px-2"
 							>
 								<svg
@@ -190,12 +196,6 @@
 									Used {template.usageCount} {template.usageCount === 1 ? 'time' : 'times'}
 								</p>
 							{/if}
-
-							<div class="mt-auto flex justify-center">
-								<Button onclick={() => handleUseTemplate(template.id)} class="w-full max-w-[200px]">
-									Use Template
-								</Button>
-							</div>
 						</CardContent>
 					</Card>
 				{/each}
