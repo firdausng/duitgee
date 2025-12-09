@@ -109,13 +109,13 @@
 				</Button>
 			</div>
 
-			<div class="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-4 text-sm">
+			<div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 justify-items-center">
 				{#each templates as template (template.id)}
-					<Card
-						class="hover:shadow-md transition-shadow flex flex-col cursor-pointer"
-						onclick={() => handleUseTemplate(template.id)}
-					>
-						<CardContent class="flex flex-col h-full py-2 relative">
+					<div class="w-full max-w-[200px]">
+						<Card
+							class="p-3 cursor-pointer hover:shadow-md transition-shadow duration-200 hover:border-primary/50 relative"
+							onclick={() => handleUseTemplate(template.id)}
+						>
 							<!-- Edit Button (Top Right) -->
 							<Button
 								variant="ghost"
@@ -124,11 +124,11 @@
 									e.stopPropagation();
 									handleEditTemplate(template.id);
 								}}
-								class="absolute top-2 right-2 px-2"
+								class="absolute top-1 right-1 px-1 h-6"
 							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
-									class="h-4 w-4"
+									class="h-3 w-3"
 									viewBox="0 0 20 20"
 									fill="currentColor"
 								>
@@ -137,43 +137,32 @@
 								<span class="sr-only">Edit</span>
 							</Button>
 
-							<!-- Icon -->
-							<div class="flex justify-center">
-								<div
-									class="p-1 rounded-lg flex items-center justify-center bg-primary/10"
-								>
-									{template.icon || '📝'}
+							<div class="space-y-2">
+								<!-- Icon and Name -->
+								<div class="flex flex-col items-center text-center gap-1">
+									<div class="text-2xl">{template.icon || '📝'}</div>
+									<div class="text-xs font-medium break-words w-full">{template.name}</div>
 								</div>
-							</div>
 
-							<!-- Name and Description -->
-							<div class="">
-								<h3 class="font-semibold break-words text-center mb-1">{template.name}</h3>
-								{#if template.description}
-									<p class="text-sm text-muted-foreground line-clamp-2 text-center">{template.description}</p>
+								<!-- Amount and Category -->
+								<div class="space-y-0.5 text-center">
+									{#if template.defaultAmount}
+										<div class="font-bold text-sm">${template.defaultAmount.toFixed(2)}</div>
+									{/if}
+									{#if template.defaultCategoryName}
+										<p class="text-xs text-muted-foreground">{template.defaultCategoryName}</p>
+									{/if}
+								</div>
+
+								<!-- Usage Count -->
+								{#if template.usageCount > 0}
+									<p class="text-xs text-muted-foreground text-center">
+										{template.usageCount} {template.usageCount === 1 ? 'time' : 'times'}
+									</p>
 								{/if}
 							</div>
-
-							<div class="flex flex-wrap justify-center gap-2 text-xs">
-								{#if template.defaultAmount}
-									<span class="inline-flex items-center px-2 py-1 rounded-md bg-muted font-medium">
-										${template.defaultAmount.toFixed(2)}
-									</span>
-								{/if}
-								{#if template.defaultCategoryName}
-									<span class="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary">
-										{template.defaultCategoryName}
-									</span>
-								{/if}
-							</div>
-
-							{#if template.usageCount > 0}
-								<p class="text-xs text-muted-foreground mb-1 text-center">
-									Used {template.usageCount} {template.usageCount === 1 ? 'time' : 'times'}
-								</p>
-							{/if}
-						</CardContent>
-					</Card>
+						</Card>
+					</div>
 				{/each}
 			</div>
 		{:else}
