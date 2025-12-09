@@ -16,6 +16,29 @@
 
     let {value = $bindable(), allExpenses, onValueChange}: Props = $props();
 
+    // Format the date range for display
+    const dateRangeLabel = $derived.by(() => {
+        if (!value?.start || !value?.end) return 'Select a date range';
+
+        const startDate = new Date(value.start.year, value.start.month - 1, value.start.day);
+        const endDate = new Date(value.end.year, value.end.month - 1, value.end.day);
+
+        const formatOptions: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+
+        // If same day, show single date
+        if (startDate.getTime() === endDate.getTime()) {
+            return startDate.toLocaleDateString('en-US', formatOptions);
+        }
+
+        // If same year, omit year from start date
+        if (startDate.getFullYear() === endDate.getFullYear()) {
+            return `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', formatOptions)}`;
+        }
+
+        // Different years, show full dates
+        return `${startDate.toLocaleDateString('en-US', formatOptions)} - ${endDate.toLocaleDateString('en-US', formatOptions)}`;
+    });
+
     // Calculate daily totals for calendar display (using ALL expenses, independent of filter)
     const dailyTotals = $derived.by(() => {
         const totals = new Map<string, number>();
@@ -46,7 +69,7 @@
                 </svg>
                 <div class="text-left">
                     <h3 class="text-sm font-semibold">Calendar</h3>
-                    <p class="text-xs text-muted-foreground">Select a date range to view expenses</p>
+                    <p class="text-xs text-muted-foreground">{dateRangeLabel}</p>
                 </div>
             </div>
         </AccordionTrigger>
