@@ -147,6 +147,15 @@
 					Sign up
 				</a>
 			</div>
+			<div class="text-muted-foreground text-center text-xs">
+				<a href="/privacy" class="hover:underline">
+					Privacy Policy
+				</a>
+				<span class="mx-2">·</span>
+				<a href="/terms" class="hover:underline">
+					Terms of Service
+				</a>
+			</div>
 		</CardFooter>
 	</Card>
 </div>

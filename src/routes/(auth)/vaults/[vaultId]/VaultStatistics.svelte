@@ -100,10 +100,17 @@
                             onclick={() => handleCategoryClick(category.categoryName)}
                             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCategoryClick(category.categoryName); }}
                         >
-                            <div class="space-y-1 text-center">
-                                <div class="text-xs font-medium break-words">{category.categoryName}</div>
-                                <div class="font-bold text-sm">{formatCurrency(category.totalAmount)}</div>
-                                <p class="text-xs text-muted-foreground">{category.count} item{category.count !== 1 ? 's' : ''}</p>
+                            <div class="space-y-2">
+                                <div class="flex flex-col items-center text-center gap-1">
+                                    {#if category.categoryIcon}
+                                        <div class="text-2xl">{category.categoryIcon}</div>
+                                    {/if}
+                                    <div class="text-xs font-medium break-words w-full">{category.categoryName}</div>
+                                </div>
+                                <div class="space-y-0.5 text-center">
+                                    <div class="font-bold text-sm">{formatCurrency(category.totalAmount)}</div>
+                                    <p class="text-xs text-muted-foreground">{category.count} item{category.count !== 1 ? 's' : ''}</p>
+                                </div>
                             </div>
                         </Card>
                     </div>

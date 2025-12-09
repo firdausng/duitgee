@@ -38,6 +38,8 @@ export type VaultStatistics = {
     }>;
     byCategory: Array<{
         categoryName: string;
+        categoryIcon?: string;
+        categoryIconType?: string;
         totalAmount: number;
         count: number;
     }>;

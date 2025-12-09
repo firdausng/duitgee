@@ -3,6 +3,7 @@ import * as schema from "$lib/server/db/schema";
 import { expenses, expenseTemplates, vaultMembers } from "$lib/server/db/schema";
 import { eq, and, sql, isNull } from "drizzle-orm";
 import { checkVaultPermission } from "$lib/server/utils/vaultPermissions";
+import { categoryData } from "$lib/configurations/categories";
 
 export const getVaultStatistics = async (
     vaultId: string,
@@ -84,6 +85,11 @@ export const getVaultStatistics = async (
         .where(baseWhereClause)
         .groupBy(expenses.paidBy, vaultMembers.displayName);
 
+    // Create a map of category names to category data for quick lookup
+    const categoryMap = new Map(
+        categoryData.categories.map(cat => [cat.name, cat])
+    );
+
     return {
         total: {
             amount: totals.totalAmount,
@@ -96,11 +102,16 @@ export const getVaultStatistics = async (
             totalAmount: item.totalAmount,
             count: item.count,
         })),
-        byCategory: expensesByCategory.map(item => ({
-            categoryName: item.categoryName,
-            totalAmount: item.totalAmount,
-            count: item.count,
-        })),
+        byCategory: expensesByCategory.map(item => {
+            const categoryInfo = categoryMap.get(item.categoryName);
+            return {
+                categoryName: item.categoryName,
+                categoryIcon: categoryInfo?.icon,
+                categoryIconType: categoryInfo?.iconType,
+                totalAmount: item.totalAmount,
+                count: item.count,
+            };
+        }),
         byMember: expensesByMember.map(item => ({
             userId: item.userId,
             displayName: item.displayName || 'Vault-level expense',

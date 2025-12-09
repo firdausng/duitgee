@@ -85,8 +85,11 @@
                                 <!-- Category and Paid By -->
                                 <div class="flex flex-wrap items-center gap-2 text-xs">
                                     {#if expense.category?.name}
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
-                                            {expense.category.name}
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
+                                            {#if expense.category.icon}
+                                                <span class="text-sm">{expense.category.icon}</span>
+                                            {/if}
+                                            <span>{expense.category.name}</span>
                                         </span>
                                     {:else}
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-destructive/10 text-destructive text-xs font-medium">

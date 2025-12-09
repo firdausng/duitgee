@@ -6,6 +6,8 @@
 	type Category = {
 		name: string;
 		group: string;
+		icon?: string;
+		iconType?: string;
 	};
 
 	type Props = {
@@ -35,6 +37,11 @@
 	let searchQuery = $state('');
 	let isOpen = $state(false);
 	let inputRef: HTMLInputElement | null = $state(null);
+
+	// Find selected category
+	const selectedCategory = $derived(
+		categories.find(cat => cat.name === value)
+	);
 
 	// Group categories
 	const groupedCategories = $derived(
@@ -102,6 +109,11 @@
 
 		<!-- Display/Search Input -->
 		<div class="relative">
+			{#if selectedCategory?.icon && !searchQuery}
+				<span class="absolute left-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none">
+					{selectedCategory.icon}
+				</span>
+			{/if}
 			<Input
 				bind:ref={inputRef}
 				type="text"
@@ -110,7 +122,7 @@
 				onfocus={handleInputFocus}
 				onblur={handleInputBlur}
 				{disabled}
-				class={cn(error ? 'border-destructive' : '', 'pr-20')}
+				class={cn(error ? 'border-destructive' : '', selectedCategory?.icon && !searchQuery ? 'pl-10 pr-20' : 'pr-20')}
 			/>
 
 			{#if value}
@@ -148,13 +160,16 @@
 							{#each cats as category}
 								<button
 									type="button"
-									class="w-full text-left px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors"
+									class="w-full text-left px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors flex items-center gap-2"
 									onmousedown={(e) => {
 										e.preventDefault();
 										handleSelect(category.name);
 									}}
 								>
-									{category.name}
+									{#if category.icon}
+										<span class="text-lg">{category.icon}</span>
+									{/if}
+									<span>{category.name}</span>
 								</button>
 							{/each}
 						</div>
