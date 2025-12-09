@@ -1,7 +1,7 @@
 import {format, parseISO} from "date-fns";
 import type {Expense} from "../types";
 
-export type DateFilter = 'all' | 'today' | 'week' | 'month' | 'year' | 'custom';
+export type DateFilter = 'all' | 'today' | 'week' | 'month' | 'year';
 
 export type DateGroup = {
     dateKey: string;
@@ -120,8 +120,6 @@ export function getDateFilterLabel(dateFilter: DateFilter): string {
             return 'This Year';
         case 'all':
             return 'All Time';
-        case 'custom':
-            return 'Custom Range';
         default:
             return 'All Time';
     }

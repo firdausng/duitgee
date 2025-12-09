@@ -17,15 +17,13 @@
     import ExpenseListByDate from "./ExpenseListByDate.svelte";
     import CalendarSection from "./CalendarSection.svelte";
     import {
-        getDateRange,
         groupExpensesByDate,
         formatCurrency,
         formatDate,
         getDateFilterLabel,
         type DateFilter
     } from "./utils";
-    import {localDatetimeToUtcIso} from "$lib/utils";
-    import {now, getLocalTimeZone} from "@internationalized/date";
+    import {now, getLocalTimeZone, CalendarDate} from "@internationalized/date";
     import type {DateRange} from "bits-ui";
 
     let {data} = $props();
@@ -34,7 +32,7 @@
     // Schema for statistics page query params
     const statisticsParamsSchema = v.object({
         filterType: v.optional(v.picklist(['template', 'category', 'member']), 'template'),
-        dateFilter: v.optional(v.picklist(['all', 'today', 'week', 'month', 'year', 'custom']), 'all'),
+        dateFilter: v.optional(v.picklist(['all', 'today', 'week', 'month', 'year']), 'all'),
         filterName: v.optional(v.fallback(v.string(), ""), ""),
         startDate: v.optional(v.fallback(v.string(), ""), ""),
         endDate: v.optional(v.fallback(v.string(), ""), ""),
@@ -79,6 +77,141 @@
         dateFilter = (params.dateFilter as DateFilter) || 'all';
     });
 
+    // Initialize calendar from URL params or preset filter on mount
+    let isInitialized = $state(false);
+
+    $effect(() => {
+        if (isInitialized) return;
+
+        const now = new Date();
+
+        // If we have URL params for dates, use them
+        if (params.startDate && params.endDate) {
+            try {
+                const start = new Date(params.startDate);
+                const end = new Date(params.endDate);
+
+                calendarValue = {
+                    start: new CalendarDate(start.getFullYear(), start.getMonth() + 1, start.getDate()),
+                    end: new CalendarDate(end.getFullYear(), end.getMonth() + 1, end.getDate())
+                };
+            } catch (e) {
+                console.error('Failed to parse dates from params', e);
+            }
+        } else {
+            // Otherwise use preset filter
+            switch (dateFilter) {
+                case 'today': {
+                    const todayDate = new CalendarDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+                    calendarValue = { start: todayDate, end: todayDate };
+                    break;
+                }
+                case 'week': {
+                    const dayOfWeek = now.getDay();
+                    const start = new Date(now);
+                    start.setDate(now.getDate() - dayOfWeek);
+                    const end = new Date(start);
+                    end.setDate(start.getDate() + 6);
+                    calendarValue = {
+                        start: new CalendarDate(start.getFullYear(), start.getMonth() + 1, start.getDate()),
+                        end: new CalendarDate(end.getFullYear(), end.getMonth() + 1, end.getDate())
+                    };
+                    break;
+                }
+                case 'month': {
+                    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    calendarValue = {
+                        start: new CalendarDate(firstDay.getFullYear(), firstDay.getMonth() + 1, firstDay.getDate()),
+                        end: new CalendarDate(lastDay.getFullYear(), lastDay.getMonth() + 1, lastDay.getDate())
+                    };
+                    break;
+                }
+                case 'year': {
+                    calendarValue = {
+                        start: new CalendarDate(now.getFullYear(), 1, 1),
+                        end: new CalendarDate(now.getFullYear(), 12, 31)
+                    };
+                    break;
+                }
+                default: {
+                    const todayDate = new CalendarDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+                    calendarValue = { start: todayDate, end: todayDate };
+                }
+            }
+        }
+
+        isInitialized = true;
+    });
+
+    // When date filter button is clicked, update calendar
+    let lastDateFilter = $state(dateFilter);
+    $effect(() => {
+        if (!isInitialized) return;
+        if (dateFilter === lastDateFilter) return;
+
+        lastDateFilter = dateFilter;
+        const now = new Date();
+
+        switch (dateFilter) {
+            case 'today': {
+                const todayDate = new CalendarDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+                calendarValue = { start: todayDate, end: todayDate };
+                break;
+            }
+            case 'week': {
+                const dayOfWeek = now.getDay();
+                const start = new Date(now);
+                start.setDate(now.getDate() - dayOfWeek);
+                const end = new Date(start);
+                end.setDate(start.getDate() + 6);
+                calendarValue = {
+                    start: new CalendarDate(start.getFullYear(), start.getMonth() + 1, start.getDate()),
+                    end: new CalendarDate(end.getFullYear(), end.getMonth() + 1, end.getDate())
+                };
+                break;
+            }
+            case 'month': {
+                const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                calendarValue = {
+                    start: new CalendarDate(firstDay.getFullYear(), firstDay.getMonth() + 1, firstDay.getDate()),
+                    end: new CalendarDate(lastDay.getFullYear(), lastDay.getMonth() + 1, lastDay.getDate())
+                };
+                break;
+            }
+            case 'year': {
+                calendarValue = {
+                    start: new CalendarDate(now.getFullYear(), 1, 1),
+                    end: new CalendarDate(now.getFullYear(), 12, 31)
+                };
+                break;
+            }
+            case 'all': {
+                const todayDate = new CalendarDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+                calendarValue = { start: todayDate, end: todayDate };
+                break;
+            }
+        }
+    });
+
+    // Update URL params when calendar value changes (but not during initialization)
+    let lastCalendarValue: string | undefined = $state();
+    $effect(() => {
+        if (!isInitialized || !calendarValue?.start || !calendarValue?.end) return;
+
+        const currentValue = `${calendarValue.start.year}-${calendarValue.start.month}-${calendarValue.start.day}_${calendarValue.end.year}-${calendarValue.end.month}-${calendarValue.end.day}`;
+
+        if (currentValue === lastCalendarValue) return;
+        lastCalendarValue = currentValue;
+
+        const start = new Date(calendarValue.start.year, calendarValue.start.month - 1, calendarValue.start.day);
+        const end = new Date(calendarValue.end.year, calendarValue.end.month - 1, calendarValue.end.day);
+
+        params.startDate = start.toISOString().split('T')[0];
+        params.endDate = end.toISOString().split('T')[0];
+    });
+
     // Resource for vault data
     const vaultResource = resource(
         () => [vaultId, vaultRefetchKey] as const,
@@ -103,56 +236,40 @@
         }
     );
 
-    // Resource for filtered expenses - reactive to date selection
+    // Resource for filtered expenses - reactive to calendar selection
     const expensesResource = resource(
-        () => [vaultId, dateFilter, calendarValue?.start, calendarValue?.end, params.startDate, params.endDate, refetchKey] as const,
-        async ([id, dateF, calStart, calEnd, startDate, endDate]) => {
-            let dateRange: { startDate?: string; endDate?: string };
-
-            // Use calendar dates if in custom mode, otherwise use predefined ranges
-            if (dateF === 'custom') {
-                dateRange = getDateRangeFromCalendar();
-            } else {
-                dateRange = getDateRange(dateF as DateFilter,
-                    startDate ? localDatetimeToUtcIso(startDate) : undefined,
-                    endDate ? localDatetimeToUtcIso(endDate) : undefined
-                );
-            }
-
+        () => [vaultId, calendarValue?.start, calendarValue?.end, dateFilter, refetchKey] as const,
+        async ([id, calStart, calEnd, dateF]) => {
             const urlParams = new URLSearchParams({
                 vaultId: id,
                 page: '1',
                 limit: '1000'
             });
 
-            if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
-            if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
+            // Use calendar value for date filtering (synced with date filter buttons)
+            if (dateF !== 'all') {
+                const dateRange = getDateRangeFromCalendar();
+                if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
+                if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
+            }
 
             const response = await ofetch<{ expenses: Expense[], pagination: any }>(`/api/getExpenses?${urlParams.toString()}`);
             return response.expenses || [];
         }
     );
 
-    // Resource for overall statistics
+    // Resource for overall statistics - reactive to calendar selection
     const statisticsResource = resource(
-        () => [vaultId, dateFilter, calendarValue?.start, calendarValue?.end, params.startDate, params.endDate, refetchKey] as const,
-        async ([id, dateF, calStart, calEnd, startDate, endDate]) => {
-            let dateRange: { startDate?: string; endDate?: string };
-
-            // Use calendar dates if in custom mode, otherwise use predefined ranges
-            if (dateF === 'custom') {
-                dateRange = getDateRangeFromCalendar();
-            } else {
-                dateRange = getDateRange(dateF as DateFilter,
-                    startDate ? localDatetimeToUtcIso(startDate) : undefined,
-                    endDate ? localDatetimeToUtcIso(endDate) : undefined
-                );
-            }
-
+        () => [vaultId, calendarValue?.start, calendarValue?.end, dateFilter, refetchKey] as const,
+        async ([id, calStart, calEnd, dateF]) => {
             const urlParams = new URLSearchParams({vaultId: id});
 
-            if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
-            if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
+            // Use calendar value for date filtering (synced with date filter buttons)
+            if (dateF !== 'all') {
+                const dateRange = getDateRangeFromCalendar();
+                if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
+                if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
+            }
 
             const response = await ofetch<{ success: boolean, data: VaultStatistics }>(`/api/getVaultStatistics?${urlParams.toString()}`);
             return response.data;
@@ -322,14 +439,12 @@
             onFilterChange={(filter) => params.dateFilter = filter}
         />
 
-        <!-- Calendar Section (shown only in custom mode) -->
-        {#if dateFilter === 'custom'}
-            <CalendarSection
-                bind:value={calendarValue}
-                allExpenses={allExpenses}
-                onValueChange={(value) => calendarValue = value}
-            />
-        {/if}
+        <!-- Calendar Section -->
+        <CalendarSection
+            bind:value={calendarValue}
+            allExpenses={allExpenses}
+            onValueChange={(value) => calendarValue = value}
+        />
 
         <!-- Total Card -->
         {#if statistics}
