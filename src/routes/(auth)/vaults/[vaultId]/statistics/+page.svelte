@@ -15,6 +15,7 @@
     import FilterTypeTabs from "./FilterTypeTabs.svelte";
     import CurrentFilterChip from "./CurrentFilterChip.svelte";
     import ExpenseListByDate from "./ExpenseListByDate.svelte";
+    import CalendarSection from "./CalendarSection.svelte";
     import {
         getDateRange,
         groupExpensesByDate,
@@ -24,6 +25,8 @@
         type DateFilter
     } from "./utils";
     import {localDatetimeToUtcIso} from "$lib/utils";
+    import {now, getLocalTimeZone} from "@internationalized/date";
+    import type {DateRange} from "bits-ui";
 
     let {data} = $props();
     let {vaultId} = data;
@@ -46,10 +49,30 @@
     // Drawer state for filter selection
     let filterDrawerOpen = $state(false);
 
+    // Calendar value - initialize to current month
+    const today = now(getLocalTimeZone());
+    let calendarValue = $state<DateRange | undefined>({
+        start: today,
+        end: today,
+    });
+
     // Derived filter values
     let filterType = $derived(params.filterType || 'template');
     let dateFilter = $state<DateFilter>(params.dateFilter || 'all');
     let filterName = $derived(params.filterName);
+
+    // Convert CalendarDate range to ISO date strings for API
+    function getDateRangeFromCalendar(): { startDate?: string; endDate?: string } {
+        if (!calendarValue?.start || !calendarValue?.end) return {};
+
+        const start = new Date(calendarValue.start.year, calendarValue.start.month - 1, calendarValue.start.day, 0, 0, 0);
+        const end = new Date(calendarValue.end.year, calendarValue.end.month - 1, calendarValue.end.day, 23, 59, 59, 999);
+
+        return {
+            startDate: start.toISOString(),
+            endDate: end.toISOString()
+        };
+    }
 
     // Update dateFilter when params change
     $effect(() => {
@@ -65,14 +88,36 @@
         }
     );
 
-    // Resource for all expenses (filtered by date only)
+    // Resource for ALL expenses (for calendar daily totals - independent of filter)
+    const allExpensesResource = resource(
+        () => [vaultId, refetchKey] as const,
+        async ([id]) => {
+            const urlParams = new URLSearchParams({
+                vaultId: id,
+                page: '1',
+                limit: '1000' // Get all expenses
+            });
+
+            const response = await ofetch<{ expenses: Expense[], pagination: any }>(`/api/getExpenses?${urlParams.toString()}`);
+            return response.expenses || [];
+        }
+    );
+
+    // Resource for filtered expenses - reactive to date selection
     const expensesResource = resource(
-        () => [vaultId, dateFilter, params.startDate, params.endDate, refetchKey] as const,
-        async ([id, dateF, startDate, endDate]) => {
-            const dateRange = getDateRange(dateF as DateFilter,
-                startDate ? localDatetimeToUtcIso(startDate) : undefined,
-                endDate ? localDatetimeToUtcIso(endDate) : undefined
-            );
+        () => [vaultId, dateFilter, calendarValue?.start, calendarValue?.end, params.startDate, params.endDate, refetchKey] as const,
+        async ([id, dateF, calStart, calEnd, startDate, endDate]) => {
+            let dateRange: { startDate?: string; endDate?: string };
+
+            // Use calendar dates if in custom mode, otherwise use predefined ranges
+            if (dateF === 'custom') {
+                dateRange = getDateRangeFromCalendar();
+            } else {
+                dateRange = getDateRange(dateF as DateFilter,
+                    startDate ? localDatetimeToUtcIso(startDate) : undefined,
+                    endDate ? localDatetimeToUtcIso(endDate) : undefined
+                );
+            }
 
             const urlParams = new URLSearchParams({
                 vaultId: id,
@@ -90,12 +135,19 @@
 
     // Resource for overall statistics
     const statisticsResource = resource(
-        () => [vaultId, dateFilter, params.startDate, params.endDate, refetchKey] as const,
-        async ([id, dateF, startDate, endDate]) => {
-            const dateRange = getDateRange(dateF as DateFilter,
-                startDate ? localDatetimeToUtcIso(startDate) : undefined,
-                endDate ? localDatetimeToUtcIso(endDate) : undefined
-            );
+        () => [vaultId, dateFilter, calendarValue?.start, calendarValue?.end, params.startDate, params.endDate, refetchKey] as const,
+        async ([id, dateF, calStart, calEnd, startDate, endDate]) => {
+            let dateRange: { startDate?: string; endDate?: string };
+
+            // Use calendar dates if in custom mode, otherwise use predefined ranges
+            if (dateF === 'custom') {
+                dateRange = getDateRangeFromCalendar();
+            } else {
+                dateRange = getDateRange(dateF as DateFilter,
+                    startDate ? localDatetimeToUtcIso(startDate) : undefined,
+                    endDate ? localDatetimeToUtcIso(endDate) : undefined
+                );
+            }
 
             const urlParams = new URLSearchParams({vaultId: id});
 
@@ -109,7 +161,8 @@
 
     // Derive data from resources
     const currentVault = $derived(vaultResource.current);
-    const allExpenses = $derived(expensesResource.current || []);
+    const allExpenses = $derived(allExpensesResource.current || []); // For calendar daily totals
+    const filteredExpensesList = $derived(expensesResource.current || []); // For the filtered list
     const statistics = $derived(statisticsResource.current || null);
     const isLoadingVault = $derived(vaultResource.loading);
     const isLoadingExpenses = $derived(expensesResource.loading);
@@ -167,29 +220,29 @@
         }
     });
 
-    // All tabs use date-grouped view
+    // Filter by type (template/category/member) after date filtering
     const filteredExpenses = $derived.by(() => {
         // Filter expenses based on filterType and filterName
         const currentFilterType = filterType;
         const currentFilterName = filterName;
         const currentFilterId = filterId;
-        let filtered = allExpenses;
+        let filtered = filteredExpensesList;
 
         if (currentFilterName) {
             switch (currentFilterType) {
                 case 'category':
-                    filtered = allExpenses.filter(expense => expense.category?.name === currentFilterName);
+                    filtered = filteredExpensesList.filter(expense => expense.category?.name === currentFilterName);
                     break;
                 case 'template':
                     if (currentFilterId) {
-                        filtered = allExpenses.filter(expense =>
+                        filtered = filteredExpensesList.filter(expense =>
                             String(expense.templateId) === String(currentFilterId)
                         );
                     }
                     break;
                 case 'member':
                     if (currentFilterId) {
-                        filtered = allExpenses.filter(expense => expense.paidBy === currentFilterId);
+                        filtered = filteredExpensesList.filter(expense => expense.paidBy === currentFilterId);
                     }
                     break;
             }
@@ -269,6 +322,15 @@
             onFilterChange={(filter) => params.dateFilter = filter}
         />
 
+        <!-- Calendar Section (shown only in custom mode) -->
+        {#if dateFilter === 'custom'}
+            <CalendarSection
+                bind:value={calendarValue}
+                allExpenses={allExpenses}
+                onValueChange={(value) => calendarValue = value}
+            />
+        {/if}
+
         <!-- Total Card -->
         {#if statistics}
             <Card class="mb-2 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
@@ -331,7 +393,7 @@
         bind:open={filterDrawerOpen}
         filterOptions={filterOptions}
         selectedName={filterName}
-        allExpensesCount={allExpenses.length}
+        allExpensesCount={filteredExpensesList.length}
         filterType={filterType}
         onOpenChange={(open) => filterDrawerOpen = open}
         onSelectAll={() => { params.filterName = ""; filterDrawerOpen = false; }}

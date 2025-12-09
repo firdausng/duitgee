@@ -89,10 +89,12 @@ export function groupExpensesByDate(expenses: Expense[]): DateGroup[] {
         }));
 }
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number, decimals = 2): string {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: 'USD'
+        currency: 'USD',
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
     }).format(amount);
 }
 
