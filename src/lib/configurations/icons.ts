@@ -81,6 +81,8 @@ export const iconData: { icons: IconItem[] } = {
 		{ icon: '🚡', name: 'Aerial Tramway', keywords: ['tramway', 'aerial', 'cable', 'mountain'], group: 'Transportation & Vehicles' },
 		{ icon: '🛰️', name: 'Satellite', keywords: ['satellite', 'space', 'orbit', 'communication'], group: 'Transportation & Vehicles' },
 		{ icon: '🚀', name: 'Rocket', keywords: ['rocket', 'space', 'launch', 'spacecraft'], group: 'Transportation & Vehicles' },
+		{ icon: '⛽', name: 'Fuel Pump', keywords: ['fuel', 'gas', 'petrol', 'station'], group: 'Transportation & Vehicles' },
+		{ icon: '🅿️', name: 'Parking', keywords: ['parking', 'park', 'car', 'lot'], group: 'Transportation & Vehicles' },
 
 		// Food & Dining
 		{ icon: '🍔', name: 'Hamburger', keywords: ['burger', 'food', 'fast food', 'meal'], group: 'Food & Dining' },
@@ -287,6 +289,7 @@ export const iconData: { icons: IconItem[] } = {
 		{ icon: '🛍️', name: 'Shopping Bags', keywords: ['shopping', 'bags', 'purchase', 'retail'], group: 'Shopping & Retail' },
 		{ icon: '🎁', name: 'Gift', keywords: ['gift', 'present', 'wrapped', 'surprise'], group: 'Shopping & Retail' },
 		{ icon: '🏷️', name: 'Label', keywords: ['label', 'tag', 'price', 'sale'], group: 'Shopping & Retail' },
+		{ icon: '📦', name: 'Package', keywords: ['package', 'box', 'delivery', 'shipping'], group: 'Shopping & Retail' },
 
 		// Store Types
 		{ icon: '🏪', name: 'Convenience Store', keywords: ['convenience', '7-11', 'mini mart', 'store', 'shop'], group: 'Shopping & Retail' },
@@ -364,6 +367,7 @@ export const iconData: { icons: IconItem[] } = {
 		{ icon: '🤾', name: 'Handball', keywords: ['handball', 'sport', 'ball', 'game'], group: 'Sports & Recreation' },
 		{ icon: '🧗', name: 'Rock Climbing', keywords: ['climbing', 'rock', 'sport', 'mountain'], group: 'Sports & Recreation' },
 		{ icon: '🏋️', name: 'Weightlifting', keywords: ['gym', 'workout', 'fitness', 'weight'], group: 'Sports & Recreation' },
+		{ icon: '🏃', name: 'Runner', keywords: ['running', 'jogging', 'fitness', 'sport'], group: 'Sports & Recreation' },
 		{ icon: '🤹', name: 'Juggling', keywords: ['juggling', 'circus', 'skill', 'hobby'], group: 'Sports & Recreation' },
 		{ icon: '🧘', name: 'Yoga', keywords: ['yoga', 'meditation', 'wellness', 'fitness'], group: 'Sports & Recreation' },
 		{ icon: '⛷️', name: 'Skiing', keywords: ['skiing', 'ski', 'snow', 'winter'], group: 'Sports & Recreation' },
@@ -434,6 +438,10 @@ export const iconData: { icons: IconItem[] } = {
 		{ icon: '🧴', name: 'Lotion', keywords: ['lotion', 'cream', 'skincare', 'bottle'], group: 'Health & Medical' },
 		{ icon: '💆', name: 'Massage', keywords: ['massage', 'spa', 'relax', 'therapy'], group: 'Health & Medical' },
 		{ icon: '🧘', name: 'Meditation', keywords: ['meditation', 'yoga', 'wellness', 'peace'], group: 'Health & Medical' },
+		{ icon: '🧠', name: 'Brain', keywords: ['brain', 'mind', 'mental', 'health'], group: 'Health & Medical' },
+		{ icon: '🧪', name: 'Test Tube', keywords: ['test tube', 'lab', 'science', 'medical'], group: 'Health & Medical' },
+		{ icon: '🦷', name: 'Tooth', keywords: ['tooth', 'dental', 'dentist', 'care'], group: 'Health & Medical' },
+		{ icon: '⚕️', name: 'Medical Symbol', keywords: ['medical', 'health', 'doctor', 'healthcare'], group: 'Health & Medical' },
 
 		// Education & Work
 		{ icon: '📚', name: 'Books', keywords: ['books', 'reading', 'library', 'study'], group: 'Education & Work' },
@@ -507,6 +515,7 @@ export const iconData: { icons: IconItem[] } = {
 		{ icon: '🔧', name: 'Wrench', keywords: ['wrench', 'tool', 'repair', 'fix'], group: 'Education & Work' },
 		{ icon: '⚙️', name: 'Gear', keywords: ['gear', 'settings', 'mechanical', 'work'], group: 'Education & Work' },
 		{ icon: '🗂️', name: 'Dividers', keywords: ['dividers', 'organize', 'filing', 'tabs'], group: 'Education & Work' },
+		{ icon: '📜', name: 'Scroll', keywords: ['scroll', 'document', 'certificate', 'ancient'], group: 'Education & Work' },
 
 		// Utilities & Services
 		{ icon: '🔧', name: 'Wrench', keywords: ['wrench', 'tool', 'repair', 'fix'], group: 'Utilities & Services' },
@@ -524,6 +533,11 @@ export const iconData: { icons: IconItem[] } = {
 		{ icon: '🔑', name: 'Key', keywords: ['key', 'unlock', 'access', 'security'], group: 'Utilities & Services' },
 		{ icon: '🗑️', name: 'Trash', keywords: ['trash', 'garbage', 'delete', 'waste'], group: 'Utilities & Services' },
 		{ icon: '♻️', name: 'Recycle', keywords: ['recycle', 'reuse', 'green', 'environment'], group: 'Utilities & Services' },
+		{ icon: '🛡️', name: 'Shield', keywords: ['shield', 'protection', 'security', 'insurance'], group: 'Utilities & Services' },
+		{ icon: '🛋️', name: 'Couch', keywords: ['couch', 'sofa', 'furniture', 'home'], group: 'Utilities & Services' },
+		{ icon: '🧹', name: 'Broom', keywords: ['broom', 'cleaning', 'sweep', 'clean'], group: 'Utilities & Services' },
+		{ icon: '🔐', name: 'Locked with Key', keywords: ['locked', 'key', 'security', 'safe'], group: 'Utilities & Services' },
+		{ icon: '✉️', name: 'Envelope', keywords: ['envelope', 'mail', 'letter', 'message'], group: 'Utilities & Services' },
 
 		// Nature & Weather
 		{ icon: '🌞', name: 'Sun with Face', keywords: ['sun', 'sunny', 'day', 'bright'], group: 'Nature & Weather' },
@@ -736,6 +750,14 @@ export const iconData: { icons: IconItem[] } = {
 		{ icon: '🏡', name: 'House with Garden', keywords: ['house', 'home', 'family', 'garden'], group: 'Family & People' },
 		{ icon: '🏠', name: 'Home', keywords: ['home', 'house', 'family', 'residence'], group: 'Family & People' },
 		{ icon: '👪', name: 'Family Icon', keywords: ['family', 'people', 'group', 'together'], group: 'Family & People' },
+		{ icon: '🗣️', name: 'Speaking Head', keywords: ['speaking', 'talk', 'speech', 'voice'], group: 'Family & People' },
+		{ icon: '👥', name: 'People', keywords: ['people', 'group', 'users', 'team'], group: 'Family & People' },
+
+		// Animals & Pets
+		{ icon: '🐶', name: 'Dog', keywords: ['dog', 'pet', 'puppy', 'animal'], group: 'Animals & Pets' },
+		{ icon: '🐷', name: 'Pig', keywords: ['pig', 'piggy', 'animal', 'savings'], group: 'Animals & Pets' },
+		{ icon: '🐾', name: 'Paw Prints', keywords: ['paw', 'prints', 'pet', 'animal'], group: 'Animals & Pets' },
+		{ icon: '🦴', name: 'Bone', keywords: ['bone', 'dog', 'pet', 'treat'], group: 'Animals & Pets' },
 
 		// Countries & Flags
 		{ icon: '🇺🇸', name: 'United States', keywords: ['usa', 'america', 'united states', 'flag'], group: 'Countries & Flags' },
