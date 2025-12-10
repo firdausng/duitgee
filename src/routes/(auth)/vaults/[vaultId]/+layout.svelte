@@ -1,7 +1,7 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import { page } from "$app/stores";
-    import { Button } from "$lib/components/ui/button";
+    import { page } from "$app/state";
+    import { FloatingActionButton } from "$lib/components/ui/floating-action-button";
 
     let { children, data } = $props();
 
@@ -12,7 +12,7 @@
     }
 
     // Check if we're on the statistics page to adjust button position
-    let isStatisticsPage = $derived($page.url.pathname.includes('/statistics'));
+    let isStatisticsPage = $derived(page.url.pathname.includes('/statistics'));
 </script>
 
 <div class="relative">
@@ -21,15 +21,14 @@
     </div>
 
     <!-- Floating Action Button -->
-    <div class="fixed right-6 z-50 transition-all duration-200" class:bottom-[7rem]={isStatisticsPage} class:bottom-6={!isStatisticsPage}>
-        <Button
-            onclick={handleNewExpense}
-            size="lg"
-            class="h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-shadow"
-        >
+    <FloatingActionButton
+        onclick={handleNewExpense}
+        class={isStatisticsPage ? 'bottom-[calc(7rem+env(safe-area-inset-bottom))] sm:bottom-[7rem]' : ''}
+    >
+        {#snippet icon()}
             <svg
                 xmlns="http://www.w3.org/2000/svg"
-                class="h-6 w-6"
+                class="w-5 h-5"
                 viewBox="0 0 20 20"
                 fill="currentColor"
             >
@@ -39,7 +38,7 @@
                     clip-rule="evenodd"
                 />
             </svg>
-            <span class="sr-only">Add New Expense</span>
-        </Button>
-    </div>
+        {/snippet}
+        Add Expense
+    </FloatingActionButton>
 </div>
