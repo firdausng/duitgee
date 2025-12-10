@@ -13,7 +13,7 @@
     import type { Expense } from "../types";
     import type { VaultWithMember } from "$lib/schemas/read/vaultWithMember";
     import { format, parseISO } from "date-fns";
-    import { formatCurrency, getDateRangeFromCalendar } from "$lib/utils";
+    import { formatCurrency, getDateRangeFromCalendar, formatDateTime } from "$lib/utils";
 
     let { data } = $props();
     let { vaultId } = data;
@@ -130,16 +130,6 @@
 
     function handleBack() {
         goto(`/vaults/${vaultId}`);
-    }
-
-    function formatDate(dateString: string): string {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
     }
 
     async function handleDeleteExpense(expenseId: string) {
@@ -329,7 +319,7 @@
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                                             <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
                                                         </svg>
-                                                        <span>{formatDate(expense.date)}</span>
+                                                        <span>{formatDateTime(expense.date)}</span>
                                                     </div>
                                                     {#if expense.paidByName}
                                                         <div class="flex items-center gap-2 text-muted-foreground">
@@ -421,7 +411,7 @@
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                                             <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
                                                         </svg>
-                                                        <span>{formatDate(expense.date)}</span>
+                                                        <span>{formatDateTime(expense.date)}</span>
                                                     </div>
                                                     {#if expense.paidByName}
                                                         <div class="flex items-center gap-2 text-muted-foreground">

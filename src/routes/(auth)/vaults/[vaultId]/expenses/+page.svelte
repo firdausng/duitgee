@@ -5,14 +5,12 @@
 	import { resource } from "runed";
 	import { Button } from "$lib/components/ui/button";
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "$lib/components/ui/card";
-	import { localDatetimeToUtcIso, formatCurrency, getDateRange, type DateFilter } from "$lib/utils";
+	import { localDatetimeToUtcIso, formatCurrency, getDateRange, type DateFilter, formatDate } from "$lib/utils";
 	import { scale } from "svelte/transition";
 	import { filterSchema } from "./schemas";
 
 	let { data } = $props();
 	let { vaultId } = data;
-
-	type FilterType = 'all' | 'today' | 'week' | 'month' | 'year' | 'custom';
 
 	type Expense = {
 		id: string;
@@ -121,14 +119,6 @@
 			console.error('Failed to delete expense:', error);
 			alert('Failed to delete expense. Please try again.');
 		}
-	}
-
-	function formatDate(dateString: string): string {
-		return new Date(dateString).toLocaleDateString('en-US', {
-			year: 'numeric',
-			month: 'short',
-			day: 'numeric'
-		});
 	}
 
 	function formatTime(dateString: string): string {

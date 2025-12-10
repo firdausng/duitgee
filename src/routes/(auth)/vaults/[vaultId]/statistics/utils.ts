@@ -3,6 +3,7 @@ import type {Expense} from "../types";
 import {
     formatCurrency as formatCurrencyUtil,
     getDateRange as getDateRangeUtil,
+    formatDateTime as formatDateTimeUtil,
     type DateFilter as DateFilterType
 } from "$lib/utils";
 
@@ -40,18 +41,9 @@ export function groupExpensesByDate(expenses: Expense[]): DateGroup[] {
         }));
 }
 
-// Re-export formatCurrency from global utils
+// Re-export shared functions
 export const formatCurrency = formatCurrencyUtil;
-
-export function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
+export const formatDate = formatDateTimeUtil;
 
 export function getDateFilterLabel(dateFilter: DateFilter): string {
     switch (dateFilter) {

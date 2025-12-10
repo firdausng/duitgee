@@ -180,3 +180,33 @@ export function getDateRangeFromCalendar(calendarValue: {
         endDate: end.toISOString()
     };
 }
+
+/**
+ * Formats an ISO date string to a localized date (without time)
+ *
+ * @param dateString - ISO date string
+ * @returns Formatted date string (e.g., "Dec 8, 2025")
+ */
+export function formatDate(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+/**
+ * Formats an ISO date string to a localized date and time
+ *
+ * @param dateString - ISO date string
+ * @returns Formatted date and time string (e.g., "Dec 8, 2025, 10:30 AM")
+ */
+export function formatDateTime(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}

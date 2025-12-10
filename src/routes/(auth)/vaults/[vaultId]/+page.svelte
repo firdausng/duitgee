@@ -16,7 +16,7 @@
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
     import {Toaster} from "$lib/components/ui/sonner";
     import {toast} from "svelte-sonner";
-    import {localDatetimeToUtcIso, formatCurrency, getDateRange, type DateFilter} from "$lib/utils";
+    import {localDatetimeToUtcIso, formatCurrency, getDateRange, type DateFilter, formatDate} from "$lib/utils";
 
     let {data} = $props();
     let {vaultId} = data;
@@ -149,14 +149,6 @@
 
     function handleBack() {
         goto('/vaults');
-    }
-
-    function formatDate(dateString: string): string {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
     }
 
     function toggleInviteForm() {
