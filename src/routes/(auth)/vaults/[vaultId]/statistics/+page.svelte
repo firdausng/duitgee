@@ -32,8 +32,8 @@
     // Schema for statistics page query params
     const statisticsParamsSchema = v.object({
         filterType: v.optional(v.picklist(['template', 'category', 'member']), 'template'),
-        dateFilter: v.optional(v.picklist(['all', 'today', 'week', 'month', 'year']), 'all'),
-        filterName: v.optional(v.fallback(v.string(), ""), ""),
+        dateFilter: v.optional(v.picklist(['all', 'today', 'week', 'month', 'year']), 'today'),
+        filterName: v.optional(v.fallback(v.string(), ""), "No Template"),
         startDate: v.optional(v.fallback(v.string(), ""), ""),
         endDate: v.optional(v.fallback(v.string(), ""), ""),
     });
@@ -197,6 +197,8 @@
 
         params.startDate = start.toISOString().split('T')[0];
         params.endDate = end.toISOString().split('T')[0];
+        if(!params.filterName) params.filterName = "No Template";
+        if(!params.filterType) params.filterType = "template";
     });
 
     // Resource for vault data
@@ -212,10 +214,35 @@
     const allExpensesResource = resource(
         () => [vaultId, refetchKey] as const,
         async ([id]) => {
+            const now = new Date();
+
+            // Previous month (day = 1)
+            const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const prev = {
+                year: prevDate.getFullYear(),
+                month: prevDate.getMonth() + 1, // +1 because months are 0-based
+                day: 1
+            };
+
+            // Next month (day = last day of next month)
+            const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            const lastDayNextMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0);
+            const next = {
+                year: nextMonth.getFullYear(),
+                month: nextMonth.getMonth() + 1,
+                day: lastDayNextMonth.getDate()
+            };
+
+            const dateRange = getDateRangeFromCalendar({
+                start: prev,
+                end: next,
+            });
             const urlParams = new URLSearchParams({
                 vaultId: id,
                 page: '1',
-                limit: '1000' // Get all expenses
+                limit: '1000', // Get all expenses,
+                startDate: dateRange.startDate!,
+                endDate: dateRange.endDate!
             });
 
             const response = await ofetch<{ expenses: Expense[], pagination: any }>(`/api/getExpenses?${urlParams.toString()}`);
@@ -227,7 +254,7 @@
     const expensesResource = resource(
         () => [vaultId, calendarValue?.start, calendarValue?.end, dateFilter, refetchKey] as const,
         async ([id, calStart, calEnd, dateF]) => {
-            if(calEnd === undefined) return [];
+            if(!calEnd || !calStart) return [];
             const urlParams = new URLSearchParams({
                 vaultId: id,
                 page: '1',
@@ -240,6 +267,9 @@
                 if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
                 if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
             }
+
+            urlParams.append('filterName', params.filterName || 'No Template');
+            urlParams.append('filterType', params.filterType || 'template');
 
             const response = await ofetch<{ expenses: Expense[], pagination: any }>(`/api/getExpenses?${urlParams.toString()}`);
             return response.expenses || [];
