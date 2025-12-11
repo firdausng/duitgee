@@ -10,6 +10,8 @@
     import { IconCombobox } from '$lib/components/ui/icon-combobox';
     import {createVaultSchema} from "$lib/schemas/vaults";
     import { iconData } from '$lib/configurations/icons';
+    import { Toaster } from "$lib/components/ui/sonner";
+    import { toast } from "svelte-sonner";
 
 	let { data } = $props();
 
@@ -23,10 +25,9 @@
         onUpdate: async ({ form }) => {
             isSubmitting = false;
             if (!form.valid) {
+                toast.error('Please fill in all required fields correctly');
                 return;
             }
-
-            console.log('Form data:', form.data);
 
             try {
                 // Set required fields
@@ -36,19 +37,38 @@
                     createdBy: data.currentUserId,
                 };
 
-                const response = await ofetch<{success: boolean, data: {vault: {id: string}}}>(`/api/createVault`, {
+                const response = await ofetch<{success: boolean, data: {vault: {id: string}}, error?: string}>(`/api/createVault`, {
                     method: 'POST',
                     body: JSON.stringify(vaultData),
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+					async onResponseError({ request, response, options }) {
+						// Log error
+						console.error(
+								"[fetch response error]",
+								request,
+								response.status,
+								response.body
+						);
+						// alert(JSON.stringify(response, null, 2));
+						toast.error(response._data.error || 'Failed to create vault');
+					},
                 });
 
-                if(response.success){
-                    await goto(`/vaults/${response.data.vault.id}`);
+                if (response.success === false) {
+                    toast.error(response.error || 'Failed to create vault');
+                    isSubmitting = false;
+                    return;
                 }
-            } catch (error) {
-                console.error('Error creating vault:', error);
+
+                toast.success('Vault created successfully');
+                await goto(`/vaults/${response.data.vault.id}`);
+            } catch (error: any) {
+				// alert(JSON.stringify(error, null, 2));
+                // console.error('Error creating vault:', error);
+                // const errorMessage = error?.data?.error || error?.body?.message || error?.message || 'Failed to create vault. Please try again.';
+                // toast.error(errorMessage);
                 isSubmitting = false;
             }
         }
@@ -71,6 +91,8 @@
 <svelte:head>
 	<title>Create New Vault - DuitGee</title>
 </svelte:head>
+
+<Toaster />
 
 <div class="container mx-auto py-8 px-4 max-w-2xl">
 	<!-- Header -->

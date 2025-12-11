@@ -88,6 +88,12 @@ export const vaultsApi = new Hono<App.Api>()
 
             try {
                 const vault = await createVault(session, data, c.env);
+                if(vault.error){
+                    return c.json({
+                        success: false,
+                        error: vault.error
+                    }, 400);
+                }
                 return c.json({
                     success: true,
                     data: vault
