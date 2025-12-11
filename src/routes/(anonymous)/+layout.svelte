@@ -1,7 +1,8 @@
 <script lang="ts">
 	import ThemeToggle from "$lib/components/theme-toggle.svelte";
+	import { Button } from "$lib/components/ui/button";
 
-	let { children } = $props();
+	let { children, data } = $props();
 </script>
 
 <div class="min-h-screen bg-background">
@@ -15,6 +16,19 @@
 			</div>
 			<div class="flex items-center gap-2">
 				<ThemeToggle />
+				{#if data.user}
+					<a href="/vaults">
+						<Button variant="default" size="sm">
+							Go to Vaults
+						</Button>
+					</a>
+				{:else}
+					<a href="/login">
+						<Button variant="default" size="sm">
+							Sign In
+						</Button>
+					</a>
+				{/if}
 			</div>
 		</div>
 	</header>

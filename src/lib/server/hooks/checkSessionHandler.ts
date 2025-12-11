@@ -22,7 +22,7 @@ export const checkSessionHandler: Handle = async ({ event, resolve }) => {
         throw new Error("No Platform")
     }
     const pathname = event.url.pathname;
-    if (publicRoutes.some(route => pathname.startsWith(route))) {
+    if (pathname === '/' || publicRoutes.some(route => pathname.startsWith(route))) {
         return resolve(event);
     }
 
