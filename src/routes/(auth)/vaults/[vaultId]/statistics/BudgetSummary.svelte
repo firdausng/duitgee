@@ -72,7 +72,7 @@
 		<!-- Amount Progress -->
 		<div>
 			<div class="flex items-baseline justify-between mb-1">
-				<span class="text-xl font-bold">{formatCurrency(progress.totalSpent)}</span>
+				<span class="text-md font-bold">{formatCurrency(progress.totalSpent)}</span>
 				<span class="text-sm opacity-80">of {formatCurrency(progress.budget.amount)}</span>
 			</div>
 

@@ -361,6 +361,18 @@
                 onEditVault={handleEditVault}
         />
 
+        <!-- Invite User Form -->
+        <InviteForm
+                show={showInviteForm}
+                email={inviteEmail}
+                role={inviteRole}
+                isInviting={isInviting}
+                onEmailChange={(value) => inviteEmail = value}
+                onRoleChange={(role) => inviteRole = role}
+                onSubmit={handleInviteUser}
+                onCancel={toggleInviteForm}
+        />
+
         <!-- Expense Filters -->
         <ExpenseFilters
                 filterType={filterType}
@@ -386,18 +398,6 @@
                 budgetProgresses={budgetProgresses}
                 vaultId={vaultId}
                 formatCurrency={vaultFormatters.currency}
-        />
-
-        <!-- Invite User Form -->
-        <InviteForm
-                show={showInviteForm}
-                email={inviteEmail}
-                role={inviteRole}
-                isInviting={isInviting}
-                onEmailChange={(value) => inviteEmail = value}
-                onRoleChange={(role) => inviteRole = role}
-                onSubmit={handleInviteUser}
-                onCancel={toggleInviteForm}
         />
 
         <!-- Expenses List -->

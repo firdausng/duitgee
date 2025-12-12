@@ -427,7 +427,14 @@
     });
 
     // Filter date-filtered expenses by category/template/member (for expense list)
-    const filteredExpenses = $derived.by(() => filterByType(filteredExpensesList));
+    const filteredExpenses = $derived.by(() => {
+        const manuallyFiltered = filterByType(filteredExpensesList);
+        // Apply budget filtering if a budget is selected
+        if (selectedBudget) {
+            return filterExpensesForBudget(manuallyFiltered, selectedBudget);
+        }
+        return manuallyFiltered;
+    });
 
     const allExpensesByDate = $derived(groupExpensesByDate(filteredExpenses));
 
