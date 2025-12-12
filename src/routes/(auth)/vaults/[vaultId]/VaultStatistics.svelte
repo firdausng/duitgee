@@ -59,7 +59,7 @@
             {#if showFilterByTemplate}
                 <h3 class="text-sm font-semibold mb-3">Expenses by Template</h3>
             {/if}
-            <div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 justify-items-center">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 justify-items-center">
                 {#each statistics.byTemplate as template (template.templateId)}
                     <div in:scale|local={{ start: 0.95, duration: 400 }} class="w-full max-w-[200px]">
                         <Card
@@ -90,7 +90,7 @@
             {#if showFilterByCategory}
                 <h3 class="text-sm font-semibold mb-3">Expenses by Category</h3>
             {/if}
-            <div class="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3 justify-items-center">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 justify-items-center">
                 {#each statistics.byCategory.slice(0, 8) as category}
                     <div class="w-full max-w-[200px]">
                         <Card
@@ -118,12 +118,12 @@
             </div>
         </div>
 
-        <!-- gride item itself  -->
+        <!-- Expenses by Member -->
         <div class:[mb-6]={showFilterByMember}  class="pb-2">
             {#if showFilterByMember}
                 <h3 class="text-sm font-semibold mb-3">Expenses by Member</h3>
             {/if}
-            <div class="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3 justify-items-center">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 justify-items-center">
                 {#each statistics.byMember as member}
                     <div class="w-full max-w-[200px]">
                         <Card
