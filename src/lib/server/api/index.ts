@@ -9,6 +9,7 @@ import {expensesApi} from "$lib/server/api/expenses/expenses-api";
 import {vaultsApi} from "$lib/server/api/vaults/vaults-api";
 import {invitationsApi} from "$lib/server/api/invitations/invitations-api";
 import {expenseTemplatesApi} from "$lib/server/api/expense-templates/expense-templates-api";
+import {budgetsApi} from "$lib/server/api/budgets/budgets-api";
 import {userApi} from "$lib/server/api/user/user-api";
 
 const router = new Hono<App.Api>()
@@ -32,6 +33,7 @@ const router = new Hono<App.Api>()
     .route('/', vaultsApi)
     .route('/', expensesApi)
     .route('/', expenseTemplatesApi)
+    .route('/', budgetsApi)
     .route('/', invitationsApi)
     .route('/', userApi)
     // .route('/user-team', teamVaultsApi)

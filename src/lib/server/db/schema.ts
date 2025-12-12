@@ -95,6 +95,46 @@ export const expenses = sqliteTable('expenses', {
     deletedBy: text('deleted_by'), // User ID as string, no FK constraint
 });
 
+export const budgets = sqliteTable('budgets', {
+    id: text('id').primaryKey().$defaultFn(() => createId()),
+    vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
+
+    // Budget details
+    name: text('name').notNull(), // e.g., "Monthly Food Budget"
+    description: text('description'),
+    amount: real('amount').notNull(), // Budget amount (uses vault's currency)
+
+    // Period configuration
+    period: text('period').notNull().default('monthly'), // 'weekly', 'monthly', 'custom'
+    startDate: text('start_date').notNull(), // Start date of budget period
+    endDate: text('end_date'), // End date (null for recurring weekly/monthly)
+
+    // Scope filters (what this budget applies to)
+    categoryName: text('category_name'), // null = all categories
+    templateId: text('template_id').references(() => expenseTemplates.id, { onDelete: 'set null' }), // null = all templates
+    userId: text('user_id'), // null = all members, specific user = only their expenses
+
+    // Alert settings
+    alertThreshold: integer('alert_threshold').default(80), // Alert when X% of budget is reached
+    alertEnabled: integer('alert_enabled', { mode: 'boolean' }).default(true),
+
+    // Status
+    isActive: integer('is_active', { mode: 'boolean' }).default(true),
+
+    // Audit fields
+    createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
+    createdBy: text('created_by').notNull(),
+    updatedAt: text('updated_at').$defaultFn(() => formatISO(new UTCDate())),
+    updatedBy: text('updated_by'),
+    deletedAt: text('deleted_at'),
+    deletedBy: text('deleted_by'),
+}, (table) => ({
+    // Index for efficient budget queries by vault
+    vaultIdx: index('idx_budgets_vault').on(table.vaultId),
+    // Index for active budgets
+    activeIdx: index('idx_budgets_active').on(table.vaultId, table.isActive),
+}));
+
 export const invitation = sqliteTable("invitation", {
     id: text("id").primaryKey(),
     vaultId: text("vault_id")

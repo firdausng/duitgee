@@ -57,3 +57,22 @@ export const setDefaultVaultRequestSchema = v.object({
     vaultId: v.string(),
 });
 export type SetDefaultVaultRequest = v.InferOutput<typeof setDefaultVaultRequestSchema>;
+
+// Member management schemas
+export const removeMemberRequestSchema = v.object({
+    vaultId: v.string(),
+    userId: v.string(),
+});
+export type RemoveMemberRequest = v.InferOutput<typeof removeMemberRequestSchema>;
+
+export const updateMemberRoleRequestSchema = v.object({
+    vaultId: v.string(),
+    userId: v.string(),
+    role: v.picklist(['admin', 'member']),
+});
+export type UpdateMemberRoleRequest = v.InferOutput<typeof updateMemberRoleRequestSchema>;
+
+export const leaveVaultRequestSchema = v.object({
+    vaultId: v.string(),
+});
+export type LeaveVaultRequest = v.InferOutput<typeof leaveVaultRequestSchema>;

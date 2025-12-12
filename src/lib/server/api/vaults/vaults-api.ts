@@ -9,7 +9,10 @@ import {
     listVaultsRequestSchema,
     updateVaultRequestSchema,
     deleteVaultRequestSchema,
-    setDefaultVaultRequestSchema
+    setDefaultVaultRequestSchema,
+    removeMemberRequestSchema,
+    updateMemberRoleRequestSchema,
+    leaveVaultRequestSchema
 } from "$lib/schemas/vaults";
 import {createVault} from "$lib/server/api/vaults/createVaultHandler";
 import {getVault} from "$lib/server/api/vaults/getVaultHandler";
@@ -17,6 +20,9 @@ import {updateVault} from "$lib/server/api/vaults/updateVaultHandler";
 import {deleteVault} from "$lib/server/api/vaults/deleteVaultHandler";
 import {setDefaultVault} from "$lib/server/api/vaults/setDefaultVaultHandler";
 import {getVaultStatistics} from "$lib/server/api/vaults/getVaultStatisticsHandler";
+import {removeMember} from "$lib/server/api/vaults/removeMemberHandler";
+import {updateMemberRole} from "$lib/server/api/vaults/updateMemberRoleHandler";
+import {leaveVault} from "$lib/server/api/vaults/leaveVaultHandler";
 
 const VAULT_TAG = ['Vault'];
 const commonVaultConfig = {
@@ -344,6 +350,152 @@ export const vaultsApi = new Hono<App.Api>()
                 return c.json({
                     success: false,
                     error: error instanceof Error ? error.message : 'Failed to fetch vault statistics'
+                }, status);
+            }
+        })
+    // Command: Remove member from vault (POST)
+    .post(
+        '/removeMember',
+        describeRoute({
+            ...commonVaultConfig,
+            description: 'Remove a member from the vault',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.any()
+                            }))
+                        },
+                    },
+                },
+                403: {
+                    description: 'Permission denied',
+                },
+                404: {
+                    description: 'Member not found',
+                },
+            },
+        }),
+        vValidator('json', removeMemberRequestSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+
+            try {
+                const result = await removeMember(session, data, c.env);
+                return c.json({
+                    success: true,
+                    data: result
+                });
+            } catch (error) {
+                console.error({
+                    message: 'Error removing member',
+                    error
+                });
+                const status = error instanceof Error && error.message.includes('Permission denied') ? 403 :
+                               error instanceof Error && error.message.includes('not found') ? 404 : 500;
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to remove member'
+                }, status);
+            }
+        })
+    // Command: Update member role (POST)
+    .post(
+        '/updateMemberRole',
+        describeRoute({
+            ...commonVaultConfig,
+            description: 'Update a member\'s role in the vault',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.any()
+                            }))
+                        },
+                    },
+                },
+                403: {
+                    description: 'Permission denied',
+                },
+                404: {
+                    description: 'Member not found',
+                },
+            },
+        }),
+        vValidator('json', updateMemberRoleRequestSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+
+            try {
+                const result = await updateMemberRole(session, data, c.env);
+                return c.json({
+                    success: true,
+                    data: result
+                });
+            } catch (error) {
+                console.error({
+                    message: 'Error updating member role',
+                    error
+                });
+                const status = error instanceof Error && error.message.includes('Permission denied') ? 403 :
+                               error instanceof Error && error.message.includes('not found') ? 404 : 500;
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to update member role'
+                }, status);
+            }
+        })
+    // Command: Leave vault (POST)
+    .post(
+        '/leaveVault',
+        describeRoute({
+            ...commonVaultConfig,
+            description: 'Leave a vault (non-owners only)',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.any()
+                            }))
+                        },
+                    },
+                },
+                403: {
+                    description: 'Permission denied (owner cannot leave)',
+                },
+            },
+        }),
+        vValidator('json', leaveVaultRequestSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+
+            try {
+                const result = await leaveVault(session, data, c.env);
+                return c.json({
+                    success: true,
+                    data: result
+                });
+            } catch (error) {
+                console.error({
+                    message: 'Error leaving vault',
+                    error
+                });
+                const status = error instanceof Error && error.message.includes('cannot leave') ? 403 : 500;
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to leave vault'
                 }, status);
             }
         })
