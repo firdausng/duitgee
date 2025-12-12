@@ -124,23 +124,25 @@
 		</div>
 
 		<!-- Budget Filters -->
-		{#if progress.budget.categoryName || progress.budget.templateId || progress.budget.userId}
+		{#if (progress.budget.categoryNames && progress.budget.categoryNames.length > 0) || (progress.budget.templateIds && progress.budget.templateIds.length > 0) || (progress.budget.userIds && progress.budget.userIds.length > 0)}
 			<div class="pt-2 border-t border-current/20">
 				<p class="text-xs opacity-60 mb-1">Tracking:</p>
 				<div class="flex flex-wrap gap-1">
-					{#if progress.budget.categoryName}
+					{#if progress.budget.categoryNames && progress.budget.categoryNames.length > 0}
+						{#each progress.budget.categoryNames as category}
+							<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-background/50">
+								{category}
+							</span>
+						{/each}
+					{/if}
+					{#if progress.budget.templateIds && progress.budget.templateIds.length > 0}
 						<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-background/50">
-							{progress.budget.categoryName}
+							{progress.budget.templateIds.length} {progress.budget.templateIds.length === 1 ? 'Template' : 'Templates'}
 						</span>
 					{/if}
-					{#if progress.budget.templateId}
+					{#if progress.budget.userIds && progress.budget.userIds.length > 0}
 						<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-background/50">
-							Template
-						</span>
-					{/if}
-					{#if progress.budget.userId}
-						<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-background/50">
-							Member
+							{progress.budget.userIds.length} {progress.budget.userIds.length === 1 ? 'Member' : 'Members'}
 						</span>
 					{/if}
 				</div>

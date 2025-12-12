@@ -14,9 +14,9 @@ export const budgetSchema = v.object({
     period: budgetPeriodSchema,
     startDate: v.string(),
     endDate: v.nullable(v.string()),
-    categoryName: v.nullable(v.string()),
-    templateId: v.nullable(v.string()),
-    userId: v.nullable(v.string()),
+    categoryNames: v.nullable(v.array(v.string())),
+    templateIds: v.nullable(v.array(v.string())),
+    userIds: v.nullable(v.array(v.string())),
     alertThreshold: v.number(),
     alertEnabled: v.boolean(),
     isActive: v.boolean(),
@@ -49,10 +49,10 @@ export const createBudgetSchema = v.object({
         v.minLength(1, 'Start date is required')
     ),
     endDate: v.optional(v.string()), // Required for 'custom' period
-    // Scope filters (all optional - null means "all")
-    categoryName: v.optional(v.string()),
-    templateId: v.optional(v.string()),
-    userId: v.optional(v.string()),
+    // Scope filters (all optional - null/empty means "all")
+    categoryNames: v.optional(v.array(v.string())),
+    templateIds: v.optional(v.array(v.string())),
+    userIds: v.optional(v.array(v.string())),
     // Alert settings
     alertThreshold: v.optional(
         v.pipe(
@@ -84,9 +84,9 @@ export const updateBudgetSchema = v.object({
     period: v.optional(budgetPeriodSchema),
     startDate: v.optional(v.string()),
     endDate: v.optional(v.nullable(v.string())),
-    categoryName: v.optional(v.nullable(v.string())),
-    templateId: v.optional(v.nullable(v.string())),
-    userId: v.optional(v.nullable(v.string())),
+    categoryNames: v.optional(v.nullable(v.array(v.string()))),
+    templateIds: v.optional(v.nullable(v.array(v.string()))),
+    userIds: v.optional(v.nullable(v.array(v.string()))),
     alertThreshold: v.optional(v.pipe(
         v.number(),
         v.minValue(1),

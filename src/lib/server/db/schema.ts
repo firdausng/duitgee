@@ -109,10 +109,10 @@ export const budgets = sqliteTable('budgets', {
     startDate: text('start_date').notNull(), // Start date of budget period
     endDate: text('end_date'), // End date (null for recurring weekly/monthly)
 
-    // Scope filters (what this budget applies to)
-    categoryName: text('category_name'), // null = all categories
-    templateId: text('template_id').references(() => expenseTemplates.id, { onDelete: 'set null' }), // null = all templates
-    userId: text('user_id'), // null = all members, specific user = only their expenses
+    // Scope filters (what this budget applies to) - supports multiple selections
+    categoryNames: text('category_names', { mode: 'json' }).$type<string[] | null>(), // null or empty = all categories
+    templateIds: text('template_ids', { mode: 'json' }).$type<string[] | null>(), // null or empty = all templates
+    userIds: text('user_ids', { mode: 'json' }).$type<string[] | null>(), // null or empty = all members
 
     // Alert settings
     alertThreshold: integer('alert_threshold').default(80), // Alert when X% of budget is reached

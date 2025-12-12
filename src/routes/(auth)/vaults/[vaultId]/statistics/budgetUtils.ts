@@ -8,9 +8,9 @@ export type Budget = {
 	period: 'weekly' | 'monthly' | 'custom';
 	startDate: string;
 	endDate: string | null;
-	categoryName: string | null;
-	templateId: string | null;
-	userId: string | null;
+	categoryNames: string[] | null;
+	templateIds: string[] | null;
+	userIds: string[] | null;
 	alertThreshold: number;
 	isActive: boolean;
 };
@@ -79,22 +79,29 @@ export function getBudgetDateRange(budget: Budget, referenceDate: Date = new Dat
 
 /**
  * Filter expenses that match the budget's criteria
+ * Supports multiple categories, templates, and users
  */
 export function filterExpensesForBudget(expenses: Expense[], budget: Budget): Expense[] {
 	return expenses.filter(expense => {
-		// Filter by category
-		if (budget.categoryName && expense.category?.name !== budget.categoryName) {
-			return false;
+		// Filter by categories - expense must match ANY of the selected categories
+		if (budget.categoryNames && budget.categoryNames.length > 0) {
+			if (!expense.category?.name || !budget.categoryNames.includes(expense.category.name)) {
+				return false;
+			}
 		}
 
-		// Filter by template
-		if (budget.templateId && String(expense.templateId) !== String(budget.templateId)) {
-			return false;
+		// Filter by templates - expense must match ANY of the selected templates
+		if (budget.templateIds && budget.templateIds.length > 0) {
+			if (!expense.templateId || !budget.templateIds.includes(String(expense.templateId))) {
+				return false;
+			}
 		}
 
-		// Filter by user
-		if (budget.userId && expense.paidBy !== budget.userId) {
-			return false;
+		// Filter by users - expense must be paid by ANY of the selected users
+		if (budget.userIds && budget.userIds.length > 0) {
+			if (!expense.paidBy || !budget.userIds.includes(expense.paidBy)) {
+				return false;
+			}
 		}
 
 		return true;

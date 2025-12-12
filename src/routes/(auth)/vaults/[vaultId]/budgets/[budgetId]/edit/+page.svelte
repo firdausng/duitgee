@@ -7,8 +7,6 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
-	import { CategoryCombobox } from '$lib/components/ui/category-combobox';
-	import { MemberCombobox } from '$lib/components/ui/member-combobox';
 	import { categoryData } from '$lib/configurations/categories';
 	import { Toaster } from "$lib/components/ui/sonner";
 	import { toast } from "svelte-sonner";
@@ -244,59 +242,119 @@
 					<div class="border-t pt-6">
 						<h3 class="text-sm font-semibold mb-4">Budget Filters (Optional)</h3>
 						<p class="text-xs text-muted-foreground mb-4">
-							Apply filters to track budget for specific categories, templates, or members. Leave empty to track all expenses.
+							Select categories, templates, or members to track. Leave all unchecked to track all expenses.
 						</p>
 					</div>
 
-					<!-- Category Filter -->
-					<CategoryCombobox
-						name="categoryName"
-						label="Category Filter"
-						categories={categoryData.categories}
-						bind:value={$form.categoryName}
-						disabled={$delayed || isLoading}
-						error={$errors.categoryName}
-						required={false}
-					/>
+					<!-- Category Filters -->
+					<div class="space-y-2">
+						<Label>Categories</Label>
+						<div class="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+							{#each categoryData.categories as category}
+								<label class="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded-md transition-colors">
+									<input
+										type="checkbox"
+										value={category.name}
+										checked={$form.categoryNames?.includes(category.name)}
+										onchange={(e) => {
+											const checked = e.currentTarget.checked;
+											if (checked) {
+												$form.categoryNames = [...($form.categoryNames || []), category.name];
+											} else {
+												$form.categoryNames = ($form.categoryNames || []).filter(c => c !== category.name);
+											}
+										}}
+										disabled={$delayed || isLoading}
+										class="h-4 w-4 rounded border-gray-300"
+									/>
+									<span class="text-lg">{category.icon}</span>
+									<span class="text-sm flex-1">{category.name}</span>
+								</label>
+							{/each}
+						</div>
+						<p class="text-xs text-muted-foreground">
+							{#if $form.categoryNames && $form.categoryNames.length > 0}
+								Tracking {$form.categoryNames.length} {$form.categoryNames.length === 1 ? 'category' : 'categories'}
+							{:else}
+								No categories selected (tracking all)
+							{/if}
+						</p>
+					</div>
 
-					<!-- Template Filter -->
+					<!-- Template Filters -->
 					{#if data.templates.length > 0}
 						<div class="space-y-2">
-							<Label for="templateId">Template Filter</Label>
-							<select
-								id="templateId"
-								name="templateId"
-								bind:value={$form.templateId}
-								disabled={$delayed || isLoading}
-								class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								<option value="">All Templates</option>
+							<Label>Templates</Label>
+							<div class="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
 								{#each data.templates as template}
-									<option value={template.id}>
-										{template.icon} {template.name}
-									</option>
+									<label class="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded-md transition-colors">
+										<input
+											type="checkbox"
+											value={template.id}
+											checked={$form.templateIds?.includes(template.id)}
+											onchange={(e) => {
+												const checked = e.currentTarget.checked;
+												if (checked) {
+													$form.templateIds = [...($form.templateIds || []), template.id];
+												} else {
+													$form.templateIds = ($form.templateIds || []).filter(t => t !== template.id);
+												}
+											}}
+											disabled={$delayed || isLoading}
+											class="h-4 w-4 rounded border-gray-300"
+										/>
+										<span class="text-lg">{template.icon || '📝'}</span>
+										<span class="text-sm flex-1">{template.name}</span>
+									</label>
 								{/each}
-							</select>
+							</div>
 							<p class="text-xs text-muted-foreground">
-								Track expenses created from a specific template
+								{#if $form.templateIds && $form.templateIds.length > 0}
+									Tracking {$form.templateIds.length} {$form.templateIds.length === 1 ? 'template' : 'templates'}
+								{:else}
+									No templates selected (tracking all)
+								{/if}
 							</p>
 						</div>
 					{/if}
 
-					<!-- Member Filter -->
+					<!-- Member Filters -->
 					{#if data.members.length > 0}
-						<MemberCombobox
-							name="userId"
-							label="Member Filter"
-							members={data.members}
-							bind:value={$form.userId}
-							disabled={$delayed || isLoading}
-							error={$errors.userId}
-							required={false}
-						/>
-						<p class="text-xs text-muted-foreground -mt-4">
-							Track expenses for a specific member
-						</p>
+						<div class="space-y-2">
+							<Label>Members</Label>
+							<div class="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+								{#each data.members as member}
+									<label class="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded-md transition-colors">
+										<input
+											type="checkbox"
+											value={member.userId}
+											checked={$form.userIds?.includes(member.userId)}
+											onchange={(e) => {
+												const checked = e.currentTarget.checked;
+												if (checked) {
+													$form.userIds = [...($form.userIds || []), member.userId];
+												} else {
+													$form.userIds = ($form.userIds || []).filter(u => u !== member.userId);
+												}
+											}}
+											disabled={$delayed || isLoading}
+											class="h-4 w-4 rounded border-gray-300"
+										/>
+										<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-semibold">
+											{member.displayName.charAt(0).toUpperCase()}
+										</div>
+										<span class="text-sm flex-1">{member.displayName}</span>
+									</label>
+								{/each}
+							</div>
+							<p class="text-xs text-muted-foreground">
+								{#if $form.userIds && $form.userIds.length > 0}
+									Tracking {$form.userIds.length} {$form.userIds.length === 1 ? 'member' : 'members'}
+								{:else}
+									No members selected (tracking all)
+								{/if}
+							</p>
+						</div>
 					{/if}
 
 					<!-- Divider -->

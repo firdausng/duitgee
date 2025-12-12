@@ -51,9 +51,9 @@ export const updateBudget = async (
     if (data.period !== undefined) updateData.period = data.period;
     if (data.startDate !== undefined) updateData.startDate = data.startDate;
     if (data.endDate !== undefined) updateData.endDate = data.endDate;
-    if (data.categoryName !== undefined) updateData.categoryName = data.categoryName;
-    if (data.templateId !== undefined) updateData.templateId = data.templateId;
-    if (data.userId !== undefined) updateData.userId = data.userId;
+    if (data.categoryNames !== undefined) updateData.categoryNames = data.categoryNames && data.categoryNames.length > 0 ? data.categoryNames : null;
+    if (data.templateIds !== undefined) updateData.templateIds = data.templateIds && data.templateIds.length > 0 ? data.templateIds : null;
+    if (data.userIds !== undefined) updateData.userIds = data.userIds && data.userIds.length > 0 ? data.userIds : null;
     if (data.alertThreshold !== undefined) updateData.alertThreshold = data.alertThreshold;
     if (data.alertEnabled !== undefined) updateData.alertEnabled = data.alertEnabled;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;

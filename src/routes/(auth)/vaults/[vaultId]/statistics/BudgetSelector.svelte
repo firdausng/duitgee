@@ -7,9 +7,9 @@
 		name: string;
 		amount: number;
 		period: 'weekly' | 'monthly' | 'custom';
-		categoryName: string | null;
-		templateId: string | null;
-		userId: string | null;
+		categoryNames: string[] | null;
+		templateIds: string[] | null;
+		userIds: string[] | null;
 	};
 
 	type Props = {
@@ -35,10 +35,20 @@
 
 	function getBudgetScope(budget: Budget): string {
 		const scopes: string[] = [];
-		if (budget.categoryName) scopes.push(budget.categoryName);
-		if (budget.templateId) scopes.push('Template');
-		if (budget.userId) scopes.push('Member');
-		return scopes.length > 0 ? scopes.join(', ') : 'All expenses';
+		if (budget.categoryNames && budget.categoryNames.length > 0) {
+			if (budget.categoryNames.length === 1) {
+				scopes.push(budget.categoryNames[0]);
+			} else {
+				scopes.push(`${budget.categoryNames.length} categories`);
+			}
+		}
+		if (budget.templateIds && budget.templateIds.length > 0) {
+			scopes.push(budget.templateIds.length === 1 ? 'Template' : `${budget.templateIds.length} templates`);
+		}
+		if (budget.userIds && budget.userIds.length > 0) {
+			scopes.push(budget.userIds.length === 1 ? 'Member' : `${budget.userIds.length} members`);
+		}
+		return scopes.length > 0 ? scopes.join(' • ') : 'All expenses';
 	}
 </script>
 

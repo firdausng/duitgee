@@ -25,14 +25,25 @@
 		period: 'weekly' | 'monthly' | 'custom';
 		startDate: string;
 		endDate: string | null;
-		categoryName: string | null;
-		templateId: string | null;
-		userId: string | null;
+		categoryNames: string[] | null;
+		templateIds: string[] | null;
+		userIds: string[] | null;
 		alertThreshold: number;
 		alertEnabled: boolean;
 		isActive: boolean;
 		createdAt: string;
 		updatedAt: string | null;
+	};
+
+	type ExpenseTemplate = {
+		id: string;
+		name: string;
+		icon?: string;
+	};
+
+	type VaultMember = {
+		userId: string;
+		displayName: string | null;
 	};
 
 	// Refetch key to trigger data reload
@@ -60,8 +71,49 @@
 		}
 	);
 
+	// Resource for expense templates
+	const templatesResource = resource(
+		() => [vaultId] as const,
+		async ([id]) => {
+			const response = await ofetch<{ success: boolean; data: ExpenseTemplate[] }>(
+				`/api/getExpenseTemplates?vaultId=${id}`
+			);
+			return response.data || [];
+		}
+	);
+
+	// Resource for vault members
+	const vaultResource = resource(
+		() => [vaultId] as const,
+		async ([id]) => {
+			const response = await ofetch<{ success: boolean; data: { members: VaultMember[] } }>(
+				`/api/getVault?vaultId=${id}`
+			);
+			return response.data?.members || [];
+		}
+	);
+
 	const budgets = $derived(budgetsResource.current || []);
 	const isLoading = $derived(budgetsResource.loading);
+	const templates = $derived(templatesResource.current || []);
+	const vaultMembers = $derived(vaultResource.current || []);
+
+	// Helper functions to get names
+	function getTemplateName(templateId: string): string {
+		if (!Array.isArray(templates) || templates.length === 0 || typeof templates.find !== 'function') {
+			return 'Loading...';
+		}
+		const template = templates.find(t => t.id === templateId);
+		return template ? `${template.icon || '📝'} ${template.name}` : 'Unknown Template';
+	}
+
+	function getUserDisplayName(userId: string): string {
+		if (!Array.isArray(vaultMembers) || vaultMembers.length === 0 || typeof vaultMembers.find !== 'function') {
+			return 'Loading...';
+		}
+		const member = vaultMembers.find(m => m.userId === userId);
+		return member?.displayName || 'Unknown User';
+	}
 
 	function handleCreateBudget() {
 		goto(`/vaults/${vaultId}/budgets/new`);
@@ -253,18 +305,50 @@
 									</div>
 
 									<!-- Filters Applied -->
-									{#if budget.categoryName || budget.userId}
-										<div class="flex flex-wrap items-center gap-1.5 text-xs md:text-sm text-muted-foreground">
-											{#if budget.categoryName}
-												<span class="inline-flex items-center px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground">
-													Category: {budget.categoryName}
-												</span>
+									{#if budget.categoryNames?.length || budget.templateIds?.length || budget.userIds?.length}
+										<div class="flex flex-wrap items-center gap-1.5 text-xs">
+											<span class="text-muted-foreground">Filters:</span>
+
+											{#if budget.categoryNames?.length}
+												{#each budget.categoryNames as category}
+													<span class="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+														<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+															<path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+														</svg>
+														{category}
+													</span>
+												{/each}
 											{/if}
-											{#if budget.userId}
-												<span class="inline-flex items-center px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground">
-													User-specific
-												</span>
+
+											{#if budget.templateIds?.length}
+												{#each budget.templateIds as templateId}
+													<span class="inline-flex items-center px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+														<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+															<path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />
+															<path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+														</svg>
+														{getTemplateName(templateId)}
+													</span>
+												{/each}
 											{/if}
+
+											{#if budget.userIds?.length}
+												{#each budget.userIds as userId}
+													<span class="inline-flex items-center px-2 py-0.5 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
+														<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+															<path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
+														</svg>
+														{getUserDisplayName(userId)}
+													</span>
+												{/each}
+											{/if}
+										</div>
+									{:else}
+										<div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+											<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+												<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+											</svg>
+											<span>All categories, templates, and users</span>
 										</div>
 									{/if}
 

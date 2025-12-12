@@ -178,21 +178,28 @@
 						</div>
 
 						<!-- Budget Scope -->
-						{#if progress.budget.categoryName || progress.budget.templateId || progress.budget.userId}
+						{#if (progress.budget.categoryNames && progress.budget.categoryNames.length > 0) || (progress.budget.templateIds && progress.budget.templateIds.length > 0) || (progress.budget.userIds && progress.budget.userIds.length > 0)}
 							<div class="flex flex-wrap gap-1 mt-2">
-								{#if progress.budget.categoryName}
+								{#if progress.budget.categoryNames && progress.budget.categoryNames.length > 0}
+									{#each progress.budget.categoryNames.slice(0, 3) as category}
+										<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-secondary text-secondary-foreground">
+											{category}
+										</span>
+									{/each}
+									{#if progress.budget.categoryNames.length > 3}
+										<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-secondary text-secondary-foreground">
+											+{progress.budget.categoryNames.length - 3} more
+										</span>
+									{/if}
+								{/if}
+								{#if progress.budget.templateIds && progress.budget.templateIds.length > 0}
 									<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-secondary text-secondary-foreground">
-										{progress.budget.categoryName}
+										{progress.budget.templateIds.length} {progress.budget.templateIds.length === 1 ? 'Template' : 'Templates'}
 									</span>
 								{/if}
-								{#if progress.budget.templateId}
+								{#if progress.budget.userIds && progress.budget.userIds.length > 0}
 									<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-secondary text-secondary-foreground">
-										Template
-									</span>
-								{/if}
-								{#if progress.budget.userId}
-									<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-secondary text-secondary-foreground">
-										Member
+										{progress.budget.userIds.length} {progress.budget.userIds.length === 1 ? 'Member' : 'Members'}
 									</span>
 								{/if}
 							</div>
