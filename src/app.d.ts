@@ -32,7 +32,7 @@ declare global {
             email: string
             emailVerified: boolean
             name: string
-            role?: string | null | undefined
+            role?: 'user'| 'admin' | null | undefined
             image?: string | null | undefined
             banned: boolean | null | undefined,
             banReason?: string | null | undefined,

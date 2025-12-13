@@ -12,8 +12,10 @@ export const createBudget = async (
 ) => {
     const client = drizzle(env.DB, { schema });
 
-    // Check permission - only owner/admin can create budgets
-    await requireVaultPermission(session, data.vaultId, 'canEditVault', env);
+    if(session.user.role !== 'admin'){
+        // Check permission - only owner/admin can create budgets
+        await requireVaultPermission(session, data.vaultId, 'canEditVault', env);
+    }
 
     // Validate custom period has end date
     if (data.period === 'custom' && !data.endDate) {

@@ -13,8 +13,11 @@ export const createExpenseTemplate = async (
 	const client = drizzle(env.DB, { schema });
 
     try {
-        // Check if user has permission to create templates in this vault
-        await requireVaultPermission(session, data.vaultId, 'canCreateExpenses', env);
+        //TODO this is just temporary, should just create another api for app admin. this endpoint should check user with vault permission
+        if(session.user.role !== 'admin'){
+            // Check if user has permission to create templates in this vault
+            await requireVaultPermission(session, data.vaultId, 'canCreateExpenses', env);
+        }
 
         const [template] = await client
             .insert(expenseTemplates)

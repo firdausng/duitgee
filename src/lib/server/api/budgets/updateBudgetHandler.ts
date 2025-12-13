@@ -13,8 +13,10 @@ export const updateBudget = async (
 ) => {
     const client = drizzle(env.DB, { schema });
 
-    // Check permission - only owner/admin can update budgets
-    await requireVaultPermission(session, data.vaultId, 'canEditVault', env);
+    if(session.user.role !== 'admin'){
+        // Check permission - only owner/admin can update budgets
+        await requireVaultPermission(session, data.vaultId, 'canEditVault', env);
+    }
 
     // Check if budget exists
     const [existingBudget] = await client
