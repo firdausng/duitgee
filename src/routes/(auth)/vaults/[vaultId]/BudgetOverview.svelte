@@ -80,7 +80,7 @@
 	}
 </script>
 
-<Card class="mb-4">
+<Card class="mb-4 mt-2">
 	<CardHeader>
 		<div class="flex items-center justify-between">
 			<CardTitle class="flex items-center gap-2">

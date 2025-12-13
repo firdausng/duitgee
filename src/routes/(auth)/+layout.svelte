@@ -7,7 +7,6 @@
 	import { page } from "$app/stores";
     import * as Drawer from "$lib/components/ui/drawer/index.js";
 	import { Separator } from "$lib/components/ui/separator";
-	import * as Breadcrumb from "$lib/components/ui/breadcrumb";
 
 	let { children, data } = $props();
 
@@ -46,144 +45,6 @@
 		closeDrawer();
 	}
 
-	// Generate breadcrumb items based on current path
-	type BreadcrumbItem = {
-		label: string;
-		href: string;
-		isCurrentPage: boolean;
-		truncate?: boolean;
-	};
-
-	const breadcrumbItems = $derived(() => {
-		const pathname = $page.url.pathname;
-		const segments = pathname.split('/').filter(Boolean);
-		const items: BreadcrumbItem[] = [];
-
-		// Skip breadcrumb for home/root
-		if (segments.length === 0) {
-			return items;
-		}
-
-		// Add Home
-		items.push({
-			label: 'Home',
-			href: '/',
-			isCurrentPage: false
-		});
-
-		// Parse segments
-		let vaultId: string | null = null;
-		let currentSection: string | null = null;
-
-		for (let i = 0; i < segments.length; i++) {
-			const segment = segments[i];
-			const isLast = i === segments.length - 1;
-			const prevSegment = i > 0 ? segments[i - 1] : null;
-
-			if (segment === 'vaults') {
-				items.push({
-					label: 'Vaults',
-					href: '/vaults',
-					isCurrentPage: isLast
-				});
-			} else if (prevSegment === 'vaults' && segment !== 'new') {
-				// This is a vault ID
-				vaultId = segment;
-				const vaultData = data.vaults.find(v => v.vaults?.id === segment);
-				items.push({
-					label: vaultData?.vaults?.name || 'Vault',
-					href: `/vaults/${segment}`,
-					isCurrentPage: isLast,
-					truncate: true // Enable truncation for vault names
-				});
-			} else if (segment === 'expenses') {
-				currentSection = 'expenses';
-				items.push({
-					label: 'Expenses',
-					href: `/vaults/${vaultId}/expenses`,
-					isCurrentPage: isLast
-				});
-			} else if (segment === 'templates') {
-				currentSection = 'templates';
-				items.push({
-					label: 'Templates',
-					href: `/vaults/${vaultId}/templates`,
-					isCurrentPage: isLast
-				});
-			} else if (segment === 'statistics') {
-				currentSection = 'statistics';
-				items.push({
-					label: 'Statistics',
-					href: `/vaults/${vaultId}/statistics`,
-					isCurrentPage: isLast
-				});
-			} else if (segment === 'members') {
-				currentSection = 'members';
-				items.push({
-					label: 'Members',
-					href: `/vaults/${vaultId}/members`,
-					isCurrentPage: isLast
-				});
-			} else if (segment === 'budgets') {
-				currentSection = 'budgets';
-				items.push({
-					label: 'Budgets',
-					href: `/vaults/${vaultId}/budgets`,
-					isCurrentPage: isLast
-				});
-			} else if (segment === 'invitations') {
-				items.push({
-					label: 'Invitations',
-					href: '/invitations',
-					isCurrentPage: isLast
-				});
-		} else if (segment === 'settings') {
-			items.push({
-				label: 'Settings',
-				href: '/settings',
-				isCurrentPage: isLast
-			});
-			} else if (segment === 'new') {
-				items.push({
-					label: 'New',
-					href: '#',
-					isCurrentPage: isLast
-				});
-			} else if (segment === 'edit') {
-				// For edit pages, show the ID of the resource being edited
-				const resourceId = prevSegment;
-				if (resourceId && resourceId !== 'expenses' && resourceId !== 'templates' && resourceId !== 'vaults') {
-					// This is the resource ID before /edit
-					items.push({
-						label: `#${resourceId.slice(0, 8)}...`,
-						href: '#',
-						isCurrentPage: false
-					});
-				}
-				items.push({
-					label: 'Edit',
-					href: '#',
-					isCurrentPage: isLast
-				});
-			} else if (prevSegment === 'expenses' && segment !== 'new' && segment !== 'edit') {
-				// This is an expense ID
-				items.push({
-					label: `#${segment.slice(0, 8)}...`,
-					href: `/vaults/${vaultId}/expenses/${segment}`,
-					isCurrentPage: isLast
-				});
-			} else if (prevSegment === 'templates' && segment !== 'new' && segment !== 'edit') {
-				// This is a template ID
-				items.push({
-					label: `#${segment.slice(0, 8)}...`,
-					href: `/vaults/${vaultId}/templates/${segment}`,
-					isCurrentPage: isLast
-				});
-			}
-		}
-
-		return items;
-	});
 </script>
 
 <div class="min-h-screen bg-background">
@@ -372,34 +233,6 @@
 			</div>
 		</div>
 	</header>
-
-	<!-- Breadcrumb -->
-	{#if breadcrumbItems().length > 0}
-		<div class="border-b bg-background/95">
-			<div class="container max-w-screen-2xl px-4 py-3">
-				<Breadcrumb.Root>
-					<Breadcrumb.List>
-						{#each breadcrumbItems() as item, index}
-							{#if index > 0}
-								<Breadcrumb.Separator />
-							{/if}
-							<Breadcrumb.Item>
-								{#if item.isCurrentPage}
-									<Breadcrumb.Page class={item.truncate ? 'max-w-[150px] md:max-w-[250px] truncate' : ''}>
-										{item.label}
-									</Breadcrumb.Page>
-								{:else}
-									<Breadcrumb.Link href={item.href} class={item.truncate ? 'max-w-[150px] md:max-w-[250px] truncate inline-block' : ''}>
-										{item.label}
-									</Breadcrumb.Link>
-								{/if}
-							</Breadcrumb.Item>
-						{/each}
-					</Breadcrumb.List>
-				</Breadcrumb.Root>
-			</div>
-		</div>
-	{/if}
 
 	<!-- Main Content -->
 	<main>

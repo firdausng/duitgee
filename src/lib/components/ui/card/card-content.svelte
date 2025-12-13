@@ -15,7 +15,7 @@
 
 <div
 	bind:this={ref}
-	class={cn("px-6 pt-0", className)}
+	class={cn("px-6 py-2 pt-0", className)}
 	{...restProps}
 >
 	{@render children?.()}

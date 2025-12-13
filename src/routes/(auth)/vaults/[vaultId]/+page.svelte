@@ -11,9 +11,9 @@
     import VaultHeader from "./VaultHeader.svelte";
     import ExpenseFilters from "./ExpenseFilters.svelte";
     import VaultStatisticsComponent from "./VaultStatistics.svelte";
-    import ExpenseList from "./ExpenseList.svelte";
     import InviteForm from "./InviteForm.svelte";
     import BudgetOverview from "./BudgetOverview.svelte";
+    import * as Tabs from "$lib/components/ui/tabs/index.js";
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
     import {Toaster} from "$lib/components/ui/sonner";
     import {toast} from "svelte-sonner";
@@ -55,25 +55,6 @@
         async ([id]) => {
             const response = await ofetch<{ success: boolean, data: VaultWithMember }>(`/api/getVault?vaultId=${id}`);
             return response.data;
-        }
-    );
-
-    // Resource for expenses - auto-refetches when filter changes
-    const expensesResource = resource(
-        () => [vaultId, filterType, params.startDate, params.endDate, refetchKey] as const,
-        async ([id, filter, startDate, endDate]) => {
-            const dateRange = getDateRangeWithCustom();
-            const urlParams = new URLSearchParams({
-                vaultId: id,
-                page: '1',
-                limit: '50'
-            });
-
-            if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
-            if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
-
-            const response = await ofetch<{ expenses: Expense[], pagination: any }>(`/api/getExpenses?${urlParams.toString()}`);
-            return response.expenses || [];
         }
     );
 
@@ -123,15 +104,12 @@
 
     // Derive data from resources
     const currentVault = $derived(vaultResource.current);
-    const expenses = $derived(expensesResource.current || []);
     const statistics = $derived(statisticsResource.current || null);
     const budgets = $derived(budgetsResource.current || []);
     const allExpenses = $derived(allExpensesResource.current || []);
     const isLoadingVault = $derived(vaultResource.loading);
-    const isLoadingExpenses = $derived(expensesResource.loading);
     const isLoadingStats = $derived(statisticsResource.loading);
     const vaultError = $derived(vaultResource.error);
-    const expensesError = $derived(expensesResource.error);
     const statisticsError = $derived(statisticsResource.error);
 
     // Calculate budget progress for all active budgets
@@ -148,13 +126,6 @@
             })
             : createVaultFormatters({ locale: 'en-US', currency: 'USD' })
     );
-
-    // Watch for non-critical errors and show toasts
-    $effect(() => {
-        if (expensesError) {
-            toast.error('Failed to load expenses. Please try again.');
-        }
-    });
 
     $effect(() => {
         if (statisticsError) {
@@ -384,34 +355,31 @@
                 onEndDateChange={(value) => params.endDate = value}
         />
 
-        <!-- Budget Overview -->
-        <BudgetOverview
-                budgetProgresses={budgetProgresses}
-                vaultId={vaultId}
-                formatCurrency={vaultFormatters.currency}
-        />
+        <Tabs.Root value="expense" class="mt-4">
+            <Tabs.List>
+                <Tabs.Trigger value="expense">Expense</Tabs.Trigger>
+                <Tabs.Trigger value="budget">Budget</Tabs.Trigger>
+            </Tabs.List>
+            <Tabs.Content value="expense">
+                <!-- Vault Statistics -->
+                <VaultStatisticsComponent
+                        statistics={statistics}
+                        isLoading={isLoadingStats}
+                        formatCurrency={vaultFormatters.currency}
+                        vaultId={vaultId}
+                        onCardClick={handleStatisticsCardClick}
+                />
+            </Tabs.Content>
+            <Tabs.Content value="budget">
+                <!-- Budget Overview -->
+                <BudgetOverview
+                        budgetProgresses={budgetProgresses}
+                        vaultId={vaultId}
+                        formatCurrency={vaultFormatters.currency}
+                />
+            </Tabs.Content>
+        </Tabs.Root>
 
-
-        <!-- Vault Statistics -->
-        <VaultStatisticsComponent
-                statistics={statistics}
-                isLoading={isLoadingStats}
-                formatCurrency={vaultFormatters.currency}
-                vaultId={vaultId}
-                onCardClick={handleStatisticsCardClick}
-        />
-
-        <!-- Expenses List -->
-        <ExpenseList
-                expenses={expenses}
-                isLoading={isLoadingExpenses}
-                filterType={filterType}
-                formatCurrency={vaultFormatters.currency}
-                formatDate={vaultFormatters.date}
-                onEditExpense={handleEditExpense}
-                onDeleteExpense={handleDeleteExpense}
-                onCreateExpense={handleCreateExpense}
-        />
     {/if}
 </div>
 

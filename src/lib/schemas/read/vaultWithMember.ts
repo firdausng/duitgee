@@ -5,6 +5,8 @@ export type VaultWithMember = {
         description: string | null;
         color: string;
         icon: string | null;
+        locale: string | null;
+        currency: string | null;
         iconType: string | null;
         organizationId: string | null;
         isDefault: boolean;
