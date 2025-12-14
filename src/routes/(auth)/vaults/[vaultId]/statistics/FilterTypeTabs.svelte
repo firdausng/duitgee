@@ -35,7 +35,7 @@
             type="button"
             onclick={() => onTypeChange(filterType.value)}
             class={cn(
-                "px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px",
+                "px-4 py-3 text-xs font-medium transition-colors border-b-2 -mb-px",
                 currentType === filterType.value
                     ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground"

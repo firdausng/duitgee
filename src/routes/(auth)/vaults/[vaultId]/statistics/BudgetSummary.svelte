@@ -54,7 +54,7 @@
 			<div class="flex items-start justify-between">
 				<div class="flex-1">
 					<CardTitle class="text-base flex items-center gap-2">
-						<span class="text-xl">{statusIcon}</span>
+						<span class="xs">{statusIcon}</span>
 						{progress.budget.name}
 					</CardTitle>
 					<p class="text-xs opacity-80 mt-1">{statusText}</p>

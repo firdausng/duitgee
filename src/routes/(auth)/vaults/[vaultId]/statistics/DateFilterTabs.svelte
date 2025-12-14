@@ -25,7 +25,7 @@
             type="button"
             onclick={() => onFilterChange(filter.value)}
             class={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
+                "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
                 currentFilter === filter.value
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted hover:bg-muted/80"

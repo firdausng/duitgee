@@ -33,8 +33,8 @@
     <div class="mb-4">
         <p class="text-xs text-muted-foreground mb-2">Filtered by:</p>
         <div class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
-            <span class="text-sm">{getIcon()}</span>
-            <span class="text-sm font-medium">{filterName}</span>
+            <span class="text-xs">{getIcon()}</span>
+            <span class="text-xs font-medium">{filterName}</span>
             <button
                 type="button"
                 onclick={onClear}

@@ -526,7 +526,7 @@
 
         <!-- Header -->
         <div class="mb-4">
-            <p class="text-sm text-muted-foreground mt-1">Expense breakdown for {getDateFilterLabel(dateFilter)}</p>
+            <p class="text-xs text-muted-foreground mt-1">Expense breakdown for {getDateFilterLabel(dateFilter)}</p>
         </div>
 
         <!-- Date Filter Tabs -->
@@ -565,8 +565,8 @@
                 <CardContent class="py-3">
                     <div class="flex items-center justify-between">
                         <div class="flex items-baseline gap-3">
-                            <h2 class="text-xl font-bold">{formatCurrency(filteredTotal.amount)}</h2>
-                            <p class="text-sm text-muted-foreground">({filteredTotal.count} transaction{filteredTotal.count !== 1 ? 's' : ''})</p>
+                            <h2 class="text-md font-bold">{formatCurrency(filteredTotal.amount)}</h2>
+                            <p class="text-xs text-muted-foreground">({filteredTotal.count} transaction{filteredTotal.count !== 1 ? 's' : ''})</p>
                         </div>
                     </div>
                 </CardContent>

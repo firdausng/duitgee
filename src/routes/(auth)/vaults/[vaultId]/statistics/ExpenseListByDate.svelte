@@ -35,7 +35,7 @@
         {#each expensesByDate as dateGroup (dateGroup.dateKey)}
             <!-- Date Header -->
             <div class="sticky top-0 flex justify-center mb-2">
-                <h3 class="text-sm font-semibold text-foreground bg-muted/80 backdrop-blur-sm px-3 py-2 rounded-md inline-block">
+                <h3 class="text-xs font-semibold text-foreground bg-muted/80 backdrop-blur-sm px-3 py-2 rounded-md inline-block">
                     {dateGroup.dateLabel}
                 </h3>
             </div>
@@ -142,7 +142,7 @@
         {#each expensesByDate as dateGroup (dateGroup.dateKey)}
             <!-- Date Header -->
             <div class="sticky top-0 flex justify-center mb-2">
-                <h3 class="text-sm font-semibold text-foreground bg-muted/80 backdrop-blur-sm px-4 py-2.5 rounded-md inline-block">
+                <h3 class="text-xs font-semibold text-foreground bg-muted/80 backdrop-blur-sm px-4 py-2.5 rounded-md inline-block">
                     {dateGroup.dateLabel}
                 </h3>
             </div>
