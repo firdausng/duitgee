@@ -1,5 +1,1 @@
-export const load = async ({ params }) => {
-	return {
-		vaultId: params.vaultId
-	};
-};
+export const ssr = false;

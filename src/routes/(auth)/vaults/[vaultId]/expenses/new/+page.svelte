@@ -5,9 +5,9 @@
 	import { Button } from "$lib/components/ui/button";
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
     import {resolve} from "$app/paths";
+	import {page} from "$app/state";
 
-	let { data } = $props();
-	let { vaultId } = data;
+	let {vaultId} = page.params
 
 	let templates = $state<Client.ExpenseTemplate[]>([]);
 	let isLoading = $state(true);
