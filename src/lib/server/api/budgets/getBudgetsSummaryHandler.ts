@@ -66,6 +66,7 @@ export const getBudgetsSummary = async (
         WHERE
             b.vault_id = ?
           AND b.is_active = 1
+          AND b.deleted_at IS NULL
         GROUP BY b.id;
     `);
 

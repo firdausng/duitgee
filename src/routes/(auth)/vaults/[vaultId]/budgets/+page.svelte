@@ -94,7 +94,6 @@
 
 	// Helper functions to get names
 	function getTemplateName(templateId: string): string {
-		console.log('templates', templates);
 		if (!Array.isArray(templates) || templates.length === 0 || typeof templates.find !== 'function') {
 			return 'Loading...';
 		}
