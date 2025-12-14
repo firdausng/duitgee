@@ -58,8 +58,6 @@
         },
         {
             debounce: 300,
-            // lazy: true,
-            // once: true
         }
     );
 
@@ -84,7 +82,6 @@
         },
         {
             debounce: 300,
-            lazy: true,
         }
     );
 
