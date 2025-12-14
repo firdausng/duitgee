@@ -1,5 +1,6 @@
 <script lang="ts">
     import {goto} from "$app/navigation";
+    import {page} from "$app/state";
     import {useSearchParams} from "runed/kit";
     import {ofetch} from "ofetch";
     import {resource} from "runed";
@@ -29,8 +30,7 @@
     import {now, getLocalTimeZone, CalendarDate} from "@internationalized/date";
     import type {DateRange} from "bits-ui";
 
-    let {data} = $props();
-    let {vaultId} = data;
+    let {vaultId} = page.params
 
     // Schema for statistics page query params
     const statisticsParamsSchema = v.object({

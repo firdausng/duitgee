@@ -7,7 +7,7 @@
 
     let { children, data } = $props();
 
-    let { vaultId } = data;
+    let {vaultId} = page.params
 
     function handleNewExpense() {
         goto(`/vaults/${vaultId}/expenses/new`);

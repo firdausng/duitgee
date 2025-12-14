@@ -7,7 +7,7 @@
     import {Button} from "$lib/components/ui/button";
     import {Card, CardContent} from "$lib/components/ui/card";
     import {filterSchema} from "./schemas";
-    import type {Expense, VaultStatistics} from "./types";
+    import type {VaultStatistics} from "./types";
     import VaultHeader from "./VaultHeader.svelte";
     import ExpenseFilters from "./ExpenseFilters.svelte";
     import VaultStatisticsComponent from "./VaultStatistics.svelte";
@@ -20,9 +20,9 @@
     import {localDatetimeToUtcIso, getDateRange, type DateFilter} from "$lib/utils";
     import {createVaultFormatters} from "$lib/vaultFormatting";
     import { calculateBudgetProgress, type Budget } from "./statistics/budgetUtils";
+    import {page} from "$app/state";
 
-    let {data} = $props();
-    let {vaultId} = data;
+    let {vaultId} = page.params
 
     const params = useSearchParams(filterSchema);
 
