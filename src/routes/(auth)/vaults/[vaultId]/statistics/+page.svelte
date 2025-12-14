@@ -36,7 +36,7 @@
     const statisticsParamsSchema = v.object({
         filterType: v.optional(v.picklist(['template', 'category', 'member']), 'template'),
         dateFilter: v.optional(v.picklist(['all', 'today', 'week', 'month', 'year']), 'today'),
-        filterName: v.optional(v.fallback(v.string(), ""), "No Template"),
+        filterName: v.optional(v.fallback(v.string(), ""), ""),
         startDate: v.optional(v.fallback(v.string(), ""), ""),
         endDate: v.optional(v.fallback(v.string(), ""), ""),
     });
@@ -206,7 +206,7 @@
 
         params.startDate = start.toISOString().split('T')[0];
         params.endDate = end.toISOString().split('T')[0];
-        if(!params.filterName) params.filterName = "No Template";
+        if(!params.filterName) params.filterName = "";
         if(!params.filterType) params.filterType = "template";
     });
 
@@ -275,7 +275,7 @@
                 if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
             }
 
-            urlParams.append('filterName', params.filterName || 'No Template');
+            urlParams.append('filterName', params.filterName || '');
             urlParams.append('filterType', params.filterType || 'template');
 
             const response = await ofetch<{ expenses: Expense[], pagination: any }>(`/api/getExpenses?${urlParams.toString()}`);
@@ -311,7 +311,7 @@
                 isActive: 'true'
             });
 
-            const response = await ofetch<{ success: boolean; data: Budget[] }>(`/api/getBudgets?${urlParams.toString()}`);
+            const response = await ofetch<{ success: boolean; data: Budget[] }>(`/api/getBudgetsSummary?${urlParams.toString()}`);
             return response.data || [];
         }
     );
@@ -334,7 +334,7 @@
 
     const budgetProgress = $derived.by(() => {
         if (!selectedBudget) return null;
-        return calculateBudgetProgress(selectedBudget, allExpenses);
+        return calculateBudgetProgress(selectedBudget);
     });
 
     // Derive filterId from filterName and statistics data
