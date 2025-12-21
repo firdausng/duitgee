@@ -70,7 +70,7 @@
 
 <Toaster />
 
-<div class="container mx-auto py-8 px-4 max-w-2xl">
+<div class="container mx-auto py-8 px-4">
 	<!-- Header -->
 	<div class="mb-8">
 		<h1 class="text-3xl font-bold tracking-tight">Settings</h1>

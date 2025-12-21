@@ -7,6 +7,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
+	import { ScrollArea } from "$lib/components/ui/scroll-area";
 	import { categoryData } from '$lib/configurations/categories';
 	import { Toaster } from "$lib/components/ui/sonner";
 	import { toast } from "svelte-sonner";
@@ -249,14 +250,14 @@
 					<!-- Category Filters -->
 					<div class="space-y-2">
 						<Label>Categories</Label>
-						<div class="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+						<ScrollArea class="h-72 rounded-md border mr-12">
 							{#each categoryData.categories as category}
 								<label class="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded-md transition-colors">
 									<input
-										type="checkbox"
-										value={category.name}
-										checked={$form.categoryNames?.includes(category.name)}
-										onchange={(e) => {
+											type="checkbox"
+											value={category.name}
+											checked={$form.categoryNames?.includes(category.name)}
+											onchange={(e) => {
 											const checked = e.currentTarget.checked;
 											if (checked) {
 												$form.categoryNames = [...($form.categoryNames || []), category.name];
@@ -264,14 +265,17 @@
 												$form.categoryNames = ($form.categoryNames || []).filter(c => c !== category.name);
 											}
 										}}
-										disabled={$delayed || isLoading}
-										class="h-4 w-4 rounded border-gray-300"
+											disabled={$delayed || isLoading}
+											class="h-4 w-4 rounded border-gray-300"
 									/>
 									<span class="text-lg">{category.icon}</span>
 									<span class="text-sm flex-1">{category.name}</span>
 								</label>
 							{/each}
-						</div>
+						</ScrollArea>
+<!--						<div class="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">-->
+<!--							-->
+<!--						</div>-->
 						<p class="text-xs text-muted-foreground">
 							{#if $form.categoryNames && $form.categoryNames.length > 0}
 								Tracking {$form.categoryNames.length} {$form.categoryNames.length === 1 ? 'category' : 'categories'}
@@ -285,14 +289,14 @@
 					{#if data.templates.length > 0}
 						<div class="space-y-2">
 							<Label>Templates</Label>
-							<div class="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+							<ScrollArea class="h-72 rounded-md border mr-12">
 								{#each data.templates as template}
 									<label class="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded-md transition-colors">
 										<input
-											type="checkbox"
-											value={template.id}
-											checked={$form.templateIds?.includes(template.id)}
-											onchange={(e) => {
+												type="checkbox"
+												value={template.id}
+												checked={$form.templateIds?.includes(template.id)}
+												onchange={(e) => {
 												const checked = e.currentTarget.checked;
 												if (checked) {
 													$form.templateIds = [...($form.templateIds || []), template.id];
@@ -300,14 +304,17 @@
 													$form.templateIds = ($form.templateIds || []).filter(t => t !== template.id);
 												}
 											}}
-											disabled={$delayed || isLoading}
-											class="h-4 w-4 rounded border-gray-300"
+												disabled={$delayed || isLoading}
+												class="h-4 w-4 rounded border-gray-300"
 										/>
 										<span class="text-lg">{template.icon || '📝'}</span>
 										<span class="text-sm flex-1">{template.name}</span>
 									</label>
 								{/each}
-							</div>
+							</ScrollArea>
+<!--							<div class="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">-->
+<!--								-->
+<!--							</div>-->
 							<p class="text-xs text-muted-foreground">
 								{#if $form.templateIds && $form.templateIds.length > 0}
 									Tracking {$form.templateIds.length} {$form.templateIds.length === 1 ? 'template' : 'templates'}
