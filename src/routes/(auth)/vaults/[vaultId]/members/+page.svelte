@@ -241,7 +241,7 @@
     }
 </script>
 
-<div class="container mx-auto py-4 sm:py-8 px-4 max-w-6xl">
+<div class="container mx-auto py-4 sm:py-8 px-4">
     <!-- Header -->
     <div class="mb-4 sm:mb-6">
         <div class="flex flex-col gap-4 mb-4">

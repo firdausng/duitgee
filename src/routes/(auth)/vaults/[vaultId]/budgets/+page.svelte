@@ -190,7 +190,7 @@
 	<title>Budgets - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-4 md:py-8 px-4 max-w-6xl">
+<div class="container mx-auto py-4 md:py-8 px-4">
 	<!-- Header -->
 	<div class="flex items-center justify-between mb-4 md:mb-6">
 		<div>

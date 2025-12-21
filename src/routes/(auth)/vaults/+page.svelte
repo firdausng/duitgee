@@ -91,7 +91,7 @@
 	<title>Vaults - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-8 px-4 max-w-7xl">
+<div class="container mx-auto py-8 px-4">
 	<!-- Header -->
 	<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
 		<div>

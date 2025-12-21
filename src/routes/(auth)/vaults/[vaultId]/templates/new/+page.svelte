@@ -74,7 +74,7 @@
 	<title>New Template - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-2 px-4 max-w-2xl">
+<div class="container mx-auto py-2 px-4">
 	<!-- Template Form -->
     {#if isLoading}
         <Spinner />

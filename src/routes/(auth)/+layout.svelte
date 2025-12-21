@@ -50,7 +50,7 @@
 <div class="min-h-screen bg-background">
 	<!-- Header -->
 	<header class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-		<div class="container flex h-14 max-w-screen-2xl items-center justify-between px-4">
+		<div class="container mx-auto flex h-14 max-w-screen-2xl items-center justify-between px-4">
 			<!-- Logo -->
 			<a href="/vaults" class="flex items-center">
 				<img src="/favicon.svg" alt="DuitGee Logo" class="h-8 w-8" />
@@ -259,7 +259,7 @@
 	</header>
 
 	<!-- Main Content -->
-	<main>
+	<main class="flex-1 overflow-x-hidden overflow-y-auto bg-background">
 		{@render children?.()}
 	</main>
 </div>

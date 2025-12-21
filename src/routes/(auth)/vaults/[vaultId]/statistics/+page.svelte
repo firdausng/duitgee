@@ -501,7 +501,7 @@
     <title>Statistics - {currentVault?.vaults.name || 'Vault'} - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-4 px-4 max-w-6xl">
+<div class="container mx-auto py-4 px-4">
     {#if isLoadingVault}
         <!-- Loading State -->
         <div class="flex flex-col items-center justify-center py-16">

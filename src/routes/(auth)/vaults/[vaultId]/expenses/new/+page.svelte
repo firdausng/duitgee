@@ -56,7 +56,7 @@
 	<title>Select Template - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-2 px-4 max-w-4xl">
+<div class="container mx-auto py-2 px-4">
 	{#if isLoading}
 		<!-- Loading State -->
 		<div class="flex justify-center py-16">

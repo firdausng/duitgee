@@ -8,7 +8,7 @@
 <div class="min-h-screen bg-background">
 	<!-- Header -->
 	<header class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-		<div class="container flex h-14 max-w-screen-2xl items-center justify-between px-4">
+		<div class="container mx-auto flex h-14 max-w-screen-2xl items-center justify-between px-4">
 			<div class="flex items-center gap-6">
 				<a href="/" class="flex items-center space-x-2">
 					<img src="/favicon.svg" alt="DuitGee Logo" class="h-8 w-8" />

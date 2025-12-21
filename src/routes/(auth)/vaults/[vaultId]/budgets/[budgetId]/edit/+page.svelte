@@ -93,7 +93,7 @@
 <Toaster />
 
 <div class="relative min-h-screen flex flex-col">
-	<div class="container mx-auto py-4 md:py-8 px-4 max-w-2xl flex-1">
+	<div class="container mx-auto py-4 md:py-8 px-4 flex-1">
 		<!-- Header -->
 		<div class="mb-4 md:mb-6">
 			<h1 class="text-2xl md:text-3xl font-bold">Edit Budget</h1>

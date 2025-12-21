@@ -98,7 +98,7 @@
 </svelte:head>
 
 <div class="relative min-h-screen flex flex-col">
-	<div class="container mx-auto py-8 px-4 max-w-2xl flex-1">
+	<div class="container mx-auto py-8 px-4 flex-1">
 	<!-- Header -->
 	<div class="mb-6">
 		<h1 class="text-2xl font-bold">

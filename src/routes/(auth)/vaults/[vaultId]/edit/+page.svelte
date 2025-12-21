@@ -116,7 +116,7 @@
 	<title>Edit Vault - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-8 px-4 max-w-2xl">
+<div class="container mx-auto py-8 px-4">
 	<!-- Expense Form -->
 	{#if isLoading || isDeleting}
 		<Spinner />

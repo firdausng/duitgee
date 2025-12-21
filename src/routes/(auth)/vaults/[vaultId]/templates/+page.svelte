@@ -57,7 +57,7 @@
 	<title>Templates - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-8 px-4 max-w-4xl">
+<div class="container mx-auto py-8 px-4">
 	<!-- Header -->
 	<div class="mb-6">
 		<div class="flex items-center justify-between">
