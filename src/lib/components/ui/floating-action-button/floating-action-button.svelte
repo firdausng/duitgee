@@ -33,8 +33,8 @@
 	{onclick}
 	{disabled}
 	class={cn(
-		'sticky right-6 z-50',
-		'bottom-[calc(1.5rem+env(safe-area-inset-bottom))] sm:fixed sm:bottom-6',
+		'fixed right-6 z-50',
+		'bottom-[calc(1.5rem+env(safe-area-inset-bottom))] sm:bottom-6',
 		'flex items-center gap-2',
 		'bg-primary text-primary-foreground',
 		'rounded-full shadow-lg hover:shadow-xl',
@@ -45,7 +45,6 @@
 		'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
 		'md:px-6 md:py-4',
 		'sm:px-5 sm:py-3.5',
-		'ml-auto',
 		className
 	)}
 	{...restProps}
