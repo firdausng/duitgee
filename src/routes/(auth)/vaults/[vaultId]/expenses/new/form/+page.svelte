@@ -10,6 +10,7 @@
 	import { CategoryCombobox } from '$lib/components/ui/category-combobox';
 	import { MemberCombobox } from '$lib/components/ui/member-combobox';
 	import { FloatingActionButton } from '$lib/components/ui/floating-action-button';
+	import { CalculatorInput } from '$lib/components/ui/calculator-input';
 	import { categoryData } from '$lib/configurations/categories';
 	import { paymentTypes } from '$lib/configurations/paymentTypes';
     import { Toaster } from "$lib/components/ui/sonner";
@@ -144,15 +145,14 @@
 				<!-- Amount -->
 				<div class="space-y-2">
 					<Label for="amount">Amount *</Label>
-					<Input
+					<CalculatorInput
 						id="amount"
 						name="amount"
-						type="number"
-						step="0.01"
-						min="0"
 						bind:value={$form.amount}
 						disabled={$delayed}
 						class={$errors.amount ? 'border-destructive' : ''}
+						error={!!$errors.amount}
+						nextInputId="note"
 					/>
 					{#if $errors.amount}
 						<p class="text-sm text-destructive">{$errors.amount}</p>
