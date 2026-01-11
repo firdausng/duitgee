@@ -126,56 +126,71 @@
 				<div class="text-right text-3xl font-bold font-mono">{displayValue}</div>
 			</div>
 
-			<!-- Numpad Grid -->
-			<div class="grid grid-cols-4 gap-2 pb-4">
-				<!-- Number buttons (3x4 grid for numbers) -->
-				{#each numberButtons as num}
+			<div class="flex ">
+				<div class="grow md:flex-none"></div>
+				<!-- Numpad Grid -->
+				<div class="grid grid-cols-3 gap-2 pb-4 w-80 md:w-full">
+					<!-- Number buttons (3x4 grid for numbers) -->
+					{#each numberButtons as num}
+						<Button
+								type="button"
+								variant="outline"
+								size="lg"
+								class="h-16 text-xl font-semibold"
+								onclick={() => handleNumberClick(num)}
+						>
+							{num}
+						</Button>
+					{/each}
+
+					<!-- no action button -->
 					<Button
-						type="button"
-						variant="outline"
-						size="lg"
-						class="h-16 text-xl font-semibold"
-						onclick={() => handleNumberClick(num)}
+							type="button"
+							variant="outline"
+							size="lg"
+							class="h-16 text-lg font-semibold bg-gray-200"
+							disabled
 					>
-						{num}
+
 					</Button>
-				{/each}
 
-				<!-- Backspace button -->
-				<Button
-					type="button"
-					variant="outline"
-					size="lg"
-					class="h-16"
-					onclick={handleBackspace}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-6 w-6"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
+					<!-- Clear button -->
+					<Button
+							type="button"
+							variant="outline"
+							size="lg"
+							class="h-16 text-lg font-semibold"
+							onclick={handleClear}
 					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z"
-						/>
-					</svg>
-				</Button>
+						C
+					</Button>
 
-				<!-- Clear button -->
-				<Button
-					type="button"
-					variant="outline"
-					size="lg"
-					class="h-16 text-lg font-semibold"
-					onclick={handleClear}
-				>
-					C
-				</Button>
+					<!-- Backspace button -->
+					<Button
+							type="button"
+							variant="outline"
+							size="lg"
+							class="h-16"
+							onclick={handleBackspace}
+					>
+						<svg
+								xmlns="http://www.w3.org/2000/svg"
+								class="h-6 w-6"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+						>
+							<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z"
+							/>
+						</svg>
+					</Button>
+				</div>
 			</div>
+
 		</div>
 
 		<DrawerFooter class="flex-shrink-0">
