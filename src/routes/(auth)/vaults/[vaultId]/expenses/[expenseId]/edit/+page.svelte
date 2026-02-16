@@ -16,7 +16,7 @@
 	import { Spinner } from '$lib/components/ui/spinner';
 	import { Toaster } from "$lib/components/ui/sonner";
 	import { toast } from "svelte-sonner";
-	import { localDatetimeToUtcIso } from '$lib/utils';
+	import { localDatetimeToUtcIso, utcToLocalDatetimeString } from '$lib/utils';
 
 	let { data } = $props();
 
@@ -69,6 +69,13 @@
 			} finally {
 				isLoading = false;
 			}
+		}
+	});
+
+	// Convert UTC date to local time on the client side
+	$effect(() => {
+		if (data.expenseDateUtc && !$form.date) {
+			$form.date = utcToLocalDatetimeString(data.expenseDateUtc);
 		}
 	});
 

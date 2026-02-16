@@ -2,7 +2,6 @@ import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { updateExpenseRequestSchema } from '$lib/schemas/expenses';
 import { error } from '@sveltejs/kit';
-import { utcToLocalDatetimeString } from '$lib/utils';
 
 export const load = async ({ params, fetch }) => {
 	const vaultId = params.vaultId;
@@ -42,6 +41,7 @@ export const load = async ({ params, fetch }) => {
 	}
 
 	// Initialize form with expense data
+	// Note: date conversion to local time must happen on the client side
 	const form = await superValidate(
 		{
 			id: expenseData.id,
@@ -50,7 +50,8 @@ export const load = async ({ params, fetch }) => {
 			amount: expenseData.amount,
 			categoryName: expenseData.category?.name || '',
 			paidBy: expenseData.paidBy,
-			date: utcToLocalDatetimeString(expenseData.date)
+			paymentType: expenseData.paymentType,
+			date: '' // Will be set on client side from expenseDateUtc
 		},
 		valibot(updateExpenseRequestSchema)
 	);
@@ -60,6 +61,7 @@ export const load = async ({ params, fetch }) => {
 		vaultId,
 		expenseId,
 		expense: expenseData,
+		expenseDateUtc: expenseData.date, // Pass raw UTC date to client
 		members
 	};
 };
