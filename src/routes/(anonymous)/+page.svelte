@@ -165,7 +165,7 @@
 					</div>
 					<h3 class="text-xl md:text-2xl font-bold">Families</h3>
 					<p class="text-sm md:text-base text-muted-foreground px-4">
-						Manage household expenses together. Everyone knows the budget.
+						Manage household expenses together. Everyone stays in the loop.
 					</p>
 				</div>
 			</div>

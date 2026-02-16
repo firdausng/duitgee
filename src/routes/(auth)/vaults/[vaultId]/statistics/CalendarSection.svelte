@@ -7,17 +7,14 @@
     import {formatCurrency} from "./utils";
     import type {Expense} from "../types";
     import {format, parseISO} from "date-fns";
-    import { getDayBudgetStatus, type Budget } from "./budgetUtils";
-
     type Props = {
         value: DateRange | undefined;
         placeholder: CalendarDate;
         allExpenses: Expense[];
-        budget?: Budget | null;
         onValueChange: (value: DateRange | undefined) => void;
     };
 
-    let {value = $bindable(), placeholder = $bindable(), allExpenses, budget = null, onValueChange}: Props = $props();
+    let {value = $bindable(), placeholder = $bindable(), allExpenses, onValueChange}: Props = $props();
 
     // Format the date range for display
     const dateRangeLabel = $derived.by(() => {
@@ -62,25 +59,6 @@
         return dailyTotals.get(dateKey) || 0;
     }
 
-    function getDayBudgetColor(day: CalendarDate): string {
-        if (!budget) return '';
-
-        const date = new Date(day.year, day.month - 1, day.day);
-        const status = getDayBudgetStatus(date, budget, allExpenses);
-
-        if (!status) return '';
-
-        switch (status) {
-            case 'under':
-                return 'bg-green-500/10 border-green-500/30';
-            case 'warning':
-                return 'bg-yellow-500/10 border-yellow-500/30';
-            case 'over':
-                return 'bg-red-500/10 border-red-500/30';
-            default:
-                return '';
-        }
-    }
 </script>
 
 <Accordion type="multiple" class="mb-6">
@@ -108,8 +86,7 @@
                     {#snippet day({ day, outsideMonth })}
                         {@const dailyTotal = getDailyTotal(day)}
                         {@const dayIsWeekend = isWeekend(day, "en-US")}
-                        {@const budgetColor = getDayBudgetColor(day)}
-                        <RangeCalendarDay class="flex flex-col items-center relative {budgetColor ? `border ${budgetColor}` : ''}">
+                        <RangeCalendarDay class="flex flex-col items-center relative">
                             <span>{day.day}</span>
                             {#if !outsideMonth && dailyTotal > 0}
                                 <span class="text-xs font-semibold text-primary absolute -bottom-2.5 right-0 -mt-1 -mr-1 bg-card border border-border rounded-full px-1.5 py-0.5 shadow-sm">

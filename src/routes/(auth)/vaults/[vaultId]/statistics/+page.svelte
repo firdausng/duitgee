@@ -17,9 +17,6 @@
     import CurrentFilterChip from "./CurrentFilterChip.svelte";
     import ExpenseListByDate from "./ExpenseListByDate.svelte";
     import CalendarSection from "./CalendarSection.svelte";
-    import BudgetSelector from "./BudgetSelector.svelte";
-    import BudgetSummary from "./BudgetSummary.svelte";
-    import { calculateBudgetProgress, filterExpensesForBudget, type Budget } from "./budgetUtils";
     import {
         groupExpensesByDate,
         formatCurrency,
@@ -49,9 +46,6 @@
 
     // Drawer state for filter selection
     let filterDrawerOpen = $state(false);
-
-    // Budget tracking state
-    let selectedBudgetId = $state<string | null>(null);
 
     // Calendar value - initialize to current month
     const today = now(getLocalTimeZone());
@@ -330,40 +324,14 @@
         }
     );
 
-    // Resource for budgets
-    const budgetsResource = resource(
-        () => [vaultId, refetchKey] as const,
-        async ([id]) => {
-            const urlParams = new URLSearchParams({
-                vaultId: id,
-                isActive: 'true'
-            });
-
-            const response = await ofetch<{ success: boolean; data: Budget[] }>(`/api/getBudgetsSummary?${urlParams.toString()}`);
-            return response.data || [];
-        }
-    );
-
     // Derive data from resources
     const currentVault = $derived(vaultResource.current);
     const allExpenses = $derived(allExpensesResource.current || []); // For calendar daily totals
     const filteredExpensesList = $derived(expensesResource.current || []); // For the filtered list
     const statistics = $derived(statisticsResource.current || null);
-    const budgets = $derived(budgetsResource.current || []);
     const isLoadingVault = $derived(vaultResource.loading);
     const isLoadingExpenses = $derived(expensesResource.loading);
     const isLoadingStats = $derived(statisticsResource.loading);
-
-    // Selected budget and progress calculation
-    const selectedBudget = $derived.by(() => {
-        if (!selectedBudgetId) return null;
-        return budgets.find(b => b.id === selectedBudgetId) || null;
-    });
-
-    const budgetProgress = $derived.by(() => {
-        if (!selectedBudget) return null;
-        return calculateBudgetProgress(selectedBudget);
-    });
 
     // Derive filterId from filterName and statistics data
     const filterId = $derived.by(() => {
@@ -448,21 +416,8 @@
     // Filter all expenses by category/template/member (for calendar totals)
     const allExpensesFiltered = $derived.by(() => filterByType(allExpenses));
 
-    // Apply budget filtering on top of manual filters (for calendar display when budget is selected)
-    const allExpensesForCalendar = $derived.by(() => {
-        if (!selectedBudget) return allExpensesFiltered;
-        return filterExpensesForBudget(allExpensesFiltered, selectedBudget);
-    });
-
     // Filter date-filtered expenses by category/template/member (for expense list)
-    const filteredExpenses = $derived.by(() => {
-        const manuallyFiltered = filterByType(filteredExpensesList);
-        // Apply budget filtering if a budget is selected
-        if (selectedBudget) {
-            return filterExpensesForBudget(manuallyFiltered, selectedBudget);
-        }
-        return manuallyFiltered;
-    });
+    const filteredExpenses = $derived.by(() => filterByType(filteredExpensesList));
 
     const allExpensesByDate = $derived(groupExpensesByDate(filteredExpenses));
 
@@ -535,27 +490,11 @@
             onFilterChange={(filter) => params.filter = filter}
         />
 
-        <!-- Budget Selector -->
-        <BudgetSelector
-            budgets={budgets}
-            selectedBudgetId={selectedBudgetId}
-            onSelect={(id) => selectedBudgetId = id}
-        />
-
-        <!-- Budget Summary -->
-        {#if budgetProgress}
-            <BudgetSummary
-                progress={budgetProgress}
-                vaultId={vaultId}
-            />
-        {/if}
-
         <!-- Calendar Section -->
         <CalendarSection
             bind:value={calendarValue}
             bind:placeholder={calendarPlaceholder}
-            allExpenses={allExpensesForCalendar}
-            budget={selectedBudget}
+            allExpenses={allExpensesFiltered}
             onValueChange={(value) => calendarValue = value}
         />
 

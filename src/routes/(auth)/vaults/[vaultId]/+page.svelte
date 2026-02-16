@@ -12,14 +12,11 @@
     import ExpenseFilters from "./ExpenseFilters.svelte";
     import VaultStatisticsComponent from "./VaultStatistics.svelte";
     import InviteForm from "./InviteForm.svelte";
-    import BudgetOverview from "./BudgetOverview.svelte";
-    import * as Tabs from "$lib/components/ui/tabs/index.js";
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
     import {Toaster} from "$lib/components/ui/sonner";
     import {toast} from "svelte-sonner";
     import {localDatetimeToUtcIso, getDateRange, type DateFilter} from "$lib/utils";
     import {createVaultFormatters} from "$lib/vaultFormatting";
-    import { calculateBudgetProgress, type Budget } from "./statistics/budgetUtils";
     import {page} from "$app/state";
     import { groupExpensesByDate, formatDate } from "./statistics/utils";
     import ExpenseListByDate from "./statistics/ExpenseListByDate.svelte";
@@ -88,20 +85,6 @@
         }
     );
 
-    // Resource for budgets
-    const budgetsSummaryResource = resource(
-        () => [vaultId, refetchKey] as const,
-        async ([id]) => {
-            const urlParams = new URLSearchParams({
-                vaultId: id,
-                isActive: 'true'
-            });
-
-            const response = await ofetch<{ success: boolean; data: Budget[] }>(`/api/getBudgetsSummary?${urlParams.toString()}`);
-            return response.data || [];
-        }
-    );
-
     // Resource for expenses - auto-refetches when filter changes
     const expensesResource = resource(
         () => {
@@ -135,7 +118,6 @@
     // Derive data from resources
     const currentVault = $derived(vaultResource.current);
     const statistics = $derived(statisticsResource.current || null);
-    const budgets = $derived(budgetsSummaryResource.current || []);
     const expenses = $derived(expensesResource.current || []);
     const isLoadingVault = $derived(vaultResource.loading);
     const isLoadingStats = $derived(statisticsResource.loading);
@@ -145,11 +127,6 @@
 
     // Group expenses by date for display
     const expensesByDate = $derived(groupExpensesByDate(expenses));
-
-    // Calculate budget progress for all active budgets
-    const budgetProgresses = $derived.by(() => {
-        return budgets.map(budget => calculateBudgetProgress(budget));
-    });
 
     // Create vault-specific formatters
     const vaultFormatters = $derived(
@@ -379,47 +356,33 @@
                 onEndDateChange={(value) => params.endDate = value}
         />
 
-        <Tabs.Root value="expense" class="mt-4">
-            <Tabs.List>
-                <Tabs.Trigger value="expense">Expense</Tabs.Trigger>
-                <Tabs.Trigger value="budget">Budget</Tabs.Trigger>
-            </Tabs.List>
-            <Tabs.Content value="expense">
-                <!-- Vault Statistics -->
-                <VaultStatisticsComponent
-                        statistics={statistics}
-                        isLoading={isLoadingStats}
-                        formatCurrency={vaultFormatters.currency}
-                        vaultId={vaultId}
-                        onCardClick={handleStatisticsCardClick}
-                />
+        <div class="mt-4">
+            <!-- Vault Statistics -->
+            <VaultStatisticsComponent
+                    statistics={statistics}
+                    isLoading={isLoadingStats}
+                    formatCurrency={vaultFormatters.currency}
+                    vaultId={vaultId}
+                    onCardClick={handleStatisticsCardClick}
+            />
 
-                <!-- Expense List -->
-                <div class="mt-6">
-                    {#if isLoadingExpenses}
-                        <div class="flex justify-center py-12">
-                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                        </div>
-                    {:else}
-                        <ExpenseListByDate
-                            expensesByDate={expensesByDate}
-                            onEdit={handleEditExpense}
-                            onDelete={handleDeleteExpense}
-                            formatCurrency={vaultFormatters.currency}
-                            formatDate={formatDate}
-                        />
-                    {/if}
-                </div>
-            </Tabs.Content>
-            <Tabs.Content value="budget">
-                <!-- Budget Overview -->
-                <BudgetOverview
-                        budgetProgresses={budgetProgresses}
-                        vaultId={vaultId}
+            <!-- Expense List -->
+            <div class="mt-6">
+                {#if isLoadingExpenses}
+                    <div class="flex justify-center py-12">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    </div>
+                {:else}
+                    <ExpenseListByDate
+                        expensesByDate={expensesByDate}
+                        onEdit={handleEditExpense}
+                        onDelete={handleDeleteExpense}
                         formatCurrency={vaultFormatters.currency}
-                />
-            </Tabs.Content>
-        </Tabs.Root>
+                        formatDate={formatDate}
+                    />
+                {/if}
+            </div>
+        </div>
 
     {/if}
 </div>

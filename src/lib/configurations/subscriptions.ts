@@ -2,7 +2,6 @@ export type SubscriptionTier = 'free' | 'premium';
 
 export interface SubscriptionLimits {
 	maxVaults: number;
-	maxBudgets: number;
 }
 
 export interface SubscriptionConfig {
@@ -16,16 +15,14 @@ export const SUBSCRIPTION_CONFIGS: Record<SubscriptionTier, SubscriptionConfig> 
 		tier: 'free',
 		name: 'Free',
 		limits: {
-			maxVaults: 1,
-			maxBudgets: 1
+			maxVaults: 1
 		}
 	},
 	premium: {
 		tier: 'premium',
 		name: 'Premium',
 		limits: {
-			maxVaults: -1, // -1 indicates unlimited
-			maxBudgets: -1
+			maxVaults: -1 // -1 indicates unlimited
 		}
 	}
 };
@@ -47,28 +44,10 @@ export function canCreateVault(tier: SubscriptionTier, currentVaultCount: number
 }
 
 /**
- * Check if user has reached budget limit
- */
-export function canCreateBudget(tier: SubscriptionTier, currentBudgetCount: number): boolean {
-	const config = getSubscriptionConfig(tier);
-	if (config.limits.maxBudgets === -1) return true; // Unlimited
-	return currentBudgetCount < config.limits.maxBudgets;
-}
-
-/**
  * Get remaining vault slots for a user
  */
 export function getRemainingVaults(tier: SubscriptionTier, currentVaultCount: number): number {
 	const config = getSubscriptionConfig(tier);
 	if (config.limits.maxVaults === -1) return -1; // Unlimited
 	return Math.max(0, config.limits.maxVaults - currentVaultCount);
-}
-
-/**
- * Get remaining budget slots for a user
- */
-export function getRemainingBudgets(tier: SubscriptionTier, currentBudgetCount: number): number {
-	const config = getSubscriptionConfig(tier);
-	if (config.limits.maxBudgets === -1) return -1; // Unlimited
-	return Math.max(0, config.limits.maxBudgets - currentBudgetCount);
 }
