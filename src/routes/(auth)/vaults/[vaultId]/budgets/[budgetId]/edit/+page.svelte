@@ -12,7 +12,7 @@
 	import { Toaster } from "$lib/components/ui/sonner";
 	import { toast } from "svelte-sonner";
 	import { ofetch } from 'ofetch';
-	import { localDatetimeToUtcIso, formatDatetimeLocal } from '$lib/utils';
+	import { localDatetimeToUtcIso, formatDatetimeLocal, utcToLocalDatetimeString } from '$lib/utils';
 	import { resolve } from "$app/paths";
 
 	let { data } = $props();
@@ -65,6 +65,16 @@
 			} finally {
 				isLoading = false;
 			}
+		}
+	});
+
+	// Convert UTC dates to local time on the client side
+	$effect(() => {
+		if (data.budgetStartDateUtc && !$form.startDate) {
+			$form.startDate = utcToLocalDatetimeString(data.budgetStartDateUtc);
+		}
+		if (data.budgetEndDateUtc && !$form.endDate) {
+			$form.endDate = utcToLocalDatetimeString(data.budgetEndDateUtc);
 		}
 	});
 

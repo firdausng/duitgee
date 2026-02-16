@@ -2,7 +2,6 @@ import { error } from '@sveltejs/kit';
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { updateBudgetSchema } from '$lib/schemas/budgets';
-import { utcToLocalDatetimeString } from '$lib/utils';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, platform, fetch, locals }) => {
@@ -28,7 +27,7 @@ export const load: PageServerLoad = async ({ params, platform, fetch, locals }) 
 		throw error(404, 'Budget not found');
 	}
 
-	// Convert UTC dates to local datetime for the form
+	// Note: date conversion to local time must happen on the client side
 	const formData = {
 		id: budget.id,
 		vaultId: budget.vaultId,
@@ -36,8 +35,8 @@ export const load: PageServerLoad = async ({ params, platform, fetch, locals }) 
 		description: budget.description,
 		amount: budget.amount,
 		period: budget.period,
-		startDate: utcToLocalDatetimeString(budget.startDate),
-		endDate: budget.endDate ? utcToLocalDatetimeString(budget.endDate) : null,
+		startDate: '', // Will be set on client side from budgetStartDateUtc
+		endDate: null as string | null, // Will be set on client side from budgetEndDateUtc
 		categoryNames: budget.categoryNames,
 		templateIds: budget.templateIds,
 		userIds: budget.userIds,
@@ -83,6 +82,8 @@ export const load: PageServerLoad = async ({ params, platform, fetch, locals }) 
 		vaultId,
 		budgetId,
 		budget,
+		budgetStartDateUtc: budget.startDate, // Pass raw UTC date to client
+		budgetEndDateUtc: budget.endDate, // Pass raw UTC date to client
 		members,
 		templates,
 		vault
