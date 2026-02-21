@@ -1,0 +1,203 @@
+import { Hono } from 'hono';
+import * as v from 'valibot';
+import { describeRoute, resolver } from 'hono-openapi';
+import { vValidator } from '@hono/valibot-validator';
+import {
+    createFundSchema,
+    updateFundSchema,
+    archiveFundSchema,
+    topUpFundSchema,
+    getFundsQuerySchema,
+    getFundQuerySchema,
+    getFundCyclesQuerySchema,
+} from '$lib/schemas/funds';
+import { getFunds } from './getFundsHandler';
+import { getFund } from './getFundHandler';
+import { createFund } from './createFundHandler';
+import { updateFund } from './updateFundHandler';
+import { archiveFund } from './archiveFundHandler';
+import { topUpFund } from './topUpFundHandler';
+import { getFundCycles } from './getFundCyclesHandler';
+
+const FUND_TAG = ['Fund'];
+const commonFundConfig = { tags: FUND_TAG };
+
+export const fundsApi = new Hono<App.Api>()
+    // ── Queries ────────────────────────────────────────────────────────────
+
+    .get(
+        '/getFunds',
+        describeRoute({
+            ...commonFundConfig,
+            description: 'List all funds in a vault',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: { 'application/json': { schema: resolver(v.object({ success: v.boolean(), data: v.array(v.any()) })) } },
+                },
+            },
+        }),
+        vValidator('query', getFundsQuerySchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const { vaultId } = c.req.valid('query');
+            try {
+                const data = await getFunds(vaultId, session, c.env);
+                return c.json({ success: true, data });
+            } catch (error) {
+                const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
+                return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to get funds' }, status);
+            }
+        },
+    )
+
+    .get(
+        '/getFund',
+        describeRoute({
+            ...commonFundConfig,
+            description: 'Get a single fund by id',
+            responses: {
+                200: { description: 'Successful response', content: { 'application/json': { schema: resolver(v.object({ success: v.boolean(), data: v.any() })) } } },
+                404: { description: 'Fund not found' },
+            },
+        }),
+        vValidator('query', getFundQuerySchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const { vaultId, id } = c.req.valid('query');
+            try {
+                const data = await getFund(vaultId, id, session, c.env);
+                if (!data) return c.json({ success: false, error: 'Fund not found' }, 404);
+                return c.json({ success: true, data });
+            } catch (error) {
+                const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
+                return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to get fund' }, status);
+            }
+        },
+    )
+
+    .get(
+        '/getFundCycles',
+        describeRoute({
+            ...commonFundConfig,
+            description: 'List cycles for a fund. Past cycles require the fund:cycle_history entitlement.',
+            responses: {
+                200: { description: 'Successful response', content: { 'application/json': { schema: resolver(v.object({ success: v.boolean(), data: v.any() })) } } },
+            },
+        }),
+        vValidator('query', getFundCyclesQuerySchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const { fundId, vaultId } = c.req.valid('query');
+            try {
+                const data = await getFundCycles(fundId, vaultId, session, c.env);
+                return c.json({ success: true, data });
+            } catch (error) {
+                const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
+                return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to get cycles' }, status);
+            }
+        },
+    )
+
+    // ── Commands ───────────────────────────────────────────────────────────
+
+    .post(
+        '/createFund',
+        describeRoute({
+            ...commonFundConfig,
+            description: 'Create a fund with its policy. First cycle is opened immediately.',
+            responses: {
+                201: { description: 'Fund created', content: { 'application/json': { schema: resolver(v.object({ success: v.boolean(), data: v.any() })) } } },
+            },
+        }),
+        vValidator('json', createFundSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+            try {
+                const result = await createFund(session, data, c.env);
+                return c.json({ success: true, data: result }, 201);
+            } catch (error) {
+                const status = error instanceof Error && error.message.includes('denied') ? 403 : 500;
+                return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to create fund' }, status);
+            }
+        },
+    )
+
+    .post(
+        '/updateFund',
+        describeRoute({
+            ...commonFundConfig,
+            description: 'Update fund name, description, or appearance',
+            responses: {
+                200: { description: 'Fund updated', content: { 'application/json': { schema: resolver(v.object({ success: v.boolean(), data: v.any() })) } } },
+                404: { description: 'Fund not found' },
+            },
+        }),
+        vValidator('json', updateFundSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+            try {
+                const result = await updateFund(session, data, c.env);
+                return c.json({ success: true, data: result });
+            } catch (error) {
+                const status = error instanceof Error && error.message.includes('not found') ? 404
+                    : error instanceof Error && error.message.includes('denied') ? 403
+                    : 500;
+                return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to update fund' }, status);
+            }
+        },
+    )
+
+    .post(
+        '/archiveFund',
+        describeRoute({
+            ...commonFundConfig,
+            description: 'Archive a fund. Closes the active cycle. Existing expenses are preserved.',
+            responses: {
+                200: { description: 'Fund archived', content: { 'application/json': { schema: resolver(v.object({ success: v.boolean(), data: v.any() })) } } },
+                404: { description: 'Fund not found' },
+            },
+        }),
+        vValidator('json', archiveFundSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+            try {
+                const result = await archiveFund(session, data, c.env);
+                return c.json({ success: true, data: result });
+            } catch (error) {
+                const status = error instanceof Error && error.message.includes('not found') ? 404
+                    : error instanceof Error && error.message.includes('denied') ? 403
+                    : 500;
+                return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to archive fund' }, status);
+            }
+        },
+    )
+
+    .post(
+        '/topUpFund',
+        describeRoute({
+            ...commonFundConfig,
+            description: 'Add money to a fund. Lazily rolls over the cycle if expired.',
+            responses: {
+                200: { description: 'Top-up recorded', content: { 'application/json': { schema: resolver(v.object({ success: v.boolean(), data: v.any() })) } } },
+                404: { description: 'Fund not found' },
+            },
+        }),
+        vValidator('json', topUpFundSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+            try {
+                const result = await topUpFund(session, data, c.env);
+                return c.json({ success: true, data: result });
+            } catch (error) {
+                const status = error instanceof Error && error.message.includes('not found') ? 404
+                    : error instanceof Error && error.message.includes('denied') ? 403
+                    : 500;
+                return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to top up fund' }, status);
+            }
+        },
+    );
