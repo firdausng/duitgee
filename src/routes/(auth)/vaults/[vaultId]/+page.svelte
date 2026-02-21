@@ -356,6 +356,22 @@
                 onEndDateChange={(value) => params.endDate = value}
         />
 
+        <!-- Funds quick-link -->
+        <div class="mt-4">
+            <button
+                class="w-full text-left"
+                onclick={() => goto(`/vaults/${vaultId}/funds`)}
+            >
+                <div class="flex items-center justify-between rounded-lg border bg-card px-4 py-3 hover:shadow-sm transition-shadow">
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">💰</span>
+                        <span class="font-medium">Funds</span>
+                    </div>
+                    <span class="text-muted-foreground text-sm">→</span>
+                </div>
+            </button>
+        </div>
+
         <div class="mt-4">
             <!-- Vault Statistics -->
             <VaultStatisticsComponent

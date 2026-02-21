@@ -60,11 +60,28 @@ export const load = async ({ params, url, platform, fetch, locals }) => {
 		console.error('Failed to fetch vault:', error);
 	}
 
+	// Fetch active funds for fund selector
+	let funds: Array<{ id: string; name: string; balance: number }> = [];
+	try {
+		const response = await fetch(`/api/getFunds?vaultId=${vaultId}`);
+		if (response.ok) {
+			const result = await response.json();
+			if (result.success) {
+				funds = (result.data ?? [])
+					.map((row: any) => row.fund)
+					.filter((f: any) => f.status === 'active');
+			}
+		}
+	} catch {
+		// non-critical — fund selector will be empty
+	}
+
 	return {
 		form,
 		vaultId,
 		template,
-		members
+		members,
+		funds,
 	};
 };
 

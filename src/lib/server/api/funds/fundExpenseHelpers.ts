@@ -104,7 +104,7 @@ export async function detachFundFromExpense(
     userId: string,
     env: Cloudflare.Env,
 ): Promise<void> {
-    if (!fundTransactionId || currentPaymentMode !== 'paid_by_fund') return;
+    if (!fundTransactionId) return;
 
     const client = drizzle(env.DB, { schema });
 
@@ -116,27 +116,44 @@ export async function detachFundFromExpense(
 
     if (!original) return;
 
+    // pending_reimbursement transactions have amount=0 — nothing was deducted, nothing to reverse.
+    // Only expense_paid and reimbursement (settled) transactions affect the fund balance.
+    if (original.type === 'pending_reimbursement') return;
+    if (original.type !== 'expense_paid' && original.type !== 'reimbursement') return;
+
     const cycle = await getActiveCycleOrCreate(original.fundId, userId, env);
     const auditFields = initialAuditFields({ userId });
+
+    const reversalType = original.type === 'expense_paid' ? 'expense_reversal' : 'reimbursement_reversal';
 
     await client.insert(fundTransactions).values({
         fundId: original.fundId,
         cycleId: cycle.id,
-        type: 'expense_reversal',
+        type: reversalType,
         amount: original.amount,
         expenseId: original.expenseId,
         ...auditFields,
     });
 
+    // Restore fund balance
     await client
         .update(funds)
         .set({ balance: sql`${funds.balance} + ${original.amount}`, ...updateAuditFields({ userId }) })
         .where(eq(funds.id, original.fundId));
 
-    await client
-        .update(fundCycles)
-        .set({ totalSpent: sql`${fundCycles.totalSpent} - ${original.amount}`, ...updateAuditFields({ userId }) })
-        .where(eq(fundCycles.id, cycle.id));
+    // Decrement the correct aggregate on the original cycle
+    if (original.type === 'expense_paid') {
+        await client
+            .update(fundCycles)
+            .set({ totalSpent: sql`${fundCycles.totalSpent} - ${original.amount}`, ...updateAuditFields({ userId }) })
+            .where(eq(fundCycles.id, original.cycleId));
+    } else {
+        // reimbursement — reverse totalReimbursed on the cycle it was settled in
+        await client
+            .update(fundCycles)
+            .set({ totalReimbursed: sql`${fundCycles.totalReimbursed} - ${original.amount}`, ...updateAuditFields({ userId }) })
+            .where(eq(fundCycles.id, original.cycleId));
+    }
 }
 
 /**

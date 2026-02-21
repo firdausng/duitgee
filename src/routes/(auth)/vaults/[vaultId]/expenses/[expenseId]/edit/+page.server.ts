@@ -40,6 +40,22 @@ export const load = async ({ params, fetch }) => {
 		console.error('Failed to fetch vault:', err);
 	}
 
+	// Fetch active funds for fund selector
+	let funds: Array<{ id: string; name: string; balance: number }> = [];
+	try {
+		const response = await fetch(`/api/getFunds?vaultId=${vaultId}`);
+		if (response.ok) {
+			const result = await response.json();
+			if (result.success) {
+				funds = (result.data ?? [])
+					.map((row: any) => row.fund)
+					.filter((f: any) => f.status === 'active');
+			}
+		}
+	} catch {
+		// non-critical — fund selector will be empty
+	}
+
 	// Initialize form with expense data
 	// Note: date conversion to local time must happen on the client side
 	const form = await superValidate(
@@ -51,7 +67,9 @@ export const load = async ({ params, fetch }) => {
 			categoryName: expenseData.category?.name || '',
 			paidBy: expenseData.paidBy,
 			paymentType: expenseData.paymentType,
-			date: '' // Will be set on client side from expenseDateUtc
+			date: '', // Will be set on client side from expenseDateUtc
+			fundId: expenseData.fundId ?? null,
+			fundPaymentMode: expenseData.fundPaymentMode ?? null,
 		},
 		valibot(updateExpenseRequestSchema)
 	);
@@ -62,6 +80,7 @@ export const load = async ({ params, fetch }) => {
 		expenseId,
 		expense: expenseData,
 		expenseDateUtc: expenseData.date, // Pass raw UTC date to client
-		members
+		members,
+		funds,
 	};
 };
