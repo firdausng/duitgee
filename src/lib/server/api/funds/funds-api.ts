@@ -10,6 +10,10 @@ import {
     getFundsQuerySchema,
     getFundQuerySchema,
     getFundCyclesQuerySchema,
+    getPendingReimbursementsQuerySchema,
+    getVaultPendingReimbursementsQuerySchema,
+    settleReimbursementsSchema,
+    settleVaultReimbursementsSchema,
 } from '$lib/schemas/funds';
 import { getFunds } from './getFundsHandler';
 import { getFund } from './getFundHandler';
@@ -18,6 +22,10 @@ import { updateFund } from './updateFundHandler';
 import { archiveFund } from './archiveFundHandler';
 import { topUpFund } from './topUpFundHandler';
 import { getFundCycles } from './getFundCyclesHandler';
+import { getPendingReimbursements } from './getPendingReimbursementsHandler';
+import { settleReimbursements } from './settleReimbursementsHandler';
+import { getVaultPendingReimbursements } from './getVaultPendingReimbursementsHandler';
+import { settleVaultReimbursements } from './settleVaultReimbursementsHandler';
 
 const FUND_TAG = ['Fund'];
 const commonFundConfig = { tags: FUND_TAG };
@@ -198,6 +206,114 @@ export const fundsApi = new Hono<App.Api>()
                     : error instanceof Error && error.message.includes('denied') ? 403
                     : 500;
                 return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to top up fund' }, status);
+            }
+        },
+    )
+
+    // ── Reimbursements ─────────────────────────────────────────────────────
+
+    .get(
+        '/getPendingReimbursements',
+        describeRoute({
+            ...commonFundConfig,
+            description: 'List pending reimbursements for a single fund',
+            responses: {
+                200: { description: 'Successful response', content: { 'application/json': { schema: resolver(v.object({ success: v.boolean(), data: v.any() })) } } },
+                404: { description: 'Fund not found' },
+            },
+        }),
+        vValidator('query', getPendingReimbursementsQuerySchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const { fundId, vaultId } = c.req.valid('query');
+            try {
+                const data = await getPendingReimbursements(fundId, vaultId, session, c.env);
+                return c.json({ success: true, data });
+            } catch (error) {
+                const status = error instanceof Error && error.message.includes('not found') ? 404
+                    : error instanceof Error && error.message.includes('denied') ? 403
+                    : 500;
+                return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to get pending reimbursements' }, status);
+            }
+        },
+    )
+
+    .get(
+        '/getVaultPendingReimbursements',
+        describeRoute({
+            ...commonFundConfig,
+            description: 'List pending reimbursements across all funds in a vault. Requires fund:cross_fund_reimbursement entitlement.',
+            responses: {
+                200: { description: 'Successful response', content: { 'application/json': { schema: resolver(v.object({ success: v.boolean(), data: v.any() })) } } },
+                403: { description: 'Entitlement denied' },
+            },
+        }),
+        vValidator('query', getVaultPendingReimbursementsQuerySchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const { vaultId } = c.req.valid('query');
+            try {
+                const data = await getVaultPendingReimbursements(vaultId, session, c.env);
+                return c.json({ success: true, data });
+            } catch (error) {
+                const status = error instanceof Error && error.message.includes('denied') ? 403 : 500;
+                return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to get vault pending reimbursements' }, status);
+            }
+        },
+    )
+
+    .post(
+        '/settleReimbursements',
+        describeRoute({
+            ...commonFundConfig,
+            description: 'Bulk settle pending reimbursements within a single fund. Pre-validates balance before committing.',
+            responses: {
+                200: { description: 'Settled', content: { 'application/json': { schema: resolver(v.object({ success: v.boolean(), data: v.any() })) } } },
+                400: { description: 'Validation failed (insufficient balance or invalid transactions)' },
+                403: { description: 'Permission denied' },
+            },
+        }),
+        vValidator('json', settleReimbursementsSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+            try {
+                const result = await settleReimbursements(session, data, c.env);
+                return c.json({ success: true, data: result });
+            } catch (error) {
+                const msg = error instanceof Error ? error.message : 'Failed to settle reimbursements';
+                const status = msg.includes('denied') ? 403
+                    : msg.includes('Insufficient') || msg.includes('not found') || msg.includes('Some transactions') ? 400
+                    : 500;
+                return c.json({ success: false, error: msg }, status);
+            }
+        },
+    )
+
+    .post(
+        '/settleVaultReimbursements',
+        describeRoute({
+            ...commonFundConfig,
+            description: 'Bulk settle pending reimbursements across multiple funds. Requires fund:cross_fund_reimbursement entitlement. All succeed or all fail.',
+            responses: {
+                200: { description: 'Settled', content: { 'application/json': { schema: resolver(v.object({ success: v.boolean(), data: v.any() })) } } },
+                400: { description: 'Validation failed (insufficient balance in one or more funds)' },
+                403: { description: 'Entitlement or permission denied' },
+            },
+        }),
+        vValidator('json', settleVaultReimbursementsSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+            try {
+                const result = await settleVaultReimbursements(session, data, c.env);
+                return c.json({ success: true, data: result });
+            } catch (error) {
+                const msg = error instanceof Error ? error.message : 'Failed to settle vault reimbursements';
+                const status = msg.includes('denied') ? 403
+                    : msg.includes('validation failed') || msg.includes('Insufficient') || msg.includes('Some transactions') ? 400
+                    : 500;
+                return c.json({ success: false, error: msg }, status);
             }
         },
     );

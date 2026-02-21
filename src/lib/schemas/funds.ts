@@ -60,3 +60,33 @@ export const topUpFundSchema = v.object({
     note: v.optional(v.string()),
 });
 export type TopUpFund = v.InferOutput<typeof topUpFundSchema>;
+
+// ── Reimbursement queries & commands ───────────────────────────────────────
+
+export const getPendingReimbursementsQuerySchema = v.object({
+    fundId: v.pipe(v.string(), v.minLength(1)),
+    vaultId: v.pipe(v.string(), v.minLength(1)),
+});
+
+export const getVaultPendingReimbursementsQuerySchema = v.object({
+    vaultId: v.pipe(v.string(), v.minLength(1)),
+});
+
+export const settleReimbursementsSchema = v.object({
+    fundId: v.pipe(v.string(), v.minLength(1)),
+    vaultId: v.pipe(v.string(), v.minLength(1)),
+    fundTransactionIds: v.pipe(
+        v.array(v.pipe(v.string(), v.minLength(1))),
+        v.minLength(1, 'Select at least one transaction to settle'),
+    ),
+});
+export type SettleReimbursements = v.InferOutput<typeof settleReimbursementsSchema>;
+
+export const settleVaultReimbursementsSchema = v.object({
+    vaultId: v.pipe(v.string(), v.minLength(1)),
+    fundTransactionIds: v.pipe(
+        v.array(v.pipe(v.string(), v.minLength(1))),
+        v.minLength(1, 'Select at least one transaction to settle'),
+    ),
+});
+export type SettleVaultReimbursements = v.InferOutput<typeof settleVaultReimbursementsSchema>;
