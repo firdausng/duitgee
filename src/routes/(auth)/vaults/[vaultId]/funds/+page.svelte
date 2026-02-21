@@ -35,7 +35,10 @@
     );
 
     const fundRows = $derived(fundsResource.current ?? []);
-    const funds = $derived(fundRows.map((r) => r.fund));
+    const allFunds = $derived(fundRows.map((r) => r.fund));
+    const archivedCount = $derived(allFunds.filter(f => f.status === 'archived').length);
+    let showArchivedFunds = $state(false);
+    const funds = $derived(showArchivedFunds ? allFunds : allFunds.filter(f => f.status === 'active'));
     const isLoading = $derived(fundsResource.loading);
     const error = $derived(fundsResource.error);
 
@@ -96,7 +99,7 @@
                 <Button variant="outline" onclick={() => refetchKey++}>Retry</Button>
             </CardContent>
         </Card>
-    {:else if funds.length === 0}
+    {:else if allFunds.length === 0}
         <Card>
             <CardContent class="flex flex-col items-center justify-center py-16 text-center">
                 <div class="text-5xl mb-4">💰</div>
@@ -108,6 +111,16 @@
             </CardContent>
         </Card>
     {:else}
+        {#if archivedCount > 0}
+            <label class="flex items-center gap-2 mb-4 cursor-pointer w-fit">
+                <input
+                    type="checkbox"
+                    class="rounded border-input"
+                    bind:checked={showArchivedFunds}
+                />
+                <span class="text-sm text-muted-foreground">Show archived funds ({archivedCount})</span>
+            </label>
+        {/if}
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {#each funds as fund (fund.id)}
                 <button
