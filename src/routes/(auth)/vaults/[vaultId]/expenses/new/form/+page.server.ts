@@ -38,6 +38,8 @@ export const load = async ({ params, url, platform, fetch, locals }) => {
 					} else {
 						form.data.paidBy = template.defaultPaidBy || '';
 					}
+					form.data.fundId = template.defaultFundId ?? null;
+					form.data.fundPaymentMode = template.defaultFundPaymentMode ?? null;
 					form.data.templateId = templateId;
 				}
 			}

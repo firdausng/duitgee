@@ -226,6 +226,43 @@
                                     allowCreator={true}
                                     creatorLabel="Expense Creator"
                             />
+
+                            <!-- Default Fund -->
+                            {#if data.funds && data.funds.length > 0}
+                                <div class="space-y-2">
+                                    <Label for="defaultFundId">Default Fund (optional)</Label>
+                                    <select
+                                        id="defaultFundId"
+                                        name="defaultFundId"
+                                        bind:value={$form.defaultFundId}
+                                        disabled={$delayed}
+                                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <option value={null}>No fund</option>
+                                        {#each data.funds as fund}
+                                            <option value={fund.id}>
+                                                {fund.name} — {fund.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </option>
+                                        {/each}
+                                    </select>
+                                </div>
+
+                                {#if $form.defaultFundId}
+                                    <div class="space-y-2">
+                                        <Label for="defaultFundPaymentMode">Default Fund Payment Mode</Label>
+                                        <select
+                                            id="defaultFundPaymentMode"
+                                            name="defaultFundPaymentMode"
+                                            bind:value={$form.defaultFundPaymentMode}
+                                            disabled={$delayed}
+                                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <option value="paid_by_fund">Paid by Fund — deducts from balance immediately</option>
+                                            <option value="pending_reimbursement">Pending Reimbursement — settle later</option>
+                                        </select>
+                                    </div>
+                                {/if}
+                            {/if}
                         </div>
                     </div>
 

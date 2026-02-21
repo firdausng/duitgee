@@ -44,6 +44,8 @@ export const createExpenseTemplateSchema = v.object({
         v.minLength(1, 'Payment type is required')
     ), 'cash'),
     defaultPaidBy: v.optional(v.nullable(v.string())),
+    defaultFundId: v.optional(v.nullable(v.string())),
+    defaultFundPaymentMode: v.optional(v.nullable(v.string())),
 });
 
 export type CreateExpenseTemplate = v.InferOutput<typeof createExpenseTemplateSchema>;
@@ -67,6 +69,8 @@ export const updateExpenseTemplateSchema = v.object({
         v.minLength(1, 'Payment type is required')
     )),
     defaultPaidBy: v.optional(v.nullable(v.string())),
+    defaultFundId: v.optional(v.nullable(v.string())),
+    defaultFundPaymentMode: v.optional(v.nullable(v.string())),
 });
 
 export type UpdateExpenseTemplate = v.InferOutput<typeof updateExpenseTemplateSchema>;

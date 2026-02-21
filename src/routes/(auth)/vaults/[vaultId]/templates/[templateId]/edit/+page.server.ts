@@ -40,6 +40,22 @@ export const load = async ({ params, fetch }) => {
 		console.error('Failed to fetch vault:', err);
 	}
 
+	// Fetch active funds for fund selector
+	let funds: Array<{ id: string; name: string; balance: number }> = [];
+	try {
+		const response = await fetch(`/api/getFunds?vaultId=${vaultId}`);
+		if (response.ok) {
+			const result = await response.json();
+			if (result.success) {
+				funds = (result.data ?? [])
+					.map((row: any) => row.fund)
+					.filter((f: any) => f.status === 'active');
+			}
+		}
+	} catch {
+		// non-critical
+	}
+
 	// Initialize form with template data
 	const form = await superValidate(
 		{
@@ -52,7 +68,9 @@ export const load = async ({ params, fetch }) => {
 			defaultNote: templateData.defaultNote,
 			defaultAmount: templateData.defaultAmount,
 			defaultCategoryName: templateData.defaultCategoryName,
-			defaultPaidBy: templateData.defaultPaidBy
+			defaultPaidBy: templateData.defaultPaidBy,
+			defaultFundId: templateData.defaultFundId ?? null,
+			defaultFundPaymentMode: templateData.defaultFundPaymentMode ?? null,
 		},
 		valibot(updateExpenseTemplateSchema)
 	);
@@ -62,6 +80,7 @@ export const load = async ({ params, fetch }) => {
 		vaultId,
 		templateId,
 		template: templateData,
-		members
+		members,
+		funds,
 	};
 };

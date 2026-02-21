@@ -66,6 +66,8 @@ export const expenseTemplates = sqliteTable('expense_templates', {
     defaultCategoryName: text('category_id'),
     defaultPaymentType: text('default_payment_type').default('cash'), // Default payment method
     defaultPaidBy: text('default_user_id'), // Who the expense should be assigned to: "__creator__", null (vault), or specific user ID
+    defaultFundId: text('default_fund_id'), // Optional default fund to tag the expense to
+    defaultFundPaymentMode: text('default_fund_payment_mode'), // 'paid_by_fund' | 'pending_reimbursement'
     // Usage tracking
     usageCount: integer('usage_count').notNull().default(0),
     lastUsedAt: text('last_used_at'),
