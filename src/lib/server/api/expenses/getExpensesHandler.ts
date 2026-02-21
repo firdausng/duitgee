@@ -13,7 +13,7 @@ export const getExpenses = async (
     options?: App.GetVaultExpensesOptions
 ) => {
     const client = drizzle(env.DB, { schema });
-    const { page = 1, limit = 10, startDate, endDate, } = options || {};
+    const { page = 1, limit = 10, startDate, endDate, fundId } = options || {};
     const offset = (page - 1) * limit;
 
     let whereClause = and(
@@ -27,6 +27,10 @@ export const getExpenses = async (
             sql`${expenses.date} >= ${startDate}`,
             sql`${expenses.date} <= ${endDate}`
         );
+    }
+
+    if (fundId) {
+        whereClause = and(whereClause, eq(expenses.fundId, fundId));
     }
 
     const expensesList = await client

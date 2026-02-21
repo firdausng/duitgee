@@ -49,7 +49,7 @@ export const expensesApi = new Hono<App.Api>()
         vValidator('query', listExpensesQuerySchema),
         async (c) => {
             const session = c.get('currentSession');
-            const { vaultId, page, limit, categoryId, startDate, endDate, memberIds } = c.req.valid('query');
+            const { vaultId, page, limit, categoryId, startDate, endDate, memberIds, fundId } = c.req.valid('query');
 
             const memberIdsArray = memberIds ? memberIds.split(',') : undefined;
 
@@ -59,7 +59,8 @@ export const expensesApi = new Hono<App.Api>()
                 categoryId,
                 startDate,
                 endDate,
-                memberIds: memberIdsArray
+                memberIds: memberIdsArray,
+                fundId
             });
 
             return c.json(result);

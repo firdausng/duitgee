@@ -45,6 +45,9 @@
     let refetchKey = $state(0);
     let vaultRefetchKey = $state(0);
 
+    // Fund filter state
+    let selectedFundId = $state<string | null>(null);
+
     // UI state
     let showInviteForm = $state(false);
     let inviteEmail = $state('');
@@ -81,9 +84,9 @@
         () => {
             // Only include startDate/endDate in dependencies for custom filters
             if (filterType === 'custom') {
-                return [vaultId, filterType, params.startDate, params.endDate, refetchKey] as const;
+                return [vaultId, filterType, params.startDate, params.endDate, refetchKey, selectedFundId] as const;
             }
-            return [vaultId, filterType, refetchKey] as const;
+            return [vaultId, filterType, refetchKey, selectedFundId] as const;
         },
         async (deps) => {
             const dateRange = getDateRangeWithCustom();
@@ -91,6 +94,8 @@
                 vaultId: deps[0],
                     ...dateRange
             });
+
+            if (selectedFundId) urlParams.append('fundId', selectedFundId);
 
             const response = await ofetch<{ success: boolean, data: VaultStatistics }>(`/api/getVaultStatistics?${urlParams.toString()}`);
             return response.data;
@@ -105,9 +110,9 @@
         () => {
             // Include startDate/endDate in dependencies for custom filters
             if (filterType === 'custom') {
-                return [vaultId, filterType, params.startDate, params.endDate, refetchKey] as const;
+                return [vaultId, filterType, params.startDate, params.endDate, refetchKey, selectedFundId] as const;
             }
-            return [vaultId, filterType, refetchKey] as const;
+            return [vaultId, filterType, refetchKey, selectedFundId] as const;
         },
         async (deps) => {
             const dateRange = getDateRangeWithCustom();
@@ -119,6 +124,7 @@
 
             if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
             if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
+            if (selectedFundId) urlParams.append('fundId', selectedFundId);
 
             const response = await ofetch<{ expenses: Expense[]; pagination: any }>(
                 `/api/getExpenses?${urlParams.toString()}`
@@ -195,6 +201,16 @@
 
     function handleBack() {
         goto('/vaults');
+    }
+
+    function toggleFundFilter(fundId: string) {
+        if (selectedFundId === fundId) {
+            selectedFundId = null;
+            params.filter = 'today';
+        } else {
+            selectedFundId = fundId;
+            params.filter = 'all';
+        }
     }
 
     function toggleInviteForm() {
@@ -390,18 +406,31 @@
                         {@const spent = (row.activeCycle?.totalSpent ?? 0) + (row.activeCycle?.totalReimbursed ?? 0)}
                         {@const topUp = row.activeCycle?.topUpAmount ?? 0}
                         {@const isLow = topUp > 0 && row.fund.balance / topUp < 0.2}
+                        {@const isSelected = selectedFundId === row.fund.id}
                         <button
-                            onclick={() => goto(`/vaults/${vaultId}/funds/${row.fund.id}`)}
+                            onclick={() => toggleFundFilter(row.fund.id)}
                             class="shrink-0 snap-start w-44 text-left"
                         >
-                            <Card class="h-full hover:shadow-md transition-shadow {isLow ? 'border-amber-400/60' : ''}"
+                            <Card class="h-full hover:shadow-md transition-shadow {isSelected ? 'ring-2 ring-primary' : ''} {isLow && !isSelected ? 'border-amber-400/60' : ''}"
                                   style={row.fund.color ? `border-left: 3px solid ${row.fund.color}` : ''}>
                                 <CardContent class="p-3">
-                                    <div class="flex items-center gap-1.5 mb-3 min-w-0">
-                                        {#if row.fund.icon}
-                                            <span class="text-base shrink-0">{row.fund.icon}</span>
-                                        {/if}
-                                        <span class="text-xs font-medium truncate">{row.fund.name}</span>
+                                    <div class="flex items-center justify-between gap-1 mb-3 min-w-0">
+                                        <div class="flex items-center gap-1.5 min-w-0">
+                                            {#if row.fund.icon}
+                                                <span class="text-base shrink-0">{row.fund.icon}</span>
+                                            {/if}
+                                            <span class="text-xs font-medium truncate">{row.fund.name}</span>
+                                        </div>
+                                        <button
+                                            onclick={(e) => { e.stopPropagation(); goto(`/vaults/${vaultId}/funds/${row.fund.id}`); }}
+                                            class="shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                                            title="Open fund"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                                                <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                                            </svg>
+                                        </button>
                                     </div>
                                     <div class="space-y-1.5">
                                         <div class="flex items-center justify-between">
@@ -452,6 +481,21 @@
 
             <!-- Expense List -->
             <div class="mt-6">
+                {#if selectedFundId}
+                    {@const selectedFund = fundRows.find(r => r.fund.id === selectedFundId)}
+                    <div class="flex items-center gap-2 mb-3 px-1">
+                        <span class="text-xs text-muted-foreground">Filtering by fund:</span>
+                        <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                            {#if selectedFund?.fund.icon}{selectedFund.fund.icon}{/if}
+                            {selectedFund?.fund.name ?? selectedFundId}
+                            <button onclick={() => { selectedFundId = null; params.filter = 'today'; }} class="ml-1 hover:text-primary/70" aria-label="Clear fund filter">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </span>
+                    </div>
+                {/if}
                 {#if isLoadingExpenses}
                     <div class="flex justify-center py-12">
                         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>

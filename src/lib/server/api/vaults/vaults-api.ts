@@ -327,15 +327,17 @@ export const vaultsApi = new Hono<App.Api>()
             vaultId: v.string(),
             startDate: v.optional(v.string()),
             endDate: v.optional(v.string()),
+            fundId: v.optional(v.string()),
         })),
         async (c) => {
             const session = c.get('currentSession');
-            const { vaultId, startDate, endDate } = c.req.valid('query');
+            const { vaultId, startDate, endDate, fundId } = c.req.valid('query');
 
             try {
                 const stats = await getVaultStatistics(vaultId, session, c.env, {
                     startDate,
-                    endDate
+                    endDate,
+                    fundId
                 });
                 return c.json({
                     success: true,

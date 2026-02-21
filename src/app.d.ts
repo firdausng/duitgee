@@ -60,6 +60,7 @@ declare global {
             startDate?: string;
             endDate?: string;
             memberIds?: string[];
+            fundId?: string;
         }
     }
 

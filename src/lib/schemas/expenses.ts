@@ -83,6 +83,7 @@ export const listExpensesQuerySchema = v.object({
     startDate: v.optional(v.string()),
     endDate: v.optional(v.string()),
     memberIds: v.optional(v.string()), // comma-separated string
+    fundId: v.optional(v.string()),
 });
 export type ListExpensesQuery = v.InferOutput<typeof listExpensesQuerySchema>;
 

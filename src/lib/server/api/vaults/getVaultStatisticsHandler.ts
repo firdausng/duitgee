@@ -9,10 +9,10 @@ export const getVaultStatistics = async (
     vaultId: string,
     session: App.AuthSession,
     env: Cloudflare.Env,
-    options?: { startDate?: string; endDate?: string }
+    options?: { startDate?: string; endDate?: string; fundId?: string }
 ) => {
     const client = drizzle(env.DB, { schema });
-    const { startDate, endDate } = options || {};
+    const { startDate, endDate, fundId } = options || {};
 
     // Check if user has access to this vault
     const hasAccess = await checkVaultPermission(session.user.id, vaultId, 'canEditVault', env);
@@ -33,6 +33,11 @@ export const getVaultStatistics = async (
             sql`${expenses.date} >= ${startDate}`,
             sql`${expenses.date} <= ${endDate}`
         );
+    }
+
+    // Add fund filter if provided
+    if (fundId) {
+        baseWhereClause = and(baseWhereClause, eq(expenses.fundId, fundId));
     }
 
     // Get total expenses and count
