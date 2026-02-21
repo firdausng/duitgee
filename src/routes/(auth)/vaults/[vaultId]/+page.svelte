@@ -26,6 +26,21 @@
 
     const params = useSearchParams(filterSchema);
 
+    // Funds resource
+    type FundRow = {
+        fund: { id: string; name: string; color: string | null; icon: string | null; balance: number; status: string };
+        activeCycle: { topUpAmount: number; totalSpent: number; totalReimbursed: number } | null;
+    };
+    let fundsRefetchKey = $state(0);
+    const fundsResource = resource(
+        () => [vaultId, fundsRefetchKey] as const,
+        async ([id]) => {
+            const response = await ofetch<{ success: boolean; data: FundRow[] }>(`/api/getFunds?vaultId=${id}`);
+            return (response.data ?? []).filter((r) => r.fund.status === 'active');
+        }
+    );
+    const fundRows = $derived(fundsResource.current ?? []);
+
     // Refetch keys to trigger data reload (e.g., after delete/update)
     let refetchKey = $state(0);
     let vaultRefetchKey = $state(0);
@@ -356,21 +371,74 @@
                 onEndDateChange={(value) => params.endDate = value}
         />
 
-        <!-- Funds quick-link -->
-        <div class="mt-4">
-            <button
-                class="w-full text-left"
-                onclick={() => goto(`/vaults/${vaultId}/funds`)}
-            >
-                <div class="flex items-center justify-between rounded-lg border bg-card px-4 py-3 hover:shadow-sm transition-shadow">
-                    <div class="flex items-center gap-2">
-                        <span class="text-lg">💰</span>
-                        <span class="font-medium">Funds</span>
-                    </div>
-                    <span class="text-muted-foreground text-sm">→</span>
+        <!-- Funds section -->
+        {#if fundsResource.loading}
+            <div class="mt-4 h-24 rounded-lg border bg-card animate-pulse"></div>
+        {:else if fundRows.length > 0}
+            <div class="mt-4">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-sm font-semibold text-muted-foreground">FUNDS</h2>
+                    <button
+                        onclick={() => goto(`/vaults/${vaultId}/funds`)}
+                        class="text-xs text-muted-foreground hover:text-primary transition-colors"
+                    >
+                        Manage →
+                    </button>
                 </div>
-            </button>
-        </div>
+                <div class="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x">
+                    {#each fundRows as row (row.fund.id)}
+                        {@const spent = (row.activeCycle?.totalSpent ?? 0) + (row.activeCycle?.totalReimbursed ?? 0)}
+                        {@const topUp = row.activeCycle?.topUpAmount ?? 0}
+                        {@const isLow = topUp > 0 && row.fund.balance / topUp < 0.2}
+                        <button
+                            onclick={() => goto(`/vaults/${vaultId}/funds/${row.fund.id}`)}
+                            class="shrink-0 snap-start w-44 text-left"
+                        >
+                            <Card class="h-full hover:shadow-md transition-shadow {isLow ? 'border-amber-400/60' : ''}"
+                                  style={row.fund.color ? `border-left: 3px solid ${row.fund.color}` : ''}>
+                                <CardContent class="p-3">
+                                    <div class="flex items-center gap-1.5 mb-3 min-w-0">
+                                        {#if row.fund.icon}
+                                            <span class="text-base shrink-0">{row.fund.icon}</span>
+                                        {/if}
+                                        <span class="text-xs font-medium truncate">{row.fund.name}</span>
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <div class="flex items-center justify-between">
+                                            <p class="text-[10px] text-muted-foreground">Funded</p>
+                                            <p class="text-xs font-semibold">{vaultFormatters.currency(topUp)}</p>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <p class="text-[10px] text-muted-foreground">Spent</p>
+                                            <p class="text-xs font-semibold">{vaultFormatters.currency(spent)}</p>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <p class="text-[10px] text-muted-foreground">Balance</p>
+                                            <p class="text-xs font-semibold {isLow ? 'text-amber-500' : ''}">{vaultFormatters.currency(row.fund.balance)}</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </button>
+                    {/each}
+                </div>
+            </div>
+        {:else if !fundsResource.error}
+            <div class="mt-4">
+                <button
+                    class="w-full text-left"
+                    onclick={() => goto(`/vaults/${vaultId}/funds`)}
+                >
+                    <div class="flex items-center justify-between rounded-lg border border-dashed bg-card px-4 py-3 hover:shadow-sm transition-shadow">
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg">💰</span>
+                            <span class="text-sm text-muted-foreground">No funds yet — create one to track a money pool</span>
+                        </div>
+                        <span class="text-muted-foreground text-sm shrink-0">→</span>
+                    </div>
+                </button>
+            </div>
+        {/if}
 
         <div class="mt-4">
             <!-- Vault Statistics -->

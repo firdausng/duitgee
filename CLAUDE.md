@@ -85,7 +85,7 @@ The application uses **two separate SQLite databases** on Cloudflare D1:
 2. **duitgee**: Application database for business logic
    - Configuration: `drizzle.config.ts`
    - Schema: `src/lib/server/db/schema.ts`
-   - Contains vaults, expenses, expense templates
+   - Contains vaults, expenses, expense templates, funds, fund cycles, fund transactions
 
 ### Authentication System
 
@@ -145,6 +145,19 @@ The API follows RPC (Remote Procedure Call) style with CQRS (Command Query Respo
 *Invitations API:*
 - `POST /api/createInvitation` - Invite user to vault
 - `POST /api/acceptInvitation` - Accept vault invitation
+
+*Funds API:*
+- `GET /api/getFunds?vaultId=xxx` - Get all active funds for a vault (returns `Array<{ fund, activeCycle, policy }>`)
+- `GET /api/getFund?vaultId=xxx&fundId=xxx` - Get a single fund with active cycle
+- `GET /api/getFundCycles?vaultId=xxx&fundId=xxx` - Get cycle history (returns `{ cycles, historyAllowed }`)
+- `GET /api/getPendingReimbursements?vaultId=xxx&fundId=xxx` - Get pending reimbursements for a fund (returns `{ fund, pendingReimbursements }`)
+- `GET /api/getVaultPendingReimbursements?vaultId=xxx` - Get all pending reimbursements across all funds
+- `POST /api/createFund` - Create a new fund
+- `POST /api/updateFund` - Update fund name/description/color
+- `POST /api/topUpFund` - Add balance to a fund (creates `top_up` transaction)
+- `POST /api/settleReimbursements` - Mark pending reimbursements as settled for a specific fund
+- `POST /api/settleVaultReimbursements` - Mark pending reimbursements as settled across all funds
+- `POST /api/transferFunds` - Transfer balance between two funds in the same vault
 
 **API Development Pattern:**
 
@@ -357,8 +370,128 @@ if (!$form.date) {
 
 **Expense Templates:** Reusable expense patterns
 - Vault-scoped templates
-- Default values for common expenses
+- Default values for common expenses including fund (`defaultFundId`, `defaultFundPaymentMode`)
 - Usage tracking (`usageCount`, `lastUsedAt`)
+
+**Funds:** Named pools of money within a vault
+- Vault-scoped, with `status` (`active` | `archived`)
+- Tracks `balance` (cache), `color`, `icon`, `iconType`
+- Replenishment policy: `replenishmentType` (`manual` | `fixed_amount` | `top_to_ceiling`), `replenishmentAmount`, `ceilingAmount`, `replenishmentSchedule`
+- Linked to expenses via `fundId` and `fundPaymentMode` on the `expenses` table
+
+**Fund Cycles:** Accounting periods for a fund
+- One active cycle per fund at a time (`status`: `active` | `closed`)
+- Aggregates: `topUpAmount`, `totalSpent`, `totalReimbursed`
+- `openingBalance`, `closingBalance` (set on close)
+
+**Fund Transactions:** Immutable ledger entries
+- Types: `top_up`, `expense_paid`, `pending_reimbursement`, `reimbursement`, `expense_reversal`, `reimbursement_reversal`, `transfer_in`, `transfer_out`
+- `pending_reimbursement` has `amount = 0` (no immediate balance change); settled later via `settleReimbursements`
+- Linked to `cycleId` and optionally `expenseId`
+
+**Key Fund Business Rules:**
+- Deleting an expense with a fund tag reverses the fund transaction (see `detachFundFromExpense` in `fundExpenseHelpers.ts`)
+- After settlement, `expense.fundPaymentMode` stays `pending_reimbursement` permanently — always check the actual `fundTransactions.type` from the DB, not the expense field
+- D1 does not support transactions; use `client.batch([...])` for multi-step fund operations
+- Schema column names: `topUpAmount` (not `totalTopUps`), `totalSpent` (not `totalExpenses`) — no transfer aggregate columns exist on `fundCycles`
+
+**Fund UI Routes:**
+- `/vaults/[vaultId]/funds` — Fund list
+- `/vaults/[vaultId]/funds/new` — Create fund
+- `/vaults/[vaultId]/funds/[fundId]` — Fund detail with active cycle stats
+- `/vaults/[vaultId]/funds/[fundId]/edit` — Edit fund
+- `/vaults/[vaultId]/funds/[fundId]/topup` — Top up fund
+- `/vaults/[vaultId]/funds/[fundId]/reimbursements` — Pending reimbursements for one fund
+- `/vaults/[vaultId]/funds/[fundId]/cycles` — Cycle history
+- `/vaults/[vaultId]/reimbursements` — Cross-fund reimbursements (vault-level)
+- `/vaults/[vaultId]/transfer` — Transfer between funds
+
+### Plans & Entitlements System
+
+The app has a **two-tier plan system** that gates fund features per vault. This is separate from the role-based permission system.
+
+**Plans** (`src/lib/configurations/plans.ts`):
+
+| Plan ID | Name | Included Entitlements |
+|---------|------|-----------------------|
+| `plan_free` | Free | `fund:create` only |
+| `plan_pro` | Pro | All 6 entitlements |
+
+**Entitlement types** (`FundEntitlement` in `plans.ts`):
+- `fund:create` — Create a fund (free + pro; limited to 1 on free)
+- `fund:create_multiple` — Create more than one active fund per vault (pro)
+- `fund:auto_replenishment` — Use `fixed_amount` or `top_to_ceiling` replenishment (pro)
+- `fund:cycle_history` — View past fund cycles; free plan only sees the active cycle (pro)
+- `fund:transfer` — Transfer balance between funds (pro)
+- `fund:cross_fund_reimbursement` — View and settle reimbursements across all funds (pro)
+
+**Storage:** Each vault has a `planId` column (default `'plan_free'`). No FK constraint — plan definitions live in code (`PLANS` array).
+
+**Utility functions** (`src/lib/server/utils/entitlements.ts`):
+```typescript
+// In-memory lookup
+getPlanById(id: string): Plan
+hasEntitlement(planId: string, entitlement: FundEntitlement): boolean
+
+// DB-backed checks
+checkVaultEntitlement(vaultId, entitlement, env): Promise<boolean>   // returns true/false
+requireVaultEntitlement(session, vaultId, entitlement, env): Promise<void>  // throws on failure
+```
+
+**Enforcement order in handlers:** always check role permission first, then entitlement:
+```typescript
+await requireVaultPermission(session, vaultId, 'canManageFunds', env);   // role gate
+await requireVaultEntitlement(session, vaultId, 'fund:create', env);      // plan gate
+```
+
+**Subscription tiers** (`src/lib/configurations/subscriptions.ts`) — a *separate* system that limits how many vaults a user can create:
+- `free`: max 1 vault
+- `premium`: unlimited vaults
+
+**Permissions vs. Entitlements at a glance:**
+
+| | Role Permissions | Plan Entitlements |
+|-|-----------------|------------------|
+| Scope | Per user per vault | Per vault (all members) |
+| Enforced by | `requireVaultPermission()` | `requireVaultEntitlement()` |
+| Gates | CRUD actions by role | Feature availability by plan |
+| Falls back to | Deny | `plan_free` |
+
+### Plan Design Philosophy for New Features
+
+**Core principle: Pro enhances, Free is fully usable.**
+
+The free plan must never leave users stuck or frustrated. Every core workflow must be completable on free. Pro adds power-user capabilities, depth, and scale — not access to basic functionality.
+
+**Decision framework when building a new feature:**
+
+Ask: *"Can a free user accomplish their core goal without this?"*
+- **Yes → Pro candidate.** Gate the advanced/scaled version, keep the basic version free.
+- **No → Must be free.** Do not gate anything that would break a core workflow.
+
+**What belongs on Free:**
+- Creating, editing, viewing the primary resource (e.g., one fund, all expenses)
+- The simplest version of any new workflow
+- Anything a user needs to understand the value of the feature before upgrading
+- Error states and recovery paths — never gate these
+
+**What belongs on Pro:**
+- Doing the same thing at scale (e.g., multiple funds, bulk operations)
+- Automation and scheduling (e.g., auto-replenishment)
+- Cross-entity aggregation (e.g., cross-fund reimbursements, vault-wide reports)
+- Historical data depth (e.g., past cycles beyond the current one)
+- Advanced configuration options that power users need
+
+**UX rules when gating:**
+- Always show the feature exists — never hide Pro features entirely
+- Show a clear, friendly message explaining the plan requirement (not a generic error)
+- Never gate viewing data the user already created — only gate creating or advanced manipulation
+- If a Pro feature becomes unavailable (e.g., plan downgrade), degrade gracefully: show data read-only, do not delete it
+
+**Adding a new entitlement:**
+1. Define it in `src/lib/configurations/plans.ts` under `FundEntitlement` type and add it to `plan_pro.entitlements`
+2. Use `requireVaultEntitlement()` in the write handler and `checkVaultEntitlement()` in read handlers where partial access applies
+3. Free users should still reach the page/screen — gate the action, not the navigation
 
 ### SvelteKit Hooks
 
@@ -643,10 +776,12 @@ Follow these steps to add a new RPC-style endpoint:
 
 ### Database Schema Changes
 
+**IMPORTANT: Never run migrations yourself. Only generate them.**
+
 1. Modify `src/lib/server/db/schema.ts`
-2. Run `pnpm run db:generate` to create migration
-3. Run `wrangler d1 migrations apply "duitgee"` to apply locally
-4. Test changes thoroughly before applying to production
+2. Run `pnpm run db:generate` to create the migration file
+3. **Stop here** — tell the user a migration was generated and they will apply it themselves
+4. Do NOT run `db:push`, `db:migrate`, or any `wrangler d1 migrations apply` command
 
 ### Authentication Changes
 
