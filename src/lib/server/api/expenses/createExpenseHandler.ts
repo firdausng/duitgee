@@ -8,6 +8,7 @@ import {expenses, expenseTemplates} from "$lib/server/db/schema";
 import {eq, sql} from "drizzle-orm";
 import {formatISO} from "date-fns";
 import {UTCDate} from "@date-fns/utc";
+import {attachFundToExpense} from "$lib/server/api/funds/fundExpenseHelpers";
 
 export const createExpense = async (
     session: App.AuthSession,
@@ -16,24 +17,36 @@ export const createExpense = async (
 ) => {
     const client = drizzle(env.DB, { schema });
     const expenseId = createId();
-    const { templateId, ...expenseFields } = data;
+    const { templateId, fundId, fundPaymentMode, ...expenseFields } = data;
     const userId = session.user.id;
 
-    const expenseData = {
-        id: expenseId,
-        ...expenseFields,
-        userId,
-        categoryName: categoryData.categories.find(c => c.name === data.categoryName)?.name || null,
-        date: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
-        expenseTemplateId: templateId || null,
-        ...initialAuditFields({ userId })
-    };
+    // If expense is tagged to a fund, create the fund transaction first so we
+    // can include fundTransactionId in the initial expense insert.
+    let fundTransactionId: string | null = null;
+    if (fundId && fundPaymentMode) {
+        fundTransactionId = await attachFundToExpense(
+            expenseId,
+            data.vaultId,
+            fundId,
+            fundPaymentMode,
+            data.amount,
+            userId,
+            env,
+        );
+    }
 
-    const expense = await client
+    const [expense] = await client
         .insert(expenses)
         .values({
-            ...expenseData,
-            categoryName: data.categoryName,
+            id: expenseId,
+            ...expenseFields,
+            categoryName: categoryData.categories.find(c => c.name === data.categoryName)?.name ?? data.categoryName,
+            date: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
+            expenseTemplateId: templateId ?? null,
+            fundId: fundId ?? null,
+            fundPaymentMode: fundPaymentMode ?? null,
+            fundTransactionId,
+            ...initialAuditFields({ userId }),
         })
         .returning();
 
@@ -48,5 +61,5 @@ export const createExpense = async (
             .where(eq(expenseTemplates.id, templateId));
     }
 
-    return expense[0];
+    return expense;
 };

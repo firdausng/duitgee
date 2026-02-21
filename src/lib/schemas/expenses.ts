@@ -43,6 +43,9 @@ export const createExpenseSchema = v.object({
     paidBy: v.optional(v.nullable(v.string())),
     vaultId: v.string(),
     templateId: v.optional(v.string()),
+    // Fund integration
+    fundId: v.optional(v.nullable(v.string())),
+    fundPaymentMode: v.optional(v.nullable(v.picklist(['paid_by_fund', 'pending_reimbursement']))),
 })
 
 export type CreateExpense = v.InferOutput<typeof createExpenseSchema>;
@@ -111,6 +114,9 @@ export const updateExpenseRequestSchema = v.object({
         v.minLength(1, 'Date is required')
     ),
     paidBy: v.optional(v.nullable(v.string())),
+    // Fund integration — undefined = no change, null = remove fund tag
+    fundId: v.optional(v.nullable(v.string())),
+    fundPaymentMode: v.optional(v.nullable(v.picklist(['paid_by_fund', 'pending_reimbursement']))),
 });
 export type UpdateExpenseRequest = v.InferOutput<typeof updateExpenseRequestSchema>;
 

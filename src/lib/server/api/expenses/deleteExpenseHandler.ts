@@ -5,6 +5,7 @@ import {expenses} from "$lib/server/db/schema";
 import {and, eq, isNull} from "drizzle-orm";
 import {deleteAuditFields} from "$lib/server/utils/audit";
 import {requireVaultPermission} from "$lib/server/utils/vaultPermissions";
+import {detachFundFromExpense} from "$lib/server/api/funds/fundExpenseHelpers";
 
 export const deleteExpense = async (
     session: App.AuthSession,
@@ -12,35 +13,29 @@ export const deleteExpense = async (
     env: Cloudflare.Env
 ) => {
     const client = drizzle(env.DB, { schema });
-
     const { id, vaultId } = data;
+    const userId = session.user.id;
 
-    // Enforce permission check
     await requireVaultPermission(session, vaultId, 'canDeleteExpenses', env);
 
-    // Check if expense exists and is not deleted
-    const existingExpense = await client
+    const [existing] = await client
         .select()
         .from(expenses)
-        .where(
-            and(
-                eq(expenses.id, id),
-                eq(expenses.vaultId, vaultId),
-                isNull(expenses.deletedAt)
-            )
-        )
+        .where(and(eq(expenses.id, id), eq(expenses.vaultId, vaultId), isNull(expenses.deletedAt)))
         .limit(1);
 
-    if (!existingExpense || existingExpense.length === 0) {
-        throw new Error('Expense not found');
+    if (!existing) throw new Error('Expense not found');
+
+    // If the expense was paid by fund, create an expense_reversal and restore balance.
+    // If it was pending_reimbursement, no balance action is needed — the pending
+    // reimbursement view filters expenses where deletedAt IS NOT NULL.
+    if (existing.fundTransactionId) {
+        await detachFundFromExpense(existing.fundTransactionId, existing.fundPaymentMode, userId, env);
     }
 
-    // Soft delete - mark as deleted with audit fields
     const [deletedExpense] = await client
         .update(expenses)
-        .set({
-            ...deleteAuditFields({ userId: session.user.id })
-        })
+        .set(deleteAuditFields({ userId }))
         .where(eq(expenses.id, id))
         .returning();
 
