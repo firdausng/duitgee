@@ -14,6 +14,7 @@ import {
     getVaultPendingReimbursementsQuerySchema,
     settleReimbursementsSchema,
     settleVaultReimbursementsSchema,
+    transferFundsSchema,
 } from '$lib/schemas/funds';
 import { getFunds } from './getFundsHandler';
 import { getFund } from './getFundHandler';
@@ -26,6 +27,7 @@ import { getPendingReimbursements } from './getPendingReimbursementsHandler';
 import { settleReimbursements } from './settleReimbursementsHandler';
 import { getVaultPendingReimbursements } from './getVaultPendingReimbursementsHandler';
 import { settleVaultReimbursements } from './settleVaultReimbursementsHandler';
+import { transferFunds } from './transferFundsHandler';
 
 const FUND_TAG = ['Fund'];
 const commonFundConfig = { tags: FUND_TAG };
@@ -312,6 +314,38 @@ export const fundsApi = new Hono<App.Api>()
                 const msg = error instanceof Error ? error.message : 'Failed to settle vault reimbursements';
                 const status = msg.includes('denied') ? 403
                     : msg.includes('validation failed') || msg.includes('Insufficient') || msg.includes('Some transactions') ? 400
+                    : 500;
+                return c.json({ success: false, error: msg }, status);
+            }
+        },
+    )
+
+    // ── Transfers ──────────────────────────────────────────────────────────
+
+    .post(
+        '/transferFunds',
+        describeRoute({
+            ...commonFundConfig,
+            description: 'Transfer balance between two funds in the same vault. Requires fund:transfer entitlement. Atomic via D1 batch.',
+            responses: {
+                200: { description: 'Transfer completed', content: { 'application/json': { schema: resolver(v.object({ success: v.boolean(), data: v.any() })) } } },
+                400: { description: 'Validation failed (same fund, insufficient balance, archived source)' },
+                403: { description: 'Entitlement or permission denied' },
+                404: { description: 'Source or destination fund not found' },
+            },
+        }),
+        vValidator('json', transferFundsSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+            try {
+                const result = await transferFunds(session, data, c.env);
+                return c.json({ success: true, data: result });
+            } catch (error) {
+                const msg = error instanceof Error ? error.message : 'Failed to transfer funds';
+                const status = msg.includes('denied') ? 403
+                    : msg.includes('not found') ? 404
+                    : msg.includes('Insufficient') || msg.includes('different') || msg.includes('archived') ? 400
                     : 500;
                 return c.json({ success: false, error: msg }, status);
             }

@@ -61,6 +61,17 @@ export const topUpFundSchema = v.object({
 });
 export type TopUpFund = v.InferOutput<typeof topUpFundSchema>;
 
+// ── Transfer ───────────────────────────────────────────────────────────────
+
+export const transferFundsSchema = v.object({
+    vaultId: v.pipe(v.string(), v.minLength(1)),
+    fromFundId: v.pipe(v.string(), v.minLength(1)),
+    toFundId: v.pipe(v.string(), v.minLength(1)),
+    amount: v.pipe(v.number(), v.minValue(0.01, 'Amount must be greater than 0')),
+    note: v.optional(v.string()),
+});
+export type TransferFunds = v.InferOutput<typeof transferFundsSchema>;
+
 // ── Reimbursement queries & commands ───────────────────────────────────────
 
 export const getPendingReimbursementsQuerySchema = v.object({
