@@ -102,9 +102,9 @@ export const fundsApi = new Hono<App.Api>()
         vValidator('query', getFundCyclesQuerySchema),
         async (c) => {
             const session = c.get('currentSession');
-            const { fundId, vaultId } = c.req.valid('query');
+            const { fundId, vaultId, page, limit } = c.req.valid('query');
             try {
-                const data = await getFundCycles(fundId, vaultId, session, c.env);
+                const data = await getFundCycles(fundId, vaultId, session, c.env, { page, limit });
                 return c.json({ success: true, data });
             } catch (error) {
                 const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;

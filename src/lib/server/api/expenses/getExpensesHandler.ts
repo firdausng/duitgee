@@ -1,6 +1,6 @@
 import {drizzle} from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
-import {expenses, vaultMembers, vaults} from "$lib/server/db/schema";
+import {expenses, vaultMembers, vaults, funds} from "$lib/server/db/schema";
 import {and, desc, asc, eq, isNull, sql} from "drizzle-orm";
 import {categoryData} from "$lib/configurations/categories";
 import {createSelectSchema} from "drizzle-valibot";
@@ -36,13 +36,16 @@ export const getExpenses = async (
     const expensesList = await client
         .select({
             ...expenses,
-            paidByName: vaultMembers.displayName
+            paidByName: vaultMembers.displayName,
+            fundName: funds.name,
+            fundIcon: funds.icon,
         })
         .from(expenses)
         .leftJoin(vaultMembers, and(
             eq(expenses.vaultId, vaultMembers.vaultId),
             eq(expenses.paidBy, vaultMembers.userId)
         ))
+        .leftJoin(funds, eq(expenses.fundId, funds.id))
         .where(whereClause)
         .orderBy(desc(expenses.date))
         .limit(limit)
@@ -64,6 +67,9 @@ export const getExpenses = async (
             createdAt: parsedExpense.createdAt,
             paidBy: parsedExpense.paidBy || undefined,
             paidByName: row.paidByName,
+            fundId: parsedExpense.fundId || null,
+            fundName: row.fundName || null,
+            fundIcon: row.fundIcon || null,
             templateId: parsedExpense.expenseTemplateId || null,
             vaultId: parsedExpense.vaultId || undefined,
             category: categoryData.categories.find(c => c.name === parsedExpense.categoryName) || null,

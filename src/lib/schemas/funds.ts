@@ -17,6 +17,8 @@ export const getFundQuerySchema = v.object({
 export const getFundCyclesQuerySchema = v.object({
     fundId: v.pipe(v.string(), v.minLength(1)),
     vaultId: v.pipe(v.string(), v.minLength(1)),
+    page: v.optional(v.pipe(v.string(), v.transform(Number)), '1'),
+    limit: v.optional(v.pipe(v.string(), v.transform(Number)), '10'),
 });
 
 export const getFundTransactionsQuerySchema = v.object({

@@ -29,7 +29,7 @@
     // Funds resource
     type FundRow = {
         fund: { id: string; name: string; color: string | null; icon: string | null; balance: number; status: string };
-        activeCycle: { topUpAmount: number; totalSpent: number; totalReimbursed: number } | null;
+        activeCycle: { openingBalance: number; topUpAmount: number; totalSpent: number; totalReimbursed: number; totalDeducted: number } | null;
     };
     let fundsRefetchKey = $state(0);
     const fundsResource = resource(
@@ -45,8 +45,8 @@
     let refetchKey = $state(0);
     let vaultRefetchKey = $state(0);
 
-    // Fund filter state
-    let selectedFundId = $state<string | null>(null);
+    // Fund filter state — persisted in URL
+    const selectedFundId = $derived(params.fundId || null);
 
     // UI state
     let showInviteForm = $state(false);
@@ -204,12 +204,10 @@
     }
 
     function toggleFundFilter(fundId: string) {
-        if (selectedFundId === fundId) {
-            selectedFundId = null;
-            params.filter = 'today';
+        if (params.fundId === fundId) {
+            params.fundId = '';
         } else {
-            selectedFundId = fundId;
-            params.filter = 'all';
+            params.fundId = fundId;
         }
     }
 
@@ -393,7 +391,7 @@
         {:else if fundRows.length > 0}
             <div class="mt-4">
                 <div class="flex items-center justify-between mb-2">
-                    <h2 class="text-sm font-semibold text-muted-foreground">FUNDS</h2>
+                    <h2 class="text-sm font-semibold text-muted-foreground">Funds</h2>
                     <button
                         onclick={() => goto(`/vaults/${vaultId}/funds`)}
                         class="text-xs text-muted-foreground hover:text-primary transition-colors"
@@ -403,48 +401,66 @@
                 </div>
                 <div class="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x">
                     {#each fundRows as row (row.fund.id)}
-                        {@const spent = (row.activeCycle?.totalSpent ?? 0) + (row.activeCycle?.totalReimbursed ?? 0)}
                         {@const topUp = row.activeCycle?.topUpAmount ?? 0}
                         {@const isLow = topUp > 0 && row.fund.balance / topUp < 0.2}
                         {@const isSelected = selectedFundId === row.fund.id}
                         <button
                             onclick={() => toggleFundFilter(row.fund.id)}
-                            class="shrink-0 snap-start w-44 text-left"
+                            class="shrink-0 snap-start w-64 text-left"
                         >
-                            <Card class="h-full hover:shadow-md transition-shadow {isSelected ? 'ring-2 ring-primary' : ''} {isLow && !isSelected ? 'border-amber-400/60' : ''}"
+                            <Card class="h-full transition-all {isSelected ? 'ring-2 ring-primary ring-offset-2 bg-primary/5 shadow-md' : 'hover:shadow-md'} {isLow && !isSelected ? 'border-amber-400/60' : ''}"
                                   style={row.fund.color ? `border-left: 3px solid ${row.fund.color}` : ''}>
-                                <CardContent class="p-3">
-                                    <div class="flex items-center justify-between gap-1 mb-3 min-w-0">
-                                        <div class="flex items-center gap-1.5 min-w-0">
+                                <CardContent class="p-4">
+                                    <!-- Name row -->
+                                    <div class="flex items-center justify-between gap-2 mb-3 min-w-0">
+                                        <div class="flex items-center gap-2 min-w-0 flex-1">
                                             {#if row.fund.icon}
-                                                <span class="text-base shrink-0">{row.fund.icon}</span>
+                                                <span class="text-lg shrink-0">{row.fund.icon}</span>
                                             {/if}
-                                            <span class="text-xs font-medium truncate">{row.fund.name}</span>
+                                            <span class="text-sm font-semibold truncate">{row.fund.name}</span>
                                         </div>
                                         <button
                                             onclick={(e) => { e.stopPropagation(); goto(`/vaults/${vaultId}/funds/${row.fund.id}`); }}
                                             class="shrink-0 text-muted-foreground hover:text-primary transition-colors"
                                             title="Open fund"
                                         >
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                                 <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
                                                 <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
                                             </svg>
                                         </button>
                                     </div>
+                                    <!-- Cycle breakdown -->
                                     <div class="space-y-1.5">
-                                        <div class="flex items-center justify-between">
-                                            <p class="text-[10px] text-muted-foreground">Funded</p>
-                                            <p class="text-xs font-semibold">{vaultFormatters.currency(topUp)}</p>
+                                        <div class="flex items-center justify-between gap-2">
+                                            <p class="text-xs text-muted-foreground">Opening</p>
+                                            <p class="text-xs tabular-nums">{vaultFormatters.currency(row.activeCycle?.openingBalance ?? 0)}</p>
                                         </div>
-                                        <div class="flex items-center justify-between">
-                                            <p class="text-[10px] text-muted-foreground">Spent</p>
-                                            <p class="text-xs font-semibold">{vaultFormatters.currency(spent)}</p>
+                                        <div class="flex items-center justify-between gap-2">
+                                            <p class="text-xs text-muted-foreground">Top-ups</p>
+                                            <p class="text-xs tabular-nums text-green-600 dark:text-green-400">+{vaultFormatters.currency(topUp)}</p>
                                         </div>
-                                        <div class="flex items-center justify-between">
-                                            <p class="text-[10px] text-muted-foreground">Balance</p>
-                                            <p class="text-xs font-semibold {isLow ? 'text-amber-500' : ''}">{vaultFormatters.currency(row.fund.balance)}</p>
+                                        <div class="flex items-center justify-between gap-2">
+                                            <p class="text-xs text-muted-foreground">Expenses</p>
+                                            <p class="text-xs tabular-nums text-red-600 dark:text-red-400">−{vaultFormatters.currency(row.activeCycle?.totalSpent ?? 0)}</p>
                                         </div>
+                                        {#if (row.activeCycle?.totalDeducted ?? 0) > 0}
+                                            <div class="flex items-center justify-between gap-2">
+                                                <p class="text-xs text-muted-foreground">Deductions</p>
+                                                <p class="text-xs tabular-nums text-red-600 dark:text-red-400">−{vaultFormatters.currency(row.activeCycle?.totalDeducted ?? 0)}</p>
+                                            </div>
+                                        {/if}
+                                        {#if (row.activeCycle?.totalReimbursed ?? 0) > 0}
+                                            <div class="flex items-center justify-between gap-2">
+                                                <p class="text-xs text-muted-foreground">Reimbursed</p>
+                                                <p class="text-xs tabular-nums text-orange-600 dark:text-orange-400">−{vaultFormatters.currency(row.activeCycle?.totalReimbursed ?? 0)}</p>
+                                            </div>
+                                        {/if}
+                                    </div>
+                                    <!-- Balance -->
+                                    <div class="border-t mt-3 pt-2 flex items-center justify-between gap-2">
+                                        <p class="text-xs text-muted-foreground">Balance</p>
+                                        <p class="text-sm font-bold tabular-nums {isLow ? 'text-amber-500' : ''}">{vaultFormatters.currency(row.fund.balance)}</p>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -488,7 +504,7 @@
                         <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                             {#if selectedFund?.fund.icon}{selectedFund.fund.icon}{/if}
                             {selectedFund?.fund.name ?? selectedFundId}
-                            <button onclick={() => { selectedFundId = null; params.filter = 'today'; }} class="ml-1 hover:text-primary/70" aria-label="Clear fund filter">
+                            <button onclick={() => { params.fundId = ''; }} class="ml-1 hover:text-primary/70" aria-label="Clear fund filter">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>

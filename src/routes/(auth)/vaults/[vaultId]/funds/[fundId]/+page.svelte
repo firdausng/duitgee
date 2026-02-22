@@ -120,7 +120,7 @@
         <Button variant="ghost" size="sm" onclick={handleBack} class="-ml-2">← Back</Button>
     </div>
     <div class="flex items-start justify-between gap-2 mb-6">
-        <h1 class="text-2xl font-bold">{fund?.name ?? 'Fund'}</h1>
+        <h1 class="text-2xl font-bold min-w-0">{fund?.name ?? 'Fund'}</h1>
         {#if fund?.status !== 'archived'}
             <Button variant="outline" size="sm" onclick={handleEdit} class="shrink-0">Edit</Button>
         {/if}
@@ -165,33 +165,53 @@
 
         <!-- Active Cycle -->
         {#if activeCycle}
+            {@const cycleNet = fund.balance - (activeCycle.openingBalance ?? 0)}
             <Card class="mb-4">
-                <CardHeader>
-                    <CardTitle class="text-base">Current Cycle</CardTitle>
+                <CardHeader class="pb-3">
+                    <CardTitle class="text-base flex items-center justify-between">
+                        <span>Current Cycle</span>
+                        <span class="text-xs font-normal text-muted-foreground">
+                            {new Date(activeCycle.periodStart).toLocaleDateString()} — {activeCycle.periodEnd.startsWith('2099') ? 'Ongoing' : new Date(activeCycle.periodEnd).toLocaleDateString()}
+                        </span>
+                    </CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <div class="grid grid-cols-3 gap-4 text-center">
-                        <div>
-                            <p class="text-lg font-semibold">
-                                {(activeCycle.topUpAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                            <p class="text-xs text-muted-foreground">Top-ups</p>
+                <CardContent class="pt-0">
+                    <div class="space-y-1.5 text-sm mb-3">
+                        <div class="flex justify-between">
+                            <span class="text-muted-foreground">Opening Balance</span>
+                            <span class="tabular-nums">{(activeCycle.openingBalance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
-                        <div>
-                            <p class="text-lg font-semibold">
-                                {(activeCycle.totalSpent ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                            <p class="text-xs text-muted-foreground">Expenses</p>
+                        <div class="flex justify-between">
+                            <span class="text-muted-foreground">Top-ups</span>
+                            <span class="tabular-nums text-green-600 dark:text-green-400">+{(activeCycle.topUpAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
-                        <div>
-                            <p class="text-lg font-semibold">
-                                {(activeCycle.totalReimbursed ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                            <p class="text-xs text-muted-foreground">Reimbursed</p>
+                        <div class="flex justify-between">
+                            <span class="text-muted-foreground">Expenses</span>
+                            <span class="tabular-nums text-red-600 dark:text-red-400">−{(activeCycle.totalSpent ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
+                        {#if (activeCycle.totalDeducted ?? 0) > 0}
+                            <div class="flex justify-between">
+                                <span class="text-muted-foreground">Deductions</span>
+                                <span class="tabular-nums text-red-600 dark:text-red-400">−{(activeCycle.totalDeducted ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                        {/if}
+                        {#if (activeCycle.totalReimbursed ?? 0) > 0}
+                            <div class="flex justify-between">
+                                <span class="text-muted-foreground">Reimbursed</span>
+                                <span class="tabular-nums text-orange-600 dark:text-orange-400">−{(activeCycle.totalReimbursed ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                        {/if}
                     </div>
-                    <div class="mt-3 text-xs text-muted-foreground text-center">
-                        Period: {new Date(activeCycle.periodStart).toLocaleDateString()} — {activeCycle.periodEnd.startsWith('2099') ? 'Ongoing' : new Date(activeCycle.periodEnd).toLocaleDateString()}
+                    <div class="border-t pt-2 flex justify-between items-center">
+                        <span class="text-sm font-medium">Current Balance</span>
+                        <div class="text-right">
+                            <span class="text-base font-bold tabular-nums">{fund.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            {#if cycleNet !== 0}
+                                <span class="text-xs ml-2 tabular-nums {cycleNet > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">
+                                    {cycleNet > 0 ? '+' : '−'}{Math.abs(cycleNet).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                            {/if}
+                        </div>
                     </div>
                 </CardContent>
             </Card>

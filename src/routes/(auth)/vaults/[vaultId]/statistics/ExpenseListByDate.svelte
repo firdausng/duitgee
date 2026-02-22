@@ -45,12 +45,10 @@
                 {#each dateGroup.expenses as expense (expense.id)}
                     <AccordionItem value={expense.id} class="border rounded-lg mb-2 px-3">
                         <AccordionTrigger class="hover:no-underline py-2">
-                            <div class="flex items-start justify-between w-full pr-2">
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-xs font-medium line-clamp-1 text-left">
-                                        {expense.note || '-'}
-                                    </p>
-                                </div>
+                            <div class="flex items-center justify-between w-full pr-2">
+                                <p class="text-xs font-medium line-clamp-1 text-left flex-1 min-w-0">
+                                    {expense.note || '-'}
+                                </p>
                                 <div class="text-right ml-2">
                                     <p class="text-sm font-bold whitespace-nowrap">{formatCurrency(expense.amount)}</p>
                                 </div>
@@ -60,6 +58,17 @@
                             <div class="space-y-3 pt-2">
                                 <!-- Details -->
                                 <div class="space-y-2 text-sm">
+                                    {#if expense.fundName}
+                                        <div class="flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-muted-foreground shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                            </svg>
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-muted-foreground text-xs font-medium">
+                                                {#if expense.fundIcon}<span>{expense.fundIcon}</span>{/if}
+                                                <span>{expense.fundName}</span>
+                                            </span>
+                                        </div>
+                                    {/if}
                                     <div class="flex items-center gap-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
                                             <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
@@ -152,12 +161,10 @@
                 {#each dateGroup.expenses as expense (expense.id)}
                     <AccordionItem value={expense.id} class="border rounded-lg mb-2 px-4">
                         <AccordionTrigger class="hover:no-underline py-2.5">
-                            <div class="flex items-start justify-between w-full pr-2">
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-medium line-clamp-1 text-left">
-                                        {expense.note || '-'}
-                                    </p>
-                                </div>
+                            <div class="flex items-center justify-between w-full pr-2">
+                                <p class="text-sm font-medium line-clamp-1 text-left flex-1 min-w-0">
+                                    {expense.note || '-'}
+                                </p>
                                 <div class="text-right ml-4">
                                     <p class="text-base font-bold whitespace-nowrap">{formatCurrency(expense.amount)}</p>
                                 </div>
@@ -166,7 +173,18 @@
                         <AccordionContent>
                             <div class="flex items-center justify-between pt-2">
                                 <!-- Details -->
-                                <div class="flex items-center gap-6 text-sm">
+                                <div class="flex items-center gap-6 text-sm flex-wrap">
+                                    {#if expense.fundName}
+                                        <div class="flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-muted-foreground shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                            </svg>
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-muted-foreground text-xs font-medium">
+                                                {#if expense.fundIcon}<span>{expense.fundIcon}</span>{/if}
+                                                <span>{expense.fundName}</span>
+                                            </span>
+                                        </div>
+                                    {/if}
                                     <div class="flex items-center gap-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
                                             <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />

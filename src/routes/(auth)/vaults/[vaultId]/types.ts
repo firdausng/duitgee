@@ -15,6 +15,9 @@ export type Expense = {
     };
     paidBy: string | null;
     paidByName: string | null;
+    fundId: string | null;
+    fundName: string | null;
+    fundIcon: string | null;
     templateId: string | null;
     date: string;
     createdAt: string | null;

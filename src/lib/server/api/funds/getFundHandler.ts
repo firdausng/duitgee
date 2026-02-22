@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/server/db/schema';
-import { funds, fundCycles, fundPolicies } from '$lib/server/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { funds, fundCycles, fundPolicies, fundTransactions } from '$lib/server/db/schema';
+import { eq, and, sql } from 'drizzle-orm';
 import { getUserVaultRole } from '$lib/server/utils/vaultPermissions';
 
 export const getFund = async (
@@ -30,5 +30,25 @@ export const getFund = async (
         .where(and(eq(funds.id, fundId), eq(funds.vaultId, vaultId)))
         .limit(1);
 
-    return row ?? null;
+    if (!row) return null;
+
+    // Fetch deduction total for the active cycle
+    let totalDeducted = 0;
+    if (row.activeCycle?.id) {
+        const [deduction] = await client
+            .select({ total: sql<number>`cast(sum(${fundTransactions.amount}) as real)` })
+            .from(fundTransactions)
+            .where(and(
+                eq(fundTransactions.cycleId, row.activeCycle.id),
+                eq(fundTransactions.type, 'deduction'),
+            ));
+        totalDeducted = deduction?.total ?? 0;
+    }
+
+    return {
+        ...row,
+        activeCycle: row.activeCycle
+            ? { ...row.activeCycle, totalDeducted }
+            : null,
+    };
 };

@@ -7,6 +7,8 @@
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+    import { IconCombobox } from '$lib/components/ui/icon-combobox';
+    import { iconData } from '$lib/configurations/icons';
     import { Toaster } from '$lib/components/ui/sonner';
     import { toast } from 'svelte-sonner';
     import { ofetch } from 'ofetch';
@@ -121,6 +123,18 @@
                         class="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     ></textarea>
                 </div>
+
+                <!-- Icon -->
+                <IconCombobox
+                    name="icon"
+                    label="Icon"
+                    icons={iconData.icons}
+                    bind:value={$form.icon}
+                    disabled={$delayed}
+                    error={$errors.icon}
+                    required={false}
+                    placeholder="Search icons..."
+                />
 
                 <!-- Color -->
                 <div class="space-y-2">
