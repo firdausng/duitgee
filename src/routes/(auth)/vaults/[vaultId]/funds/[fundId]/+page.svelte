@@ -7,6 +7,8 @@
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
     import { Toaster } from '$lib/components/ui/sonner';
     import { toast } from 'svelte-sonner';
+    import FundTransactionList from '$lib/components/fund-activity/FundTransactionList.svelte';
+    import type { FundTransaction } from '$lib/components/fund-activity/FundTransactionList.svelte';
 
     let { vaultId, fundId } = page.params;
 
@@ -28,6 +30,19 @@
     const isLoading = $derived(fundResource.loading);
     const error = $derived(fundResource.error);
 
+    const DEFAULT_PREVIEW_TYPES = 'top_up,deduction,transfer_in,transfer_out';
+
+    const recentActivityResource = resource(
+        () => [vaultId, fundId, refetchKey] as const,
+        async ([vid, fid]) => {
+            const r = await ofetch<{ success: boolean; data: { transactions: FundTransaction[] } }>(
+                `/api/getFundTransactions?vaultId=${vid}&fundId=${fid}&limit=10&types=${DEFAULT_PREVIEW_TYPES}`
+            );
+            return r.data?.transactions ?? [];
+        }
+    );
+    const recentActivity = $derived(recentActivityResource.current ?? []);
+
     $effect(() => {
         if (error) toast.error('Failed to load fund.');
     });
@@ -44,12 +59,20 @@
         goto(`/vaults/${vaultId}/funds/${fundId}/topup`);
     }
 
+    function handleDeduct() {
+        goto(`/vaults/${vaultId}/funds/${fundId}/deduct`);
+    }
+
     function handleReimbursements() {
         goto(`/vaults/${vaultId}/funds/${fundId}/reimbursements`);
     }
 
     function handleCycles() {
         goto(`/vaults/${vaultId}/funds/${fundId}/cycles`);
+    }
+
+    function handleActivity() {
+        goto(`/vaults/${vaultId}/funds/${fundId}/activity`);
     }
 
     async function handleArchive() {
@@ -193,15 +216,43 @@
             </Card>
         {/if}
 
+        <!-- Recent Activity -->
+        <Card class="mb-4">
+            <CardHeader class="pb-2">
+                <div class="flex items-center justify-between">
+                    <CardTitle class="text-base">Recent Activity</CardTitle>
+                    <button
+                        onclick={handleActivity}
+                        class="text-xs text-muted-foreground hover:text-primary transition-colors"
+                    >
+                        View all →
+                    </button>
+                </div>
+            </CardHeader>
+            <CardContent class="px-4 pb-3">
+                {#if recentActivityResource.loading}
+                    <div class="flex justify-center py-4">
+                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                    </div>
+                {:else}
+                    <FundTransactionList transactions={recentActivity} />
+                {/if}
+            </CardContent>
+        </Card>
+
         <!-- Actions -->
         {#if fund.status !== 'archived'}
             <div class="grid gap-3 sm:grid-cols-2">
                 <Button onclick={handleTopUp} class="w-full">Top Up</Button>
+                <Button variant="outline" onclick={handleDeduct} class="w-full">Deduct</Button>
                 <Button variant="outline" onclick={handleReimbursements} class="w-full">
                     Pending Reimbursements
                 </Button>
                 <Button variant="outline" onclick={handleCycles} class="w-full">
                     Cycle History
+                </Button>
+                <Button variant="outline" onclick={handleActivity} class="w-full sm:col-span-2">
+                    Activity History
                 </Button>
             </div>
 
@@ -244,6 +295,9 @@
             <div class="grid gap-3 sm:grid-cols-2">
                 <Button variant="outline" onclick={handleCycles} class="w-full">
                     Cycle History
+                </Button>
+                <Button variant="outline" onclick={handleActivity} class="w-full">
+                    Activity History
                 </Button>
             </div>
         {/if}

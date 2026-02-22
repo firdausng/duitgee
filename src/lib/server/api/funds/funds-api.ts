@@ -7,9 +7,11 @@ import {
     updateFundSchema,
     archiveFundSchema,
     topUpFundSchema,
+    deductFundSchema,
     getFundsQuerySchema,
     getFundQuerySchema,
     getFundCyclesQuerySchema,
+    getFundTransactionsQuerySchema,
     getPendingReimbursementsQuerySchema,
     getVaultPendingReimbursementsQuerySchema,
     settleReimbursementsSchema,
@@ -22,7 +24,9 @@ import { createFund } from './createFundHandler';
 import { updateFund } from './updateFundHandler';
 import { archiveFund } from './archiveFundHandler';
 import { topUpFund } from './topUpFundHandler';
+import { deductFund } from './deductFundHandler';
 import { getFundCycles } from './getFundCyclesHandler';
+import { getFundTransactions } from './getFundTransactionsHandler';
 import { getPendingReimbursements } from './getPendingReimbursementsHandler';
 import { settleReimbursements } from './settleReimbursementsHandler';
 import { getVaultPendingReimbursements } from './getVaultPendingReimbursementsHandler';
@@ -105,6 +109,33 @@ export const fundsApi = new Hono<App.Api>()
             } catch (error) {
                 const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
                 return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to get cycles' }, status);
+            }
+        },
+    )
+
+    .get(
+        '/getFundTransactions',
+        describeRoute({
+            ...commonFundConfig,
+            description: 'List transactions for a fund with optional type filter.',
+            responses: {
+                200: { description: 'Successful response', content: { 'application/json': { schema: resolver(v.object({ success: v.boolean(), data: v.any() })) } } },
+                404: { description: 'Fund not found' },
+            },
+        }),
+        vValidator('query', getFundTransactionsQuerySchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const { vaultId, fundId, page, limit, types } = c.req.valid('query');
+            const typesArray = types ? types.split(',').filter(Boolean) : undefined;
+            try {
+                const data = await getFundTransactions(vaultId, fundId, session, c.env, { page, limit, types: typesArray });
+                return c.json({ success: true, data });
+            } catch (error) {
+                const status = error instanceof Error && error.message.includes('not found') ? 404
+                    : error instanceof Error && error.message.includes('denied') ? 403
+                    : 500;
+                return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to get transactions' }, status);
             }
         },
     )
@@ -208,6 +239,32 @@ export const fundsApi = new Hono<App.Api>()
                     : error instanceof Error && error.message.includes('denied') ? 403
                     : 500;
                 return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to top up fund' }, status);
+            }
+        },
+    )
+
+    .post(
+        '/deductFund',
+        describeRoute({
+            ...commonFundConfig,
+            description: 'Deduct money from a fund balance. Blocked if it would result in a negative balance.',
+            responses: {
+                200: { description: 'Deduction recorded', content: { 'application/json': { schema: resolver(v.object({ success: v.boolean(), data: v.any() })) } } },
+                404: { description: 'Fund not found' },
+            },
+        }),
+        vValidator('json', deductFundSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+            try {
+                const result = await deductFund(session, data, c.env);
+                return c.json({ success: true, data: result });
+            } catch (error) {
+                const status = error instanceof Error && error.message.includes('not found') ? 404
+                    : error instanceof Error && error.message.includes('denied') ? 403
+                    : 500;
+                return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to deduct from fund' }, status);
             }
         },
     )

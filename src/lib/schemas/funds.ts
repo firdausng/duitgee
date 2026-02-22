@@ -19,6 +19,14 @@ export const getFundCyclesQuerySchema = v.object({
     vaultId: v.pipe(v.string(), v.minLength(1)),
 });
 
+export const getFundTransactionsQuerySchema = v.object({
+    vaultId: v.pipe(v.string(), v.minLength(1)),
+    fundId: v.pipe(v.string(), v.minLength(1)),
+    page: v.optional(v.pipe(v.string(), v.transform(Number)), '1'),
+    limit: v.optional(v.pipe(v.string(), v.transform(Number)), '30'),
+    types: v.optional(v.string()), // comma-separated list
+});
+
 // ── Commands ───────────────────────────────────────────────────────────────
 
 export const createFundSchema = v.object({
@@ -60,6 +68,14 @@ export const topUpFundSchema = v.object({
     note: v.optional(v.string()),
 });
 export type TopUpFund = v.InferOutput<typeof topUpFundSchema>;
+
+export const deductFundSchema = v.object({
+    id: v.pipe(v.string(), v.minLength(1)),
+    vaultId: v.pipe(v.string(), v.minLength(1)),
+    amount: v.pipe(v.number(), v.minValue(0.01, 'Amount must be greater than 0')),
+    note: v.optional(v.string()),
+});
+export type DeductFund = v.InferOutput<typeof deductFundSchema>;
 
 // ── Transfer ───────────────────────────────────────────────────────────────
 
