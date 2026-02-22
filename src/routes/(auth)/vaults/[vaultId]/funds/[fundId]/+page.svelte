@@ -116,11 +116,13 @@
 </svelte:head>
 
 <div class="container mx-auto py-6 px-4">
-    <div class="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="sm" onclick={handleBack}>← Back</Button>
-        <h1 class="text-2xl font-bold flex-1 truncate">{fund?.name ?? 'Fund'}</h1>
+    <div class="mb-1">
+        <Button variant="ghost" size="sm" onclick={handleBack} class="-ml-2">← Back</Button>
+    </div>
+    <div class="flex items-start justify-between gap-2 mb-6">
+        <h1 class="text-2xl font-bold">{fund?.name ?? 'Fund'}</h1>
         {#if fund?.status !== 'archived'}
-            <Button variant="outline" size="sm" onclick={handleEdit}>Edit</Button>
+            <Button variant="outline" size="sm" onclick={handleEdit} class="shrink-0">Edit</Button>
         {/if}
     </div>
 
