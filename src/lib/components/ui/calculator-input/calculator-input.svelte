@@ -130,18 +130,6 @@
 				<div class="grow md:flex-none"></div>
 				<!-- Numpad Grid -->
 				<div class="grid grid-cols-3 gap-2 pb-4 w-80 md:w-full">
-					<!-- Number buttons (3x4 grid for numbers) -->
-					{#each numberButtons as num}
-						<Button
-								type="button"
-								variant="outline"
-								size="lg"
-								class="h-16 text-xl font-semibold"
-								onclick={() => handleNumberClick(num)}
-						>
-							{num}
-						</Button>
-					{/each}
 
 					<!-- no action button -->
 					<Button
@@ -188,6 +176,21 @@
 							/>
 						</svg>
 					</Button>
+
+					<!-- Number buttons (3x4 grid for numbers) -->
+					{#each numberButtons as num}
+						<Button
+								type="button"
+								variant="outline"
+								size="lg"
+								class="h-16 text-xl font-semibold"
+								onclick={() => handleNumberClick(num)}
+						>
+							{num}
+						</Button>
+					{/each}
+
+
 				</div>
 			</div>
 
