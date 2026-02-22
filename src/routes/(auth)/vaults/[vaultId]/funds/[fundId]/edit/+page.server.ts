@@ -10,6 +10,9 @@ export const load = async ({ params, fetch }) => {
     let fundColor = '';
     let fundIcon = '';
     let fundIconType = '';
+    let carryOverBalance = false;
+    let carryOverFundId = '';
+    let replenishmentType = 'manual';
 
     try {
         const response = await fetch(`/api/getFund?vaultId=${vaultId}&id=${fundId}`);
@@ -21,6 +24,9 @@ export const load = async ({ params, fetch }) => {
                 fundColor = result.data.fund.color || '';
                 fundIcon = result.data.fund.icon || '';
                 fundIconType = result.data.fund.iconType || '';
+                carryOverBalance = result.data.policy?.carryOverBalance === 1;
+                carryOverFundId = result.data.policy?.carryOverFundId || '';
+                replenishmentType = result.data.policy?.replenishmentType || 'manual';
             }
         }
     } catch {
@@ -37,9 +43,11 @@ export const load = async ({ params, fetch }) => {
                 color: fundColor,
                 icon: fundIcon,
                 iconType: fundIconType,
+                carryOverBalance,
+                carryOverFundId,
             },
         })
     );
 
-    return { form, vaultId, fundId };
+    return { form, vaultId, fundId, replenishmentType };
 };

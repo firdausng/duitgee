@@ -45,10 +45,22 @@ export const getFund = async (
         totalDeducted = deduction?.total ?? 0;
     }
 
+    // Resolve carry-over target fund name
+    let carryOverFundName: string | null = null;
+    if (row.policy?.carryOverFundId) {
+        const [targetFund] = await client
+            .select({ name: funds.name, icon: funds.icon })
+            .from(funds)
+            .where(eq(funds.id, row.policy.carryOverFundId))
+            .limit(1);
+        carryOverFundName = targetFund ? `${targetFund.icon ?? ''} ${targetFund.name}`.trim() : null;
+    }
+
     return {
         ...row,
         activeCycle: row.activeCycle
             ? { ...row.activeCycle, totalDeducted }
             : null,
+        carryOverFundName,
     };
 };

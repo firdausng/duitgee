@@ -40,6 +40,26 @@ export const createFund = async (
         await requireVaultEntitlement(session, data.vaultId, 'fund:create_multiple', env);
     }
 
+    // Validate carry-over target fund if specified
+    if (data.carryOverBalance && data.carryOverFundId) {
+        const [targetPolicy] = await client
+            .select({ replenishmentType: fundPolicies.replenishmentType })
+            .from(fundPolicies)
+            .innerJoin(funds, eq(fundPolicies.fundId, funds.id))
+            .where(
+                and(
+                    eq(fundPolicies.fundId, data.carryOverFundId),
+                    eq(funds.vaultId, data.vaultId),
+                    isNull(funds.deletedAt),
+                ),
+            )
+            .limit(1);
+
+        if (!targetPolicy) throw new Error('Target fund not found in this vault');
+        if (targetPolicy.replenishmentType === 'top_to_ceiling')
+            throw new Error('Target fund cannot be a "Top to Ceiling" type');
+    }
+
     const { periodStart, periodEnd } = calculateCyclePeriod(data.replenishmentSchedule);
     const auditFields = initialAuditFields({ userId });
 
@@ -67,6 +87,8 @@ export const createFund = async (
             replenishmentAmount: data.replenishmentAmount ?? null,
             ceilingAmount: data.ceilingAmount ?? null,
             replenishmentSchedule: data.replenishmentSchedule ?? null,
+            carryOverBalance: data.carryOverBalance ? 1 : 0,
+            carryOverFundId: data.carryOverBalance ? (data.carryOverFundId ?? null) : null,
             ...auditFields,
         })
         .returning();

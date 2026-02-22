@@ -153,6 +153,8 @@ export const fundPolicies = sqliteTable('fund_policies', {
     replenishmentAmount: real('replenishment_amount'), // For 'fixed_amount': how much to add each cycle
     ceilingAmount: real('ceiling_amount'), // For 'top_to_ceiling': max balance to restore to
     replenishmentSchedule: text('replenishment_schedule'), // 'monthly' | 'biweekly' | 'weekly' | null for manual
+    carryOverBalance: integer('carry_over_balance').notNull().default(0), // boolean as int: transfer remaining balance to another fund on cycle rollover
+    carryOverFundId: text('carry_over_fund_id').references(() => funds.id, { onDelete: 'set null' }), // target fund for carry-over (cannot be top_to_ceiling)
     effectiveFrom: text('effective_from').notNull().$defaultFn(() => formatISO(new UTCDate())),
     // Audit fields
     createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),

@@ -43,6 +43,9 @@ export const createFundSchema = v.object({
     replenishmentAmount: v.optional(v.pipe(v.number(), v.minValue(0.01, 'Amount must be greater than 0'))),
     ceilingAmount: v.optional(v.pipe(v.number(), v.minValue(0.01, 'Ceiling must be greater than 0'))),
     replenishmentSchedule: v.optional(replenishmentScheduleSchema),
+    // Carry-over policy
+    carryOverBalance: v.optional(v.boolean()),
+    carryOverFundId: v.optional(v.string()),
 });
 export type CreateFund = v.InferOutput<typeof createFundSchema>;
 
@@ -54,6 +57,9 @@ export const updateFundSchema = v.object({
     color: v.optional(v.string()),
     icon: v.optional(v.string()),
     iconType: v.optional(v.string()),
+    // Carry-over policy
+    carryOverBalance: v.optional(v.boolean()),
+    carryOverFundId: v.optional(v.string()),
 });
 export type UpdateFund = v.InferOutput<typeof updateFundSchema>;
 

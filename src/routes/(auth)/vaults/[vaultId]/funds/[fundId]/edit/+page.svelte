@@ -12,6 +12,7 @@
     import { Toaster } from '$lib/components/ui/sonner';
     import { toast } from 'svelte-sonner';
     import { ofetch } from 'ofetch';
+    import { resource } from 'runed';
 
     let { data } = $props();
     let isLoading = $state(false);
@@ -48,6 +49,33 @@
             }
         },
     });
+
+    // Carry-over is only relevant for scheduled (non-manual) replenishment types
+    const showCarryOver = $derived(data.replenishmentType !== 'manual');
+
+    function handleCarryOverToggle(e: Event) {
+        if (!(e.target as HTMLInputElement).checked) {
+            $form.carryOverFundId = '';
+        }
+    }
+
+    // Fetch available funds for carry-over target
+    const fundsResource = resource(
+        () => data.vaultId,
+        async (vaultId) => {
+            const response = await ofetch<{ success: boolean; data: any[] }>(`/api/getFunds?vaultId=${vaultId}`);
+            return response.data ?? [];
+        }
+    );
+
+    const carryOverFunds = $derived(
+        (fundsResource.current ?? []).filter(
+            (f: any) =>
+                f.fund.id !== data.fundId &&
+                f.fund.status !== 'archived' &&
+                f.policy?.replenishmentType !== 'top_to_ceiling'
+        )
+    );
 
     const colorOptions = [
         { value: '#3B82F6', label: 'Blue' },
@@ -155,6 +183,58 @@
                         {/each}
                     </div>
                 </div>
+
+                <!-- Carry Over Balance (only for scheduled types) -->
+                {#if showCarryOver}
+                    <div class="rounded-lg border p-4 space-y-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-medium">Carry Over Balance</p>
+                                <p class="text-xs text-muted-foreground mt-0.5">
+                                    Transfer remaining balance to another fund when this cycle ends
+                                </p>
+                            </div>
+                            <input
+                                type="checkbox"
+                                name="carryOverBalance"
+                                bind:checked={$form.carryOverBalance}
+                                onchange={handleCarryOverToggle}
+                                disabled={$delayed}
+                                class="mt-1 h-4 w-4 rounded border-input"
+                            />
+                        </div>
+                        {#if $form.carryOverBalance}
+                            <div class="space-y-2">
+                                <Label for="carryOverFundId">Transfer To</Label>
+                                {#if fundsResource.loading}
+                                    <p class="text-sm text-muted-foreground">Loading funds...</p>
+                                {:else if carryOverFunds.length === 0}
+                                    <p class="text-sm text-muted-foreground">
+                                        No eligible funds available in this vault.
+                                    </p>
+                                {:else}
+                                    <select
+                                        id="carryOverFundId"
+                                        name="carryOverFundId"
+                                        bind:value={$form.carryOverFundId}
+                                        disabled={$delayed}
+                                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <option value="">Select a fund...</option>
+                                        {#each carryOverFunds as f}
+                                            <option value={f.fund.id}>
+                                                {f.fund.icon} {f.fund.name}
+                                            </option>
+                                        {/each}
+                                    </select>
+                                {/if}
+                                {#if $form.carryOverBalance && !$form.carryOverFundId}
+                                    <p class="text-sm text-destructive">Please select a target fund</p>
+                                {/if}
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
 
                 <div class="sm:hidden pb-24"></div>
             </form>

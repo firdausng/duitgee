@@ -234,6 +234,12 @@
                     {#if policy.ceilingAmount}
                         <p><span class="text-muted-foreground">Ceiling:</span> {policy.ceilingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                     {/if}
+                    {#if policy.carryOverBalance}
+                        <p>
+                            <span class="text-muted-foreground">Carry Over:</span>
+                            Transfer balance to {fundResource.current?.carryOverFundName ?? policy.carryOverFundId} at cycle end
+                        </p>
+                    {/if}
                 </CardContent>
             </Card>
         {/if}
