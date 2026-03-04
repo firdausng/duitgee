@@ -7,8 +7,8 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
-	import { CategoryCombobox } from '$lib/components/ui/category-combobox';
-	import { MemberCombobox } from '$lib/components/ui/member-combobox';
+	import { CategoryPicker } from '$lib/components/ui/category-picker';
+	import { Textarea } from '$lib/components/ui/textarea';
 	import { CalculatorInput } from '$lib/components/ui/calculator-input';
 	import { categoryData } from '$lib/configurations/categories';
 	import { paymentTypes } from '$lib/configurations/paymentTypes';
@@ -181,14 +181,14 @@
 					<!-- Note -->
 					<div class="space-y-2">
 						<Label for="note">Description</Label>
-						<Input
+						<Textarea
 							id="note"
 							name="note"
-							type="text"
 							bind:value={$form.note}
 							disabled={$delayed}
 							placeholder="What was this expense for?"
 							class={$errors.note ? 'border-destructive' : ''}
+							rows={2}
 						/>
 						{#if $errors.note}
 							<p class="text-sm text-destructive">{$errors.note}</p>
@@ -196,10 +196,11 @@
 					</div>
 
 					<!-- Category -->
-					<CategoryCombobox
+					<CategoryPicker
 						name="categoryName"
 						label="Category"
 						categories={categoryData.categories}
+						categoryGroups={categoryData.categoryGroups}
 						bind:value={$form.categoryName}
 						disabled={$delayed}
 						error={$errors.categoryName}
@@ -208,37 +209,64 @@
 
 					<!-- Payment Type -->
 					<div class="space-y-2">
-						<Label for="paymentType">Payment Type *</Label>
-						<select
-							id="paymentType"
-							name="paymentType"
-							bind:value={$form.paymentType}
-							disabled={$delayed}
-							class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {$errors.paymentType ? 'border-destructive' : ''}"
-						>
-							{#each paymentTypes as paymentType}
-								<option value={paymentType.value}>
-									{paymentType.icon} {paymentType.label}
-								</option>
+						<Label>Payment Type *</Label>
+						<input type="hidden" name="paymentType" value={$form.paymentType} />
+						<div class="grid grid-cols-4 gap-2">
+							{#each paymentTypes as pt}
+								<button
+									type="button"
+									onclick={() => ($form.paymentType = pt.value)}
+									disabled={$delayed}
+									class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+										{$form.paymentType === pt.value
+											? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-1'
+											: 'border-input'}"
+									aria-label={pt.label}
+								>
+									<span class="text-xl">{pt.icon}</span>
+									<span class="text-xs leading-tight">{pt.label}</span>
+								</button>
 							{/each}
-						</select>
+						</div>
 						{#if $errors.paymentType}
 							<p class="text-sm text-destructive">{$errors.paymentType}</p>
 						{/if}
 					</div>
 
 					<!-- Paid By -->
-					<MemberCombobox
-						name="paidBy"
-						label="Paid By"
-						members={data.members}
-						bind:value={$form.paidBy}
-						disabled={$delayed}
-						error={$errors.paidBy}
-						required={false}
-						allowEmpty={true}
-						emptyLabel="Vault-level expense (no specific person)"
-					/>
+					<div class="space-y-2">
+						<Label>Paid By</Label>
+						<input type="hidden" name="paidBy" value={$form.paidBy ?? ''} />
+						<div class="grid grid-cols-3 gap-1">
+							<button
+								type="button"
+								onclick={() => ($form.paidBy = '')}
+								disabled={$delayed}
+								class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+									{!$form.paidBy ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-input'}"
+							>
+								<span class="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-base">—</span>
+								<span class="leading-tight">None</span>
+							</button>
+							{#each data.members as member}
+								<button
+									type="button"
+									onclick={() => ($form.paidBy = member.userId)}
+									disabled={$delayed}
+									class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+										{$form.paidBy === member.userId ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-input'}"
+								>
+									<span class="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-sm font-semibold">
+										{member.displayName.charAt(0).toUpperCase()}
+									</span>
+									<span class="leading-tight line-clamp-2">{member.displayName}</span>
+								</button>
+							{/each}
+						</div>
+						{#if $errors.paidBy}
+							<p class="text-sm text-destructive">{$errors.paidBy}</p>
+						{/if}
+					</div>
 
 					<!-- Date and Time -->
 					<div class="space-y-2">
@@ -259,36 +287,63 @@
 					<!-- Fund -->
 					{#if data.funds && data.funds.length > 0}
 						<div class="space-y-2">
-							<Label for="fundId">Fund (optional)</Label>
-							<select
-								id="fundId"
-								name="fundId"
-								bind:value={$form.fundId}
-								disabled={$delayed}
-								class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								<option value={null}>No fund</option>
+							<Label>Fund (optional)</Label>
+							<input type="hidden" name="fundId" value={$form.fundId ?? ''} />
+							<div class="grid grid-cols-3 gap-1">
+								<button
+									type="button"
+									onclick={() => ($form.fundId = null)}
+									disabled={$delayed}
+									class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+										{!$form.fundId ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-input'}"
+								>
+									<span class="text-xl">—</span>
+									<span class="leading-tight">No fund</span>
+								</button>
 								{#each data.funds as fund}
-									<option value={fund.id}>
-										{fund.name} — {fund.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-									</option>
+									<button
+										type="button"
+										onclick={() => ($form.fundId = fund.id)}
+										disabled={$delayed}
+										class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+											{$form.fundId === fund.id ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-input'}"
+									>
+										<span class="text-xl">{fund.icon ?? '💰'}</span>
+										<span class="leading-tight line-clamp-2">{fund.name}</span>
+										<span class="text-muted-foreground tabular-nums">{fund.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+									</button>
 								{/each}
-							</select>
+							</div>
 						</div>
 
 						{#if $form.fundId}
 							<div class="space-y-2">
-								<Label for="fundPaymentMode">Fund Payment Mode</Label>
-								<select
-									id="fundPaymentMode"
-									name="fundPaymentMode"
-									bind:value={$form.fundPaymentMode}
-									disabled={$delayed}
-									class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-								>
-									<option value="paid_by_fund">Paid by Fund — deducts from balance immediately</option>
-									<option value="pending_reimbursement">Pending Reimbursement — settle later</option>
-								</select>
+								<Label>Fund Payment Mode</Label>
+								<input type="hidden" name="fundPaymentMode" value={$form.fundPaymentMode} />
+								<div class="grid grid-cols-2 gap-2">
+									<button
+										type="button"
+										onclick={() => ($form.fundPaymentMode = 'paid_by_fund')}
+										disabled={$delayed}
+										class="rounded-md border-2 px-3 py-2.5 text-sm text-center transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+											{$form.fundPaymentMode === 'paid_by_fund'
+												? 'border-primary bg-primary text-primary-foreground'
+												: 'border-input'}"
+									>
+										Paid by Fund
+									</button>
+									<button
+										type="button"
+										onclick={() => ($form.fundPaymentMode = 'pending_reimbursement')}
+										disabled={$delayed}
+										class="rounded-md border-2 px-3 py-2.5 text-sm text-center transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+											{$form.fundPaymentMode === 'pending_reimbursement'
+												? 'border-primary bg-primary text-primary-foreground'
+												: 'border-input'}"
+									>
+										Pending Reimb.
+									</button>
+								</div>
 							</div>
 						{/if}
 					{/if}

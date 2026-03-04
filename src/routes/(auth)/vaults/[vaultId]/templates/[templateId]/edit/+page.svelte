@@ -6,9 +6,9 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import { Textarea } from '$lib/components/ui/textarea';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
-	import { CategoryCombobox } from '$lib/components/ui/category-combobox';
-	import { MemberCombobox } from '$lib/components/ui/member-combobox';
+	import { CategoryPicker } from '$lib/components/ui/category-picker';
 	import { IconCombobox } from '$lib/components/ui/icon-combobox';
 	import { categoryData } from '$lib/configurations/categories';
 	import { paymentTypes } from '$lib/configurations/paymentTypes';
@@ -39,9 +39,7 @@
 				const response = await ofetch('/api/updateExpenseTemplate', {
 					method: 'POST',
 					body: form.data,
-					headers: {
-						'Content-Type': 'application/json'
-					}
+					headers: { 'Content-Type': 'application/json' }
 				});
 
 				if (response.success === false) {
@@ -50,14 +48,9 @@
 				}
 
 				toast.success('Template updated successfully');
-
-				// Redirect back to template selection page
 				await goto(`/vaults/${data.vaultId}/expenses/new`);
 			} catch (error: any) {
-				console.error({
-					...error,
-					message: '[template:edit:action] Failed to update template'
-				});
+				console.error({ ...error, message: '[template:edit:action] Failed to update template' });
 				const errorMessage = error?.data?.error || error?.message || 'Failed to update template. Please try again.';
 				toast.error(errorMessage);
 			} finally {
@@ -81,13 +74,8 @@
 		try {
 			const response = await ofetch('/api/deleteExpenseTemplate', {
 				method: 'POST',
-				body: {
-					id: data.templateId,
-					vaultId: data.vaultId
-				},
-				headers: {
-					'Content-Type': 'application/json'
-				}
+				body: { id: data.templateId, vaultId: data.vaultId },
+				headers: { 'Content-Type': 'application/json' }
 			});
 
 			if (response.success === false) {
@@ -96,14 +84,9 @@
 			}
 
 			toast.success('Template deleted successfully');
-
-			// Redirect back to template selection page
 			await goto(`/vaults/${data.vaultId}/expenses/new`);
 		} catch (error: any) {
-			console.error({
-				...error,
-				message: '[template:edit:delete] Failed to delete template'
-			});
+			console.error({ ...error, message: '[template:edit:delete] Failed to delete template' });
 			const errorMessage = error?.data?.error || error?.message || 'Failed to delete template. Please try again.';
 			toast.error(errorMessage);
 		} finally {
@@ -122,7 +105,6 @@
 </svelte:head>
 
 <div class="container mx-auto py-2 px-4">
-	<!-- Template Form -->
 	{#if isLoading || isDeleting}
 		<Spinner />
 	{:else}
@@ -159,13 +141,13 @@
 					<!-- Description -->
 					<div class="space-y-2">
 						<Label for="description">Description</Label>
-						<Input
+						<Textarea
 							id="description"
 							name="description"
-							type="text"
 							bind:value={$form.description}
 							disabled={$delayed}
 							placeholder="Optional description"
+							rows={2}
 							class={$errors.description ? 'border-destructive' : ''}
 						/>
 						{#if $errors.description}
@@ -214,13 +196,13 @@
 							<!-- Default Note -->
 							<div class="space-y-2">
 								<Label for="defaultNote">Default Description</Label>
-								<Input
+								<Textarea
 									id="defaultNote"
 									name="defaultNote"
-									type="text"
 									bind:value={$form.defaultNote}
 									disabled={$delayed}
 									placeholder="Default note for this expense"
+									rows={2}
 									class={$errors.defaultNote ? 'border-destructive' : ''}
 								/>
 								{#if $errors.defaultNote}
@@ -229,10 +211,11 @@
 							</div>
 
 							<!-- Default Category -->
-							<CategoryCombobox
+							<CategoryPicker
 								name="defaultCategoryName"
 								label="Default Category"
 								categories={categoryData.categories}
+								categoryGroups={categoryData.categoryGroups}
 								bind:value={$form.defaultCategoryName}
 								disabled={$delayed}
 								error={$errors.defaultCategoryName}
@@ -241,73 +224,135 @@
 
 							<!-- Default Payment Type -->
 							<div class="space-y-2">
-								<Label for="defaultPaymentType">Default Payment Type</Label>
-								<select
-									id="defaultPaymentType"
-									name="defaultPaymentType"
-									bind:value={$form.defaultPaymentType}
-									disabled={$delayed}
-									class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {$errors.defaultPaymentType ? 'border-destructive' : ''}"
-								>
-									{#each paymentTypes as paymentType}
-										<option value={paymentType.value}>
-											{paymentType.icon} {paymentType.label}
-										</option>
+								<Label>Default Payment Type</Label>
+								<input type="hidden" name="defaultPaymentType" value={$form.defaultPaymentType} />
+								<div class="grid grid-cols-4 gap-2">
+									{#each paymentTypes as pt}
+										<button
+											type="button"
+											onclick={() => ($form.defaultPaymentType = pt.value)}
+											disabled={$delayed}
+											class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+												{$form.defaultPaymentType === pt.value
+													? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-1'
+													: 'border-input'}"
+											aria-label={pt.label}
+										>
+											<span class="text-xl">{pt.icon}</span>
+											<span class="text-xs leading-tight">{pt.label}</span>
+										</button>
 									{/each}
-								</select>
+								</div>
 								{#if $errors.defaultPaymentType}
 									<p class="text-sm text-destructive">{$errors.defaultPaymentType}</p>
 								{/if}
 							</div>
 
 							<!-- Default Paid By -->
-							<MemberCombobox
-								name="defaultPaidBy"
-								label="Default Paid By"
-								members={data.members}
-								bind:value={$form.defaultPaidBy}
-								disabled={$delayed}
-								error={$errors.defaultPaidBy}
-								required={false}
-								allowEmpty={true}
-								emptyLabel="Vault-level expense (no specific person)"
-								allowCreator={true}
-								creatorLabel="Expense Creator"
-							/>
+							<div class="space-y-2">
+								<Label>Default Paid By</Label>
+								<input type="hidden" name="defaultPaidBy" value={$form.defaultPaidBy ?? ''} />
+								<div class="grid grid-cols-3 gap-1">
+									<button
+										type="button"
+										onclick={() => ($form.defaultPaidBy = '')}
+										disabled={$delayed}
+										class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+											{!$form.defaultPaidBy ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-input'}"
+									>
+										<span class="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-base">—</span>
+										<span class="leading-tight">None</span>
+									</button>
+									<button
+										type="button"
+										onclick={() => ($form.defaultPaidBy = '__creator__')}
+										disabled={$delayed}
+										class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+											{$form.defaultPaidBy === '__creator__' ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-input'}"
+									>
+										<span class="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-sm font-semibold">★</span>
+										<span class="leading-tight">Creator</span>
+									</button>
+									{#each data.members as member}
+										<button
+											type="button"
+											onclick={() => ($form.defaultPaidBy = member.userId)}
+											disabled={$delayed}
+											class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+												{$form.defaultPaidBy === member.userId ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-input'}"
+										>
+											<span class="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-sm font-semibold">
+												{member.displayName.charAt(0).toUpperCase()}
+											</span>
+											<span class="leading-tight line-clamp-2">{member.displayName}</span>
+										</button>
+									{/each}
+								</div>
+								{#if $errors.defaultPaidBy}
+									<p class="text-sm text-destructive">{$errors.defaultPaidBy}</p>
+								{/if}
+							</div>
 
 							<!-- Default Fund -->
 							{#if data.funds && data.funds.length > 0}
 								<div class="space-y-2">
-									<Label for="defaultFundId">Default Fund (optional)</Label>
-									<select
-										id="defaultFundId"
-										name="defaultFundId"
-										bind:value={$form.defaultFundId}
-										disabled={$delayed}
-										class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-									>
-										<option value={null}>No fund</option>
+									<Label>Default Fund (optional)</Label>
+									<input type="hidden" name="defaultFundId" value={$form.defaultFundId ?? ''} />
+									<div class="grid grid-cols-3 gap-1">
+										<button
+											type="button"
+											onclick={() => ($form.defaultFundId = null)}
+											disabled={$delayed}
+											class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+												{!$form.defaultFundId ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-input'}"
+										>
+											<span class="text-xl">—</span>
+											<span class="leading-tight">No fund</span>
+										</button>
 										{#each data.funds as fund}
-											<option value={fund.id}>
-												{fund.name} — {fund.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-											</option>
+											<button
+												type="button"
+												onclick={() => ($form.defaultFundId = fund.id)}
+												disabled={$delayed}
+												class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+													{$form.defaultFundId === fund.id ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-input'}"
+											>
+												<span class="text-xl">{fund.icon ?? '💰'}</span>
+												<span class="leading-tight line-clamp-2">{fund.name}</span>
+												<span class="text-muted-foreground tabular-nums">{fund.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+											</button>
 										{/each}
-									</select>
+									</div>
 								</div>
 
 								{#if $form.defaultFundId}
 									<div class="space-y-2">
-										<Label for="defaultFundPaymentMode">Default Fund Payment Mode</Label>
-										<select
-											id="defaultFundPaymentMode"
-											name="defaultFundPaymentMode"
-											bind:value={$form.defaultFundPaymentMode}
-											disabled={$delayed}
-											class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-										>
-											<option value="paid_by_fund">Paid by Fund — deducts from balance immediately</option>
-											<option value="pending_reimbursement">Pending Reimbursement — settle later</option>
-										</select>
+										<Label>Default Fund Payment Mode</Label>
+										<input type="hidden" name="defaultFundPaymentMode" value={$form.defaultFundPaymentMode} />
+										<div class="grid grid-cols-2 gap-2">
+											<button
+												type="button"
+												onclick={() => ($form.defaultFundPaymentMode = 'paid_by_fund')}
+												disabled={$delayed}
+												class="rounded-md border-2 px-3 py-2.5 text-sm text-center transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+													{$form.defaultFundPaymentMode === 'paid_by_fund'
+														? 'border-primary bg-primary text-primary-foreground'
+														: 'border-input'}"
+											>
+												Paid by Fund
+											</button>
+											<button
+												type="button"
+												onclick={() => ($form.defaultFundPaymentMode = 'pending_reimbursement')}
+												disabled={$delayed}
+												class="rounded-md border-2 px-3 py-2.5 text-sm text-center transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+													{$form.defaultFundPaymentMode === 'pending_reimbursement'
+														? 'border-primary bg-primary text-primary-foreground'
+														: 'border-input'}"
+											>
+												Pending Reimb.
+											</button>
+										</div>
 									</div>
 								{/if}
 							{/if}
@@ -318,11 +363,7 @@
 					<div class="space-y-3 pt-4">
 						<div class="flex gap-3">
 							<Button type="submit" disabled={$delayed} class="flex-1">
-								{#if $delayed}
-									Updating...
-								{:else}
-									Update Template
-								{/if}
+								{$delayed ? 'Updating...' : 'Update Template'}
 							</Button>
 							<Button type="button" variant="outline" onclick={handleBack} disabled={$delayed}>
 								Cancel
@@ -343,11 +384,7 @@
 										disabled={isDeleting}
 										class="flex-1"
 									>
-										{#if isDeleting}
-											Deleting...
-										{:else}
-											Confirm Delete
-										{/if}
+										{isDeleting ? 'Deleting...' : 'Confirm Delete'}
 									</Button>
 									<Button
 										type="button"

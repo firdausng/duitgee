@@ -50,6 +50,57 @@ export const createExpenseSchema = v.object({
 
 export type CreateExpense = v.InferOutput<typeof createExpenseSchema>;
 
+// --- Bulk expense creation schemas ---
+
+export const sharedExpenseDefaultsSchema = v.object({
+    paymentType: v.pipe(
+        v.fallback(v.string(), 'cash'),
+        v.minLength(1, 'Payment type is required')
+    ),
+    date: v.pipe(
+        v.fallback(v.string(), ''),
+        v.minLength(1, 'Date is required')
+    ),
+    paidBy: v.optional(v.nullable(v.string())),
+    fundId: v.optional(v.nullable(v.string())),
+    fundPaymentMode: v.optional(v.nullable(v.picklist(['paid_by_fund', 'pending_reimbursement']))),
+});
+
+export type SharedExpenseDefaults = v.InferOutput<typeof sharedExpenseDefaultsSchema>;
+
+export const createExpenseItemSchema = v.object({
+    amount: v.pipe(
+        v.number('Amount is required'),
+        v.minValue(0.01, 'Amount must be greater than 0')
+    ),
+    categoryName: v.pipe(
+        v.fallback(v.string(), ''),
+        v.minLength(1, 'Category is required')
+    ),
+    note: v.optional(v.string()),
+    // Per-row overrides (if absent, shared defaults are used)
+    paymentType: v.optional(v.string()),
+    paidBy: v.optional(v.nullable(v.string())),
+    date: v.optional(v.string()),
+    fundId: v.optional(v.nullable(v.string())),
+    fundPaymentMode: v.optional(v.nullable(v.picklist(['paid_by_fund', 'pending_reimbursement']))),
+});
+
+export type CreateExpenseItem = v.InferOutput<typeof createExpenseItemSchema>;
+
+export const createExpensesRequestSchema = v.object({
+    vaultId: v.string(),
+    templateId: v.optional(v.string()),
+    shared: sharedExpenseDefaultsSchema,
+    items: v.pipe(
+        v.array(createExpenseItemSchema),
+        v.minLength(1, 'At least one expense item is required'),
+        v.maxLength(20, 'Maximum 20 expenses per batch')
+    ),
+});
+
+export type CreateExpensesRequest = v.InferOutput<typeof createExpensesRequestSchema>;
+
 export const updateExpenseSchema = v.object({
     note: v.optional(v.string()),
     amount: v.pipe(

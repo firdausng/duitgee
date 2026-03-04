@@ -39,5 +39,7 @@ export const getExpense = async (
         vaultId: expenseResult.vaultId || undefined,
         vault: null, // Not included in this query
         category: categoryData.categories.find(c => c.name === expenseResult.categoryName) || null,
+        fundId: expenseResult.fundId ?? null,
+        fundPaymentMode: expenseResult.fundPaymentMode ?? null,
     };
 };

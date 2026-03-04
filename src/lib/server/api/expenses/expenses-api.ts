@@ -5,12 +5,14 @@ import {getExpenses} from "$lib/server/api/expenses/getExpensesHandler";
 import {vValidator} from "@hono/valibot-validator";
 import {
     createExpenseSchema,
+    createExpensesRequestSchema,
     listExpensesQuerySchema,
     getExpenseQuerySchema,
     updateExpenseRequestSchema,
     deleteExpenseRequestSchema
 } from "$lib/schemas/expenses";
 import {createExpense} from "$lib/server/api/expenses/createExpenseHandler";
+import {createExpenses} from "$lib/server/api/expenses/createExpensesHandler";
 import {getExpense} from "$lib/server/api/expenses/getExpenseHandler";
 import {updateExpense} from "$lib/server/api/expenses/updateExpenseHandler";
 import {deleteExpense} from "$lib/server/api/expenses/deleteExpenseHandler";
@@ -138,6 +140,52 @@ export const expensesApi = new Hono<App.Api>()
                 success: true,
                 data: expense
             }, 201);
+        })
+    // Command: Create multiple expenses in a batch (POST)
+    .post(
+        '/createExpenses',
+        describeRoute({
+            ...commonExpenseConfig,
+            description: 'Create multiple expenses in a batch',
+            responses: {
+                201: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.object({
+                                    created: v.number(),
+                                    expenseIds: v.array(v.string()),
+                                })
+                            }))
+                        },
+                    },
+                },
+            },
+        }),
+        vValidator('json', createExpensesRequestSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+
+            try {
+                const result = await createExpenses(session, data, c.env);
+                return c.json({
+                    success: true,
+                    data: result
+                }, 201);
+            } catch (error) {
+                console.error({
+                    message: 'Error creating expenses batch',
+                    error
+                });
+                const status = error instanceof Error && error.message.includes('not found') ? 404 : 400;
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to create expenses'
+                }, status);
+            }
         })
     // Command: Update expense (POST)
     .post(
