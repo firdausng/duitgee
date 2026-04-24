@@ -2,10 +2,10 @@ import { Hono } from 'hono';
 import * as v from 'valibot';
 import { describeRoute } from 'hono-openapi';
 import { vValidator } from '@hono/valibot-validator';
-import { requireAdmin } from '$lib/server/utils/adminCheck';
+import { isAdmin } from '$lib/server/utils/adminCheck';
 import { processDueFundCycles } from '$lib/server/api/funds/processDueFundCycles';
 
-const ADMIN_TAG = ['Admin'];
+const OPS_TAG = ['Ops'];
 
 const runFundsCronSchema = v.object({
     now: v.optional(v.string()),
@@ -14,23 +14,18 @@ const runFundsCronSchema = v.object({
 
 export const adminApi = new Hono<App.Api>()
     .post(
-        '/admin/cron/funds',
+        '/ops/cron/funds',
         describeRoute({
             hide: true,
-            tags: ADMIN_TAG,
+            tags: OPS_TAG,
             description:
                 'Manually trigger the fund-cycle rollover + auto-replenishment job. Admin-gated (user.role === "admin"). Accepts optional ISO `now` and `fundId` to scope the run.',
         }),
         vValidator('json', runFundsCronSchema),
         async (c) => {
             const session = c.get('currentSession');
-            try {
-                requireAdmin(session.user);
-            } catch (error) {
-                return c.json(
-                    { success: false, error: error instanceof Error ? error.message : 'Forbidden' },
-                    403,
-                );
+            if (!session?.user || !isAdmin(session.user)) {
+                return c.json({ success: false, error: 'Not found' }, 404);
             }
 
             const { now, fundId } = c.req.valid('json');
