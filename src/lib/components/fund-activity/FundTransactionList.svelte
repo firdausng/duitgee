@@ -105,14 +105,28 @@
         <ul class="divide-y mb-4 border rounded-lg overflow-hidden">
             {#each group.transactions as tx (tx.id)}
                 {@const meta = typeMeta(tx.type, tx.otherFundName)}
+                {@const isCarryOver =
+                    (tx.type === 'transfer_in' ||
+                        tx.type === 'transfer_out' ||
+                        tx.type === 'top_up') &&
+                    typeof tx.note === 'string' &&
+                    tx.note.toLowerCase().startsWith('carry-over')}
                 <li class="flex items-center gap-3 px-3 py-3 bg-card">
                     <!-- Type badge -->
                     <span class="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap {meta.badgeClass}">
                         {meta.label}
                     </span>
+                    {#if isCarryOver}
+                        <span
+                            class="shrink-0 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground"
+                            title="Automated carry-over at cycle rollover"
+                        >
+                            ↻ Carry-over
+                        </span>
+                    {/if}
                     <!-- Note -->
                     <p class="flex-1 min-w-0 text-sm text-muted-foreground truncate">
-                        {tx.note ?? ''}
+                        {isCarryOver ? '' : tx.note ?? ''}
                     </p>
                     <!-- Amount -->
                     {#if tx.type !== 'pending_reimbursement'}

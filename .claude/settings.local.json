@@ -19,7 +19,13 @@
       "Bash(grep -A2 \"expenses\\\\\\\\\\\\\\\\\\\\+page\\\\|filter-pill\\\\|filter-eval\\\\|filter-types\")",
       "Bash(grep -A2 \"ExpenseFilters\\\\|time-range-filter\\\\|statistics\\\\\\\\\\\\\\\\\\\\+page\\\\|DateFilterTabs\")",
       "Bash(grep -E \"date-range|expenses\\\\\\\\\\\\\\\\\\\\+page\")",
-      "Bash(grep -E \"d:\\\\\\\\\\\\\\\\\")"
+      "Bash(grep -E \"d:\\\\\\\\\\\\\\\\\")",
+      "Bash(grep -A 6 -i \"funds.\\\\[fundId\\\\]\\\\\\\\\\\\\\\\+page.svelte\\\\|funds/\\\\[fundId\\\\]/+page.svelte\\\\|fund-budget-hero\\\\|fund-policy-line\\\\|fund-summary\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5205/)",
+      "mcp__playwright__browser_select_option",
+      "mcp__playwright__browser_type",
+      "Bash(grep -n \"funds.\\\\[fundId\\\\].edit\\\\|reimbursements\\\\\\\\\\\\\\\\+page\\\\|FundTransactionList\\\\|fund-policy-line\" /tmp/check3.out)",
+      "Bash(grep \"funds.\\\\[fundId\\\\].edit\\\\|reimbursements\\\\\\\\\\\\\\\\+page\\\\|FundTransactionList\\\\|fund-policy-line\" /tmp/check4.out)"
     ]
   }
 }

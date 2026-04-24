@@ -13,6 +13,8 @@
     import { toast } from 'svelte-sonner';
     import { ofetch } from 'ofetch';
     import { resource } from 'runed';
+    import { FundPolicyLine } from '$lib/components/ui/fund-policy-line';
+    import { createVaultFormatters } from '$lib/vaultFormatting';
 
     let { data } = $props();
     let isLoading = $state(false);
@@ -91,6 +93,10 @@
     function handleBack() {
         goto(`/vaults/${data.vaultId}/funds/${data.fundId}`);
     }
+
+    const vaultFormatters = $derived(
+        createVaultFormatters({ locale: data.locale, currency: data.currency }),
+    );
 </script>
 
 <svelte:head>
@@ -101,6 +107,22 @@
     <div class="flex items-center gap-3 mb-6">
         <h1 class="text-2xl font-bold">Edit Fund</h1>
     </div>
+
+    {#if data.fundContext && data.policy}
+        <div class="mb-4 space-y-1">
+            <FundPolicyLine
+                fund={data.fundContext}
+                cycle={data.activeCycle}
+                policy={data.policy}
+                formatCurrency={vaultFormatters.currency}
+                carryOverFundName={data.carryOverFundName}
+            />
+            <p class="text-xs text-muted-foreground px-1">
+                Replenishment type, amount, and schedule are set at creation and can't be edited here.
+                Change them by creating a new fund. Carry-over and metadata below are editable.
+            </p>
+        </div>
+    {/if}
 
     <Card>
         <CardHeader>

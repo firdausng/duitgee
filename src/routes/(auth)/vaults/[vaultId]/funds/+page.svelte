@@ -7,6 +7,16 @@
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
     import { Toaster } from '$lib/components/ui/sonner';
     import { toast } from 'svelte-sonner';
+    import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+    import { createVaultFormatters } from '$lib/vaultFormatting';
+    import type { VaultWithMember } from '$lib/schemas/read/vaultWithMember';
+    import {
+        computeFundSummary,
+        nextRefillDate,
+        daysUntilPhrase,
+        type CycleLike,
+        type PolicyLike,
+    } from '$lib/utils/fund-summary';
 
     let { vaultId } = page.params;
 
@@ -22,9 +32,26 @@
             balance: number;
             status: string;
         };
-        activeCycle: any;
-        policy: any;
+        activeCycle: CycleLike | null;
+        policy: PolicyLike | null;
     };
+
+    const vaultResource = resource(
+        () => [vaultId] as const,
+        async ([id]) => {
+            const response = await ofetch<{ success: boolean; data: VaultWithMember }>(`/api/getVault?vaultId=${id}`);
+            return response.data;
+        },
+    );
+
+    const vaultFormatters = $derived(
+        vaultResource.current
+            ? createVaultFormatters({
+                locale: vaultResource.current.vaults.locale || 'en-US',
+                currency: vaultResource.current.vaults.currency || 'USD',
+            })
+            : createVaultFormatters({ locale: 'en-US', currency: 'USD' }),
+    );
 
     const fundsResource = resource(
         () => [vaultId, refetchKey] as const,
@@ -35,12 +62,24 @@
     );
 
     const fundRows = $derived(fundsResource.current ?? []);
-    const allFunds = $derived(fundRows.map((r) => r.fund));
-    const archivedCount = $derived(allFunds.filter(f => f.status === 'archived').length);
+    const archivedCount = $derived(fundRows.filter((r) => r.fund.status === 'archived').length);
     let showArchivedFunds = $state(false);
-    const funds = $derived(showArchivedFunds ? allFunds : allFunds.filter(f => f.status === 'active'));
+    const visibleRows = $derived(
+        showArchivedFunds ? fundRows : fundRows.filter((r) => r.fund.status === 'active'),
+    );
     const isLoading = $derived(fundsResource.loading);
     const error = $derived(fundsResource.error);
+
+    function summaryFor(row: FundRow) {
+        return computeFundSummary(row.fund, row.activeCycle, row.policy);
+    }
+
+    function barColorFor(pct: number | null): string {
+        if (pct == null) return 'var(--primary)';
+        if (pct >= 1) return 'var(--amount-negative)';
+        if (pct >= 0.9) return 'var(--accent-strong)';
+        return 'var(--primary)';
+    }
 
     $effect(() => {
         if (error) toast.error('Failed to load funds. Please try again.');
@@ -98,7 +137,7 @@
                 <Button variant="outline" onclick={() => refetchKey++}>Retry</Button>
             </CardContent>
         </Card>
-    {:else if allFunds.length === 0}
+    {:else if fundRows.length === 0}
         <Card>
             <CardContent class="flex flex-col items-center justify-center py-16 text-center">
                 <div class="text-5xl mb-4">💰</div>
@@ -121,7 +160,11 @@
             </label>
         {/if}
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {#each funds as fund (fund.id)}
+            {#each visibleRows as row (row.fund.id)}
+                {@const fund = row.fund}
+                {@const summary = summaryFor(row)}
+                {@const refill = nextRefillDate(row.activeCycle, row.policy)}
+                {@const refillPhrase = daysUntilPhrase(refill)}
                 <button
                     class="text-left w-full"
                     onclick={() => handleFundDetail(fund.id)}
@@ -141,14 +184,58 @@
                                 {/if}
                             </CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent class="space-y-2">
                             {#if fund.description}
-                                <p class="text-sm text-muted-foreground mb-3 line-clamp-2">{fund.description}</p>
+                                <p class="text-sm text-muted-foreground line-clamp-2">{fund.description}</p>
                             {/if}
-                            <p class="text-2xl font-bold">
-                                {fund.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                            <p class="text-xs text-muted-foreground">Balance</p>
+
+                            <!-- Balance (always) -->
+                            <div>
+                                <p class="font-mono text-2xl font-bold tabular-nums">
+                                    {vaultFormatters.currency(fund.balance)}
+                                </p>
+                                <p class="text-xs text-muted-foreground">Balance</p>
+                            </div>
+
+                            {#if summary.isManual}
+                                <!-- Manual fund caption -->
+                                <p class="flex items-center gap-1 text-xs text-muted-foreground pt-1">
+                                    <RefreshCw class="size-3" />
+                                    Manual fund · no cycle
+                                </p>
+                            {:else if summary.percentUsed != null}
+                                <!-- Progress bar -->
+                                <div class="pt-1">
+                                    <div class="h-1.5 rounded-full bg-muted overflow-hidden">
+                                        <div
+                                            class="h-full rounded-full transition-all duration-500"
+                                            style="width: {(summary.percentUsed * 100).toFixed(1)}%; background: {barColorFor(summary.percentUsed)};"
+                                        ></div>
+                                    </div>
+                                    <p class="text-xs text-muted-foreground mt-1 tabular-nums">
+                                        {(summary.percentUsed * 100).toFixed(0)}% of {vaultFormatters.currency(summary.budget)}
+                                    </p>
+                                </div>
+                                <!-- Days left + next refill -->
+                                {#if summary.daysLeft != null || refillPhrase}
+                                    <p class="flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap">
+                                        {#if summary.daysLeft != null}
+                                            <span>
+                                                {summary.daysLeft} {summary.daysLeft === 1 ? 'day' : 'days'} left
+                                            </span>
+                                        {/if}
+                                        {#if summary.daysLeft != null && refillPhrase}
+                                            <span aria-hidden="true">·</span>
+                                        {/if}
+                                        {#if refillPhrase}
+                                            <span class="inline-flex items-center gap-1">
+                                                <RefreshCw class="size-3" />
+                                                Refills {refillPhrase}
+                                            </span>
+                                        {/if}
+                                    </p>
+                                {/if}
+                            {/if}
                         </CardContent>
                     </Card>
                 </button>

@@ -7,12 +7,17 @@
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
     import { Toaster } from '$lib/components/ui/sonner';
     import { toast } from 'svelte-sonner';
+    import X from '@lucide/svelte/icons/x';
 
     let { vaultId } = page.params;
 
     let refetchKey = $state(0);
     let selected = $state<Set<string>>(new Set());
     let isSettling = $state(false);
+
+    // Optional fund pre-filter from the ?fundId query param — set when the
+    // user arrived via "Pending reimbursements" on a specific fund's detail.
+    const fundIdParam = $derived(page.url.searchParams.get('fundId'));
 
     type PendingRow = {
         transaction: { id: string; fundId: string; expenseId: string | null };
@@ -30,9 +35,36 @@
         }
     );
 
-    const pending = $derived(pendingResource.current ?? []);
+    const allPending = $derived(pendingResource.current ?? []);
+    const pending = $derived(
+        fundIdParam ? allPending.filter((p) => p.fund.id === fundIdParam) : allPending,
+    );
+
+    // Resolve the fund name independently of pending — we still want a nice
+    // strip label when everything's already settled for that fund.
+    const filteredFundResource = resource(
+        () => [vaultId, fundIdParam] as const,
+        async ([vid, fid]) => {
+            if (!fid) return null;
+            const r = await ofetch<{ success: boolean; data: { fund: { name: string } } }>(
+                `/api/getFund?vaultId=${vid}&id=${fid}`,
+            );
+            return r.data?.fund?.name ?? null;
+        },
+    );
+    const filteredFundName = $derived(
+        fundIdParam
+            ? allPending.find((p) => p.fund.id === fundIdParam)?.fund.name
+                ?? filteredFundResource.current
+                ?? null
+            : null,
+    );
     const isLoading = $derived(pendingResource.loading);
     const error = $derived(pendingResource.error);
+
+    function clearFundFilter() {
+        goto(`/vaults/${vaultId}/reimbursements`, { replaceState: true, noScroll: true });
+    }
 
     $effect(() => {
         if (error) toast.error('Failed to load pending reimbursements.');
@@ -115,6 +147,24 @@
         <h1 class="text-2xl font-bold flex-1">Vault Reimbursements</h1>
     </div>
 
+    {#if fundIdParam}
+        <div class="mb-4 flex items-center gap-2 rounded-[var(--radius-md)] border bg-muted/40 px-3 py-2 text-sm">
+            <span class="text-muted-foreground">Showing:</span>
+            <span class="font-medium">
+                {filteredFundName ?? 'selected fund'}
+            </span>
+            <button
+                type="button"
+                onclick={clearFundFilter}
+                class="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Clear fund filter"
+            >
+                <X class="size-3" />
+                Show all funds
+            </button>
+        </div>
+    {/if}
+
     {#if isLoading}
         <div class="flex justify-center py-16">
             <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
@@ -130,8 +180,19 @@
         <Card>
             <CardContent class="flex flex-col items-center justify-center py-16 text-center">
                 <div class="text-4xl mb-4">✅</div>
-                <h2 class="text-xl font-semibold mb-2">No pending reimbursements</h2>
-                <p class="text-muted-foreground">All expenses across all funds have been settled.</p>
+                <h2 class="text-xl font-semibold mb-2">
+                    {fundIdParam ? 'Nothing to settle for this fund' : 'No pending reimbursements'}
+                </h2>
+                <p class="text-muted-foreground">
+                    {#if fundIdParam && allPending.length > 0}
+                        Other funds in this vault still have items —
+                        <button type="button" class="underline hover:text-foreground" onclick={clearFundFilter}>
+                            view all
+                        </button>.
+                    {:else}
+                        All expenses across all funds have been settled.
+                    {/if}
+                </p>
             </CardContent>
         </Card>
     {:else}

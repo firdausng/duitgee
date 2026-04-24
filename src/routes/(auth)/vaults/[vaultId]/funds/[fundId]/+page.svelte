@@ -9,7 +9,15 @@
     import { toast } from 'svelte-sonner';
     import FundTransactionList from '$lib/components/fund-activity/FundTransactionList.svelte';
     import type { FundTransaction } from '$lib/components/fund-activity/FundTransactionList.svelte';
+    import { FundBudgetHero } from '$lib/components/ui/fund-budget-hero';
+    import { FundPolicyLine } from '$lib/components/ui/fund-policy-line';
+    import { BreakdownBars, type BreakdownRow } from '$lib/components/ui/breakdown-bars';
+    import { TransferSheet, type TransferSheetFund } from '$lib/components/ui/transfer-sheet';
+    import { createVaultFormatters } from '$lib/vaultFormatting';
+    import type { VaultWithMember } from '$lib/schemas/read/vaultWithMember';
+    import type { Expense } from '../../types';
     import ArrowRight from '@lucide/svelte/icons/arrow-right';
+    import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
     import Archive from '@lucide/svelte/icons/archive';
     import Plus from '@lucide/svelte/icons/plus';
     import Minus from '@lucide/svelte/icons/minus';
@@ -19,6 +27,24 @@
     let refetchKey = $state(0);
     let showArchiveConfirm = $state(false);
     let isArchiving = $state(false);
+    let transferOpen = $state(false);
+
+    const vaultResource = resource(
+        () => [vaultId] as const,
+        async ([id]) => {
+            const response = await ofetch<{ success: boolean; data: VaultWithMember }>(`/api/getVault?vaultId=${id}`);
+            return response.data;
+        },
+    );
+
+    const vaultFormatters = $derived(
+        vaultResource.current
+            ? createVaultFormatters({
+                locale: vaultResource.current.vaults.locale || 'en-US',
+                currency: vaultResource.current.vaults.currency || 'USD',
+            })
+            : createVaultFormatters({ locale: 'en-US', currency: 'USD' }),
+    );
 
     const fundResource = resource(
         () => [vaultId, fundId, refetchKey] as const,
@@ -31,6 +57,7 @@
     const fund = $derived(fundResource.current?.fund ?? null);
     const policy = $derived(fundResource.current?.policy ?? null);
     const activeCycle = $derived(fundResource.current?.activeCycle ?? null);
+    const carryOverFundName = $derived(fundResource.current?.carryOverFundName ?? null);
     const isLoading = $derived(fundResource.loading);
     const error = $derived(fundResource.error);
 
@@ -46,6 +73,66 @@
         }
     );
     const recentActivity = $derived(recentActivityResource.current ?? []);
+
+    // Cycle expenses for the category breakdown. Active-cycle window uses
+    // the cycle's period; for manual funds (sentinel 2099 periodEnd) we
+    // include everything ever tagged to the fund.
+    const cycleExpensesResource = resource(
+        () => [
+            vaultId,
+            fundId,
+            activeCycle?.periodStart ?? null,
+            activeCycle?.periodEnd ?? null,
+            refetchKey,
+        ] as const,
+        async ([vid, fid, start, end]) => {
+            if (!vid || !fid) return [];
+            const qs = new URLSearchParams({ vaultId: vid, fundId: fid, page: '1', limit: '500' });
+            if (start) qs.append('startDate', start);
+            if (end && !end.startsWith('2099')) qs.append('endDate', end);
+            const response = await ofetch<{ expenses: Expense[] }>(`/api/getExpenses?${qs.toString()}`);
+            return response.expenses ?? [];
+        },
+    );
+    const cycleExpenses = $derived(cycleExpensesResource.current ?? []);
+
+    // Vault funds list — populates the Transfer sheet's To picker.
+    const vaultFundsResource = resource(
+        () => [vaultId, refetchKey] as const,
+        async ([vid]) => {
+            if (!vid) return [];
+            const r = await ofetch<{ success: boolean; data: Array<{ fund: TransferSheetFund }> }>(
+                `/api/getFunds?vaultId=${vid}`,
+            );
+            return (r.data ?? []).map((row) => row.fund);
+        },
+    );
+    const vaultFunds = $derived(vaultFundsResource.current ?? []);
+    const hasTransferTargets = $derived(
+        vaultFunds.filter((f) => f.status === 'active' && f.id !== fundId).length > 0,
+    );
+
+    const categoryRows = $derived.by<BreakdownRow[]>(() => {
+        const map = new Map<string, BreakdownRow>();
+        for (const e of cycleExpenses) {
+            const key = e.category?.name ?? '__uncategorized__';
+            const row = map.get(key);
+            if (row) {
+                row.value += e.amount;
+                row.count += 1;
+            } else {
+                map.set(key, {
+                    id: key,
+                    label: e.category?.name ?? 'Uncategorized',
+                    icon: e.category?.icon ?? null,
+                    color: e.category?.color ?? null,
+                    value: e.amount,
+                    count: 1,
+                });
+            }
+        }
+        return Array.from(map.values());
+    });
 
     $effect(() => {
         if (error) toast.error('Failed to load fund.');
@@ -68,7 +155,10 @@
     }
 
     function handleReimbursements() {
-        goto(`/vaults/${vaultId}/funds/${fundId}/reimbursements`);
+        // Deep-link into the canonical vault-level reimbursements UX,
+        // pre-filtered to this fund. Users can clear the filter there to
+        // see vault-wide pending items.
+        goto(`/vaults/${vaultId}/reimbursements?fundId=${fundId}`);
     }
 
     function handleCycles() {
@@ -106,13 +196,6 @@
         }
     }
 
-    function replenishmentTypeLabel(type: string | null) {
-        switch (type) {
-            case 'fixed_amount': return 'Fixed Amount';
-            case 'top_to_ceiling': return 'Top to Ceiling';
-            default: return 'Manual';
-        }
-    }
 </script>
 
 <svelte:head>
@@ -139,111 +222,73 @@
             </CardContent>
         </Card>
     {:else}
-        <!-- Balance Card -->
-        <Card class="mb-4" style={fund.color ? `border-left: 4px solid ${fund.color}` : ''}>
-            <CardContent class="pt-6">
-                <div class="flex items-center gap-3 mb-4">
-                    {#if fund.icon}
-                        <span class="text-3xl">{fund.icon}</span>
-                    {/if}
-                    <div>
-                        <p class="text-3xl font-bold">
-                            {fund.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </p>
-                        <p class="text-sm text-muted-foreground">Current Balance</p>
-                    </div>
-                    {#if fund.status === 'archived'}
-                        <span class="ml-auto text-sm bg-muted text-muted-foreground px-3 py-1 rounded-full">
-                            Archived
-                        </span>
-                    {/if}
-                </div>
+        <!-- Fund identity strip (icon + description + archived badge) -->
+        <div
+            class="rounded-[var(--radius-md)] border bg-card px-4 py-3 mb-4 flex items-center gap-3"
+            style={fund.color ? `border-left: 4px solid ${fund.color}` : ''}
+        >
+            {#if fund.icon}
+                <span class="text-2xl leading-none shrink-0">{fund.icon}</span>
+            {/if}
+            <div class="min-w-0 flex-1">
                 {#if fund.description}
-                    <p class="text-sm text-muted-foreground">{fund.description}</p>
+                    <p class="text-sm text-muted-foreground truncate">{fund.description}</p>
+                {:else}
+                    <p class="text-sm text-muted-foreground">No description.</p>
+                {/if}
+            </div>
+            {#if fund.status === 'archived'}
+                <span class="shrink-0 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                    Archived
+                </span>
+            {/if}
+        </div>
+
+        <!-- Budget hero (progress + spent/budget + breakdown disclosure) -->
+        <div class="mb-3">
+            <FundBudgetHero
+                {fund}
+                cycle={activeCycle}
+                {policy}
+                formatCurrency={vaultFormatters.currency}
+            />
+        </div>
+
+        <!-- Policy line -->
+        {#if policy}
+            <div class="mb-4">
+                <FundPolicyLine
+                    {fund}
+                    cycle={activeCycle}
+                    {policy}
+                    formatCurrency={vaultFormatters.currency}
+                    {carryOverFundName}
+                    onEdit={fund.status !== 'archived' ? handleEdit : undefined}
+                />
+            </div>
+        {/if}
+
+        <!-- Category breakdown -->
+        <Card class="mb-4">
+            <CardHeader class="pb-2">
+                <CardTitle class="text-base">Where the money went</CardTitle>
+            </CardHeader>
+            <CardContent class="px-2 pb-2">
+                {#if cycleExpensesResource.loading}
+                    <div class="flex justify-center py-6">
+                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                    </div>
+                {:else}
+                    <BreakdownBars
+                        rows={categoryRows}
+                        limit={5}
+                        formatCurrency={vaultFormatters.currency}
+                        emptyTitle="No expenses tagged to this fund yet."
+                        class="border-0"
+                    />
                 {/if}
             </CardContent>
         </Card>
-
-        <!-- Active Cycle -->
-        {#if activeCycle}
-            {@const cycleNet = fund.balance - (activeCycle.openingBalance ?? 0)}
-            <Card class="mb-4">
-                <CardHeader class="pb-3">
-                    <CardTitle class="text-base flex items-center justify-between">
-                        <span>Current Cycle</span>
-                        <span class="text-xs font-normal text-muted-foreground">
-                            {new Date(activeCycle.periodStart).toLocaleDateString()} — {activeCycle.periodEnd.startsWith('2099') ? 'Ongoing' : new Date(activeCycle.periodEnd).toLocaleDateString()}
-                        </span>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent class="pt-0">
-                    <div class="space-y-1.5 text-sm mb-3">
-                        <div class="flex justify-between">
-                            <span class="text-muted-foreground">Opening Balance</span>
-                            <span class="tabular-nums">{(activeCycle.openingBalance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-muted-foreground">Top-ups</span>
-                            <span class="tabular-nums text-green-600 dark:text-green-400">+{(activeCycle.topUpAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-muted-foreground">Expenses</span>
-                            <span class="tabular-nums text-red-600 dark:text-red-400">−{(activeCycle.totalSpent ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        {#if (activeCycle.totalDeducted ?? 0) > 0}
-                            <div class="flex justify-between">
-                                <span class="text-muted-foreground">Deductions</span>
-                                <span class="tabular-nums text-red-600 dark:text-red-400">−{(activeCycle.totalDeducted ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            </div>
-                        {/if}
-                        {#if (activeCycle.totalReimbursed ?? 0) > 0}
-                            <div class="flex justify-between">
-                                <span class="text-muted-foreground">Reimbursed</span>
-                                <span class="tabular-nums text-orange-600 dark:text-orange-400">−{(activeCycle.totalReimbursed ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            </div>
-                        {/if}
-                    </div>
-                    <div class="border-t pt-2 flex justify-between items-center">
-                        <span class="text-sm font-medium">Current Balance</span>
-                        <div class="text-right">
-                            <span class="text-base font-bold tabular-nums">{fund.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            {#if cycleNet !== 0}
-                                <span class="text-xs ml-2 tabular-nums {cycleNet > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">
-                                    {cycleNet > 0 ? '+' : '−'}{Math.abs(cycleNet).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                            {/if}
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-        {/if}
-
-        <!-- Policy -->
-        {#if policy}
-            <Card class="mb-4">
-                <CardHeader>
-                    <CardTitle class="text-base">Replenishment Policy</CardTitle>
-                </CardHeader>
-                <CardContent class="space-y-1 text-sm">
-                    <p><span class="text-muted-foreground">Type:</span> {replenishmentTypeLabel(policy.replenishmentType)}</p>
-                    {#if policy.replenishmentSchedule}
-                        <p><span class="text-muted-foreground">Schedule:</span> {policy.replenishmentSchedule}</p>
-                    {/if}
-                    {#if policy.replenishmentAmount}
-                        <p><span class="text-muted-foreground">Amount:</span> {policy.replenishmentAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                    {/if}
-                    {#if policy.ceilingAmount}
-                        <p><span class="text-muted-foreground">Ceiling:</span> {policy.ceilingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                    {/if}
-                    {#if policy.carryOverBalance}
-                        <p>
-                            <span class="text-muted-foreground">Carry Over:</span>
-                            Transfer balance to {fundResource.current?.carryOverFundName ?? policy.carryOverFundId} at cycle end
-                        </p>
-                    {/if}
-                </CardContent>
-            </Card>
-        {/if}
 
         <!-- Recent Activity -->
         <Card class="mb-4">
@@ -271,7 +316,7 @@
 
         <!-- Actions -->
         {#if fund.status !== 'archived'}
-            <!-- Primary: Top Up + Deduct -->
+            <!-- Primary: Top Up + Deduct + Transfer -->
             <div class="flex gap-2">
                 <Button onclick={handleTopUp} class="flex-1">
                     <Plus class="size-4" />
@@ -280,6 +325,16 @@
                 <Button variant="outline" onclick={handleDeduct} class="flex-1">
                     <Minus class="size-4" />
                     Deduct
+                </Button>
+                <Button
+                    variant="outline"
+                    onclick={() => (transferOpen = true)}
+                    disabled={!hasTransferTargets}
+                    class="flex-1"
+                    title={hasTransferTargets ? 'Transfer balance to another fund' : 'No other active funds to transfer to'}
+                >
+                    <ArrowLeftRight class="size-4" />
+                    Transfer
                 </Button>
             </div>
 
@@ -369,5 +424,17 @@
         {/if}
     {/if}
 </div>
+
+{#if fund && fundId && vaultId}
+    <TransferSheet
+        open={transferOpen}
+        vaultId={vaultId}
+        fromFundId={fundId}
+        funds={vaultFunds}
+        formatCurrency={vaultFormatters.currency}
+        onOpenChange={(v) => (transferOpen = v)}
+        onSuccess={() => refetchKey++}
+    />
+{/if}
 
 <Toaster />
