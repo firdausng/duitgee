@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/server/db/schema';
 import * as authSchema from '$lib/server/db/better-auth-schema';
 import { funds, fundPolicies, vaults, fundCycles, expenses } from '$lib/server/db/schema';
-import { and, eq, isNull, isNotNull, count } from 'drizzle-orm';
+import { and, eq, isNull, isNotNull, count, or } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ platform }) => {
@@ -22,7 +22,12 @@ export const load: PageServerLoad = async ({ platform }) => {
         authClient
             .select({ n: count() })
             .from(authSchema.user)
-            .where(eq(authSchema.user.isAnonymous, false)),
+            .where(
+                or(
+                    isNull(authSchema.user.isAnonymous),
+                    eq(authSchema.user.isAnonymous, false),
+                ),
+            ),
         authClient
             .select({ n: count() })
             .from(authSchema.user)
