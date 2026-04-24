@@ -7,7 +7,9 @@
     import Play from '@lucide/svelte/icons/play';
     import Users from '@lucide/svelte/icons/users';
     import UserX from '@lucide/svelte/icons/user-x';
+    import UserPlus from '@lucide/svelte/icons/user-plus';
     import Wallet from '@lucide/svelte/icons/wallet';
+    import Crown from '@lucide/svelte/icons/crown';
     import PiggyBank from '@lucide/svelte/icons/piggy-bank';
     import Receipt from '@lucide/svelte/icons/receipt';
 
@@ -28,7 +30,9 @@
     const statItems = $derived([
         { label: 'Users', value: data.stats.users, icon: Users },
         { label: 'Anonymous', value: data.stats.anonymousUsers, icon: UserX },
+        { label: '7-day signups', value: data.stats.recentSignups, icon: UserPlus },
         { label: 'Vaults', value: data.stats.vaults, icon: Wallet },
+        { label: 'Pro vaults', value: data.stats.proVaults, icon: Crown },
         { label: 'Active funds', value: data.stats.funds, icon: PiggyBank },
         { label: 'Expenses', value: data.stats.expenses, icon: Receipt },
     ]);
@@ -75,7 +79,7 @@
         </p>
     </div>
 
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
         {#each statItems as item}
             {@const Icon = item.icon}
             <Card>

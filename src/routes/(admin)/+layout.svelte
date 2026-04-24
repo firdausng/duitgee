@@ -14,12 +14,15 @@
         await goto('/login');
     }
 
-    function isActive(href: string): boolean {
+    function isActive(href: string, exact = false): boolean {
+        if (exact) return page.url.pathname === href;
         return page.url.pathname === href || page.url.pathname.startsWith(href + '/');
     }
 
     const navItems = [
-        { href: '/ops', label: 'Overview' },
+        { href: '/ops', label: 'Overview', exact: true },
+        { href: '/ops/users', label: 'Users' },
+        { href: '/ops/vaults', label: 'Vaults' },
     ];
 </script>
 
@@ -32,7 +35,7 @@
                     {#each navItems as item}
                         <a
                             href={item.href}
-                            class="px-3 py-1.5 rounded-md text-sm transition-colors hover:bg-muted {isActive(item.href) ? 'bg-muted font-medium' : 'text-muted-foreground'}"
+                            class="px-3 py-1.5 rounded-md text-sm transition-colors hover:bg-muted {isActive(item.href, item.exact) ? 'bg-muted font-medium' : 'text-muted-foreground'}"
                         >
                             {item.label}
                         </a>
