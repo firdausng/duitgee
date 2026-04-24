@@ -95,7 +95,7 @@
 				<img src="/favicon.svg" alt="DuitGee Logo" class="h-8 w-8" />
 			</a>
 
-			<!-- Vault Navigation Menu (desktop tabs; drawer still available for mobile) -->
+			<!-- Vault Navigation Menu (desktop only; a mobile variant renders below the header) -->
 			{#if vaultId() && vaultId() !== 'new'}
 				{@const vId = vaultId()}
 				{@const tabs = [
@@ -298,6 +298,36 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- Mobile vault tab row (same tabs as desktop, horizontally scrollable) -->
+		{#if vaultId() && vaultId() !== 'new'}
+			{@const vId = vaultId()}
+			{@const mobileTabs = [
+				{ href: `/vaults/${vId}`, label: 'Home', exact: true },
+				{ href: `/vaults/${vId}/expenses`, label: 'Expenses' },
+				{ href: `/vaults/${vId}/funds`, label: 'Funds' },
+				{ href: `/vaults/${vId}/templates`, label: 'Templates' },
+				{ href: `/vaults/${vId}/statistics`, label: 'Statistics' },
+				{ href: `/vaults/${vId}/members`, label: 'Members' },
+			]}
+			<nav
+				class="md:hidden flex gap-1 overflow-x-auto border-t bg-background px-2 py-1 scrollbar-hide"
+				aria-label="Vault sections"
+			>
+				{#each mobileTabs as tab}
+					{@const active = tab.exact ? page.url.pathname === tab.href : isActive(tab.href)}
+					<a
+						href="{tab.href}{searchParams()}"
+						class="relative shrink-0 py-1.5 px-3 text-sm font-medium transition-colors hover:text-primary whitespace-nowrap {active ? 'text-primary' : 'text-muted-foreground'}"
+					>
+						{tab.label}
+						{#if active}
+							<div class="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full"></div>
+						{/if}
+					</a>
+				{/each}
+			</nav>
+		{/if}
 	</header>
 
 	<!-- Main Content -->

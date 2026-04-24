@@ -58,34 +58,39 @@
                     </span>
 
                     <div class="flex-1 min-w-0">
-                        <div class="flex items-baseline justify-between gap-2">
-                            <span class="font-medium truncate">
-                                {expense.note || expense.category?.name || 'Expense'}
-                            </span>
-                            <Amount
-                                value={-expense.amount}
-                                sign="negative"
-                                showSign={false}
-                                formatted={formatCurrency(expense.amount)}
-                                size="sm"
-                            />
-                        </div>
-                        <div class="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
-                            {#if expense.category?.name}
-                                <span class="truncate">{expense.category.name}</span>
-                            {/if}
-                            {#if expense.fundName}
-                                <span class="opacity-50">·</span>
-                                <span class="truncate" title={expense.fundName}>
-                                    {expense.fundIcon ?? ''} {expense.fundName}
+                        <!-- Title full-width row -->
+                        <p class="font-medium break-words">
+                            {expense.note || expense.category?.name || 'Expense'}
+                        </p>
+                        <!-- Meta on left, amount + date stacked on right -->
+                        <div class="flex items-start justify-between gap-2 mt-0.5">
+                            <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground min-w-0">
+                                {#if expense.category?.name}
+                                    <span>{expense.category.name}</span>
+                                {/if}
+                                {#if expense.fundName}
+                                    <span class="opacity-50">·</span>
+                                    <span title={expense.fundName}>
+                                        {expense.fundIcon ?? ''} {expense.fundName}
+                                    </span>
+                                {/if}
+                                {#if expense.paidByName}
+                                    <span class="opacity-50">·</span>
+                                    <span>{expense.paidByName}</span>
+                                {/if}
+                            </div>
+                            <div class="shrink-0 flex flex-col items-end gap-0.5">
+                                <Amount
+                                    value={-expense.amount}
+                                    sign="negative"
+                                    showSign={false}
+                                    formatted={formatCurrency(expense.amount)}
+                                    size="sm"
+                                />
+                                <span class="text-xs text-muted-foreground whitespace-nowrap">
+                                    {formatDate(expense.date)}
                                 </span>
-                            {/if}
-                            {#if expense.paidByName}
-                                <span class="opacity-50">·</span>
-                                <span class="truncate">{expense.paidByName}</span>
-                            {/if}
-                            <span class="opacity-50">·</span>
-                            <span class="shrink-0 whitespace-nowrap">{formatDate(expense.date)}</span>
+                            </div>
                         </div>
                     </div>
 

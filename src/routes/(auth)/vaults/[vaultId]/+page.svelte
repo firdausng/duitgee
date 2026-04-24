@@ -20,6 +20,7 @@
     import { RecentExpenses } from "$lib/components/ui/recent-expenses";
     import { EmptyState } from "$lib/components/ui/empty-state";
     import ArrowRight from "@lucide/svelte/icons/arrow-right";
+    import ExternalLink from "@lucide/svelte/icons/external-link";
     import Receipt from "@lucide/svelte/icons/receipt";
     import Plus from "@lucide/svelte/icons/plus";
     import Globe from "@lucide/svelte/icons/globe";
@@ -403,21 +404,35 @@
                 </div>
                 <div class="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x">
                     {#each fundRows as row (row.fund.id)}
+                        {@const opening = row.activeCycle?.openingBalance ?? 0}
                         {@const topUp = row.activeCycle?.topUpAmount ?? 0}
+                        {@const spent = (row.activeCycle?.totalSpent ?? 0)
+                            + (row.activeCycle?.totalDeducted ?? 0)
+                            - (row.activeCycle?.totalReimbursed ?? 0)}
+                        {@const budget = opening + topUp}
+                        {@const pct = budget > 0 ? Math.min(1, Math.max(0, spent / budget)) : null}
+                        {@const isManual = budget === 0}
                         {@const isLow = topUp > 0 && row.fund.balance / topUp < 0.2}
                         {@const isSelected = selectedFundId === row.fund.id}
+                        {@const pctColor = pct == null
+                            ? 'var(--primary)'
+                            : pct >= 1
+                            ? 'var(--amount-negative)'
+                            : pct >= 0.9
+                            ? 'var(--accent-strong)'
+                            : 'var(--primary)'}
                         <button
                             onclick={() => toggleFundFilter(row.fund.id)}
-                            class="shrink-0 snap-start w-64 text-left"
+                            class="shrink-0 snap-start w-44 sm:w-56 text-left"
                         >
                             <Card class="h-full transition-all {isSelected ? 'ring-2 ring-primary ring-offset-2 bg-primary/5 shadow-md' : 'hover:shadow-md'} {isLow && !isSelected ? 'border-amber-400/60' : ''}"
                                   style={row.fund.color ? `border-left: 3px solid ${row.fund.color}` : ''}>
-                                <CardContent class="p-4">
+                                <CardContent class="p-3 space-y-2">
                                     <!-- Name row -->
-                                    <div class="flex items-center justify-between gap-2 mb-3 min-w-0">
-                                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-2 min-w-0">
+                                        <div class="flex items-center gap-1.5 min-w-0 flex-1">
                                             {#if row.fund.icon}
-                                                <span class="text-lg shrink-0">{row.fund.icon}</span>
+                                                <span class="text-base shrink-0">{row.fund.icon}</span>
                                             {/if}
                                             <span class="text-sm font-semibold truncate" title={row.fund.name}>{row.fund.name}</span>
                                         </div>
@@ -425,45 +440,33 @@
                                             onclick={(e) => { e.stopPropagation(); goto(`/vaults/${vaultId}/funds/${row.fund.id}`); }}
                                             class="shrink-0 text-muted-foreground hover:text-primary transition-colors"
                                             title="Open fund"
+                                            aria-label="Open fund"
                                         >
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-                                                <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
-                                            </svg>
+                                            <ExternalLink class="size-3.5" />
                                         </button>
                                     </div>
-                                    <!-- Cycle breakdown -->
-                                    <div class="space-y-1.5">
-                                        <div class="flex items-center justify-between gap-2">
-                                            <p class="text-xs text-muted-foreground">Opening</p>
-                                            <p class="text-xs tabular-nums">{vaultFormatters.currency(row.activeCycle?.openingBalance ?? 0)}</p>
-                                        </div>
-                                        <div class="flex items-center justify-between gap-2">
-                                            <p class="text-xs text-muted-foreground">Top-ups</p>
-                                            <p class="text-xs tabular-nums text-green-600 dark:text-green-400">+{vaultFormatters.currency(topUp)}</p>
-                                        </div>
-                                        <div class="flex items-center justify-between gap-2">
-                                            <p class="text-xs text-muted-foreground">Expenses</p>
-                                            <p class="text-xs tabular-nums text-red-600 dark:text-red-400">−{vaultFormatters.currency(row.activeCycle?.totalSpent ?? 0)}</p>
-                                        </div>
-                                        {#if (row.activeCycle?.totalDeducted ?? 0) > 0}
-                                            <div class="flex items-center justify-between gap-2">
-                                                <p class="text-xs text-muted-foreground">Deductions</p>
-                                                <p class="text-xs tabular-nums text-red-600 dark:text-red-400">−{vaultFormatters.currency(row.activeCycle?.totalDeducted ?? 0)}</p>
-                                            </div>
-                                        {/if}
-                                        {#if (row.activeCycle?.totalReimbursed ?? 0) > 0}
-                                            <div class="flex items-center justify-between gap-2">
-                                                <p class="text-xs text-muted-foreground">Reimbursed</p>
-                                                <p class="text-xs tabular-nums text-orange-600 dark:text-orange-400">−{vaultFormatters.currency(row.activeCycle?.totalReimbursed ?? 0)}</p>
-                                            </div>
-                                        {/if}
-                                    </div>
+
                                     <!-- Balance -->
-                                    <div class="border-t mt-3 pt-2 flex items-center justify-between gap-2">
-                                        <p class="text-xs text-muted-foreground">Balance</p>
-                                        <p class="text-sm font-bold tabular-nums {isLow ? 'text-amber-500' : ''}">{vaultFormatters.currency(row.fund.balance)}</p>
-                                    </div>
+                                    <p class="font-mono text-lg font-bold tabular-nums leading-none {isLow ? 'text-amber-500' : ''}">
+                                        {vaultFormatters.currency(row.fund.balance)}
+                                    </p>
+
+                                    {#if pct != null}
+                                        <!-- Progress bar + caption -->
+                                        <div>
+                                            <div class="h-1.5 rounded-full bg-muted overflow-hidden">
+                                                <div
+                                                    class="h-full rounded-full transition-all"
+                                                    style="width: {(pct * 100).toFixed(1)}%; background: {pctColor};"
+                                                ></div>
+                                            </div>
+                                            <p class="text-[11px] text-muted-foreground mt-1 tabular-nums">
+                                                {(pct * 100).toFixed(0)}% of {vaultFormatters.currency(budget)}
+                                            </p>
+                                        </div>
+                                    {:else if isManual}
+                                        <p class="text-[11px] text-muted-foreground">Manual fund</p>
+                                    {/if}
                                 </CardContent>
                             </Card>
                         </button>

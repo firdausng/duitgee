@@ -86,8 +86,15 @@
 
     function onDocumentClick(e: MouseEvent) {
         if (!open) return;
-        const target = e.target as Node;
-        if (containerRef?.contains(target)) return;
+        if (!containerRef) return;
+        // Use composedPath() rather than containerRef.contains(target) — the
+        // target node may already be detached (e.g. a step-1 field button that
+        // Svelte removed when it transitioned to step 2), in which case
+        // `.contains()` returns false and would falsely close the popover on
+        // the very click that was supposed to advance a step. composedPath
+        // captures the ancestor chain at dispatch time.
+        const path = e.composedPath();
+        if (path.includes(containerRef)) return;
         close();
     }
 
@@ -229,48 +236,64 @@
                     {:else}
                         <!-- Enum multi-select -->
                         <div class="max-h-64 overflow-y-auto space-y-0.5">
-                            {#if field === 'category' && options.category.length > 0}
-                                {#each options.category as v (v)}
-                                    {@const active = selectedValues.includes(v)}
-                                    <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
-                                        <Checkbox checked={active} onCheckedChange={() => toggleValue(v)} />
-                                        <span class="truncate">{v || '—'}</span>
-                                    </label>
-                                {/each}
+                            {#if field === 'category'}
+                                {#if options.category.length === 0}
+                                    <p class="px-2 py-3 text-xs text-muted-foreground text-center">No categories available.</p>
+                                {:else}
+                                    {#each options.category as v (v)}
+                                        {@const active = selectedValues.includes(v)}
+                                        <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
+                                            <Checkbox checked={active} onCheckedChange={() => toggleValue(v)} />
+                                            <span class="truncate">{v || '—'}</span>
+                                        </label>
+                                    {/each}
+                                {/if}
                             {:else if field === 'fund'}
                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
                                     <Checkbox checked={selectedValues.includes('__none__')} onCheckedChange={() => toggleValue('__none__')} />
                                     <span class="text-muted-foreground">No fund</span>
                                 </label>
-                                {#each options.fund as fund (fund.id)}
-                                    {@const active = selectedValues.includes(fund.id)}
-                                    <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
-                                        <Checkbox checked={active} onCheckedChange={() => toggleValue(fund.id)} />
-                                        <span>{fund.icon ?? '💰'}</span>
-                                        <span class="truncate">{fund.name}</span>
-                                    </label>
-                                {/each}
+                                {#if options.fund.length === 0}
+                                    <p class="px-2 py-3 text-xs text-muted-foreground text-center">No funds in this vault.</p>
+                                {:else}
+                                    {#each options.fund as fund (fund.id)}
+                                        {@const active = selectedValues.includes(fund.id)}
+                                        <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
+                                            <Checkbox checked={active} onCheckedChange={() => toggleValue(fund.id)} />
+                                            <span>{fund.icon ?? '💰'}</span>
+                                            <span class="truncate">{fund.name}</span>
+                                        </label>
+                                    {/each}
+                                {/if}
                             {:else if field === 'paidBy'}
                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
                                     <Checkbox checked={selectedValues.includes('__vault__')} onCheckedChange={() => toggleValue('__vault__')} />
                                     <span class="text-muted-foreground">Vault-level</span>
                                 </label>
-                                {#each options.paidBy as member (member.id)}
-                                    {@const active = selectedValues.includes(member.id)}
-                                    <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
-                                        <Checkbox checked={active} onCheckedChange={() => toggleValue(member.id)} />
-                                        <span class="truncate">{member.name}</span>
-                                    </label>
-                                {/each}
+                                {#if options.paidBy.length === 0}
+                                    <p class="px-2 py-3 text-xs text-muted-foreground text-center">No members in this vault yet.</p>
+                                {:else}
+                                    {#each options.paidBy as member (member.id)}
+                                        {@const active = selectedValues.includes(member.id)}
+                                        <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
+                                            <Checkbox checked={active} onCheckedChange={() => toggleValue(member.id)} />
+                                            <span class="truncate">{member.name}</span>
+                                        </label>
+                                    {/each}
+                                {/if}
                             {:else if field === 'paymentType'}
-                                {#each options.paymentType as pt (pt.value)}
-                                    {@const active = selectedValues.includes(pt.value)}
-                                    <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
-                                        <Checkbox checked={active} onCheckedChange={() => toggleValue(pt.value)} />
-                                        <span>{pt.icon ?? ''}</span>
-                                        <span class="truncate">{pt.label}</span>
-                                    </label>
-                                {/each}
+                                {#if options.paymentType.length === 0}
+                                    <p class="px-2 py-3 text-xs text-muted-foreground text-center">No payment types configured.</p>
+                                {:else}
+                                    {#each options.paymentType as pt (pt.value)}
+                                        {@const active = selectedValues.includes(pt.value)}
+                                        <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
+                                            <Checkbox checked={active} onCheckedChange={() => toggleValue(pt.value)} />
+                                            <span>{pt.icon ?? ''}</span>
+                                            <span class="truncate">{pt.label}</span>
+                                        </label>
+                                    {/each}
+                                {/if}
                             {/if}
                         </div>
                     {/if}

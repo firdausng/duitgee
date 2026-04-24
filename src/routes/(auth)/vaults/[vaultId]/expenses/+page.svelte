@@ -20,6 +20,7 @@
     } from '$lib/filters/filter-types';
     import { applyFilters } from '$lib/filters/filter-eval';
     import { paymentTypes } from '$lib/configurations/paymentTypes';
+    import { categoryData } from '$lib/configurations/categories';
     import Search from '@lucide/svelte/icons/search';
     import Plus from '@lucide/svelte/icons/plus';
     import Receipt from '@lucide/svelte/icons/receipt';
@@ -31,6 +32,8 @@
 
     let { data } = $props();
     let { vaultId, vault } = data;
+    const vaultFunds = $derived(data.funds ?? []);
+    const vaultMembers = $derived(data.members ?? []);
 
     const fmt = createVaultFormatters({
         locale: vault?.locale || 'en-US',
@@ -91,24 +94,22 @@
     // Filter pills — parsed from the URL's repeated ?f= params.
     const pills = $derived<FilterPillData[]>(decodePills(page.url.searchParams));
 
-    // Options for the AddFilterPopover — distinct values from the loaded list
-    // + static payment-type list from configurations.
-    const filterOptions = $derived.by(() => {
-        const cats = new Set<string>();
-        const funds = new Map<string, { id: string; name: string; icon?: string | null }>();
-        const members = new Map<string, { id: string; name: string }>();
-        for (const e of expenses) {
-            const c = e.category?.name;
-            if (c) cats.add(c);
-            if (e.fundId && e.fundName) funds.set(e.fundId, { id: e.fundId, name: e.fundName, icon: e.fundIcon });
-            if (e.paidBy && e.paidByName) members.set(e.paidBy, { id: e.paidBy, name: e.paidByName });
-        }
-        return {
-            category: Array.from(cats).sort(),
-            fund: Array.from(funds.values()).sort((a, b) => a.name.localeCompare(b.name)),
-            paidBy: Array.from(members.values()).sort((a, b) => a.name.localeCompare(b.name)),
-            paymentType: paymentTypes.map((p) => ({ value: p.value, label: p.label, icon: p.icon })),
-        };
+    // Options for the AddFilterPopover. Sourced from stable references so the
+    // popover shows the full universe of filterable values regardless of what's
+    // currently rendered below (which may be narrowed to zero by a date filter).
+    //   - category: static config
+    //   - fund: loaded in +page.server.ts from /api/getFunds
+    //   - paidBy: loaded in +page.server.ts from /api/getVault members
+    //   - paymentType: static config
+    const filterOptions = $derived({
+        category: categoryData.categories
+            .map((c) => c.name)
+            .sort((a, b) => a.localeCompare(b)),
+        fund: [...vaultFunds].sort((a, b) => a.name.localeCompare(b.name)),
+        paidBy: vaultMembers
+            .map((m) => ({ id: m.userId, name: m.displayName }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        paymentType: paymentTypes.map((p) => ({ value: p.value, label: p.label, icon: p.icon })),
     });
 
     function writePills(next: FilterPillData[]) {
@@ -353,21 +354,39 @@
                     {/snippet}
                 </EmptyState>
             {:else}
+                {@const hasSearch = !!searchQuery.trim()}
+                {@const hasPills = pills.length > 0}
+                {@const hasDateRange = filterType && filterType !== 'all'}
+                {@const description = hasSearch
+                    ? `Nothing matches "${searchQuery}" in the current view.`
+                    : hasPills && hasDateRange
+                    ? 'Nothing matches the current filters and date range.'
+                    : hasPills
+                    ? 'Nothing matches the current filters.'
+                    : 'Nothing in this date range.'}
                 <EmptyState
                     icon={Search}
                     title="No matches"
-                    description={`Nothing matches "${searchQuery}" in the current range.`}
+                    {description}
                 >
                     {#snippet secondary()}
-                        <Button variant="outline" size="sm" onclick={() => (searchQuery = '')}>
-                            Clear search
-                        </Button>
+                        {#if hasSearch}
+                            <Button variant="outline" size="sm" onclick={() => (searchQuery = '')}>
+                                Clear search
+                            </Button>
+                        {:else if hasPills || hasDateRange}
+                            <Button variant="outline" size="sm" onclick={clearAllFilters}>
+                                Clear filters
+                            </Button>
+                        {/if}
                     {/snippet}
                     {#snippet primary()}
-                        <Button size="sm" onclick={() => setFilter('all')}>
-                            <ArrowRight class="size-4" />
-                            Show all time
-                        </Button>
+                        {#if hasDateRange}
+                            <Button size="sm" onclick={() => setFilter('all')}>
+                                <ArrowRight class="size-4" />
+                                Show all time
+                            </Button>
+                        {/if}
                     {/snippet}
                 </EmptyState>
             {/if}
@@ -388,34 +407,39 @@
 
                     <!-- Middle: description + metadata -->
                     <div class="flex-1 min-w-0">
-                        <div class="flex items-baseline justify-between gap-2">
-                            <span class="font-medium truncate">
-                                {expense.note || expense.category?.name || 'Expense'}
-                            </span>
-                            <Amount
-                                value={isNegative ? -expense.amount : expense.amount}
-                                sign="negative"
-                                showSign={false}
-                                formatted={fmt.currency(expense.amount)}
-                                size="sm"
-                            />
-                        </div>
-                        <div class="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
-                            {#if expense.category?.name}
-                                <span class="truncate">{expense.category.name}</span>
-                            {/if}
-                            {#if expense.fundName}
-                                <span class="opacity-50">·</span>
-                                <span class="truncate" title={expense.fundName}>
-                                    {expense.fundIcon ?? ''} {expense.fundName}
+                        <!-- Title on its own full-width row -->
+                        <p class="font-medium break-words">
+                            {expense.note || expense.category?.name || 'Expense'}
+                        </p>
+                        <!-- Meta on left, amount + date stacked on right -->
+                        <div class="flex items-start justify-between gap-2 mt-0.5">
+                            <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground min-w-0">
+                                {#if expense.category?.name}
+                                    <span>{expense.category.name}</span>
+                                {/if}
+                                {#if expense.fundName}
+                                    <span class="opacity-50">·</span>
+                                    <span title={expense.fundName}>
+                                        {expense.fundIcon ?? ''} {expense.fundName}
+                                    </span>
+                                {/if}
+                                {#if expense.paidByName}
+                                    <span class="opacity-50">·</span>
+                                    <span>{expense.paidByName}</span>
+                                {/if}
+                            </div>
+                            <div class="shrink-0 flex flex-col items-end gap-0.5">
+                                <Amount
+                                    value={isNegative ? -expense.amount : expense.amount}
+                                    sign="negative"
+                                    showSign={false}
+                                    formatted={fmt.currency(expense.amount)}
+                                    size="sm"
+                                />
+                                <span class="text-xs text-muted-foreground whitespace-nowrap">
+                                    {fmt.date(expense.date)}
                                 </span>
-                            {/if}
-                            {#if expense.paidByName}
-                                <span class="opacity-50">·</span>
-                                <span class="truncate">{expense.paidByName}</span>
-                            {/if}
-                            <span class="opacity-50">·</span>
-                            <span class="shrink-0 whitespace-nowrap">{formatDayAndTime(expense.date)}</span>
+                            </div>
                         </div>
                     </div>
 
