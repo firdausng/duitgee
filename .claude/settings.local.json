@@ -15,7 +15,11 @@
       "Bash(grep -A3 \"\\\\[vaultId\\\\]\\\\\\\\\\\\\\\\\\\\+layout\\\\.svelte:30\")",
       "Bash(grep -B1 -A3 \"vaultId.\\\\]\\\\\\\\\\\\\\\\\\\\+layout\\\\.svelte\")",
       "Bash(grep -E \"new\\\\\\\\\\\\\\\\form\\\\\\\\\\\\\\\\\\\\+page\")",
-      "Bash(grep -E \"expandable-fab|\\\\[vaultId\\\\]\\\\\\\\\\\\\\\\\\\\+layout\\\\.svelte\")"
+      "Bash(grep -E \"expandable-fab|\\\\[vaultId\\\\]\\\\\\\\\\\\\\\\\\\\+layout\\\\.svelte\")",
+      "Bash(grep -A2 \"expenses\\\\\\\\\\\\\\\\\\\\+page\\\\|filter-pill\\\\|filter-eval\\\\|filter-types\")",
+      "Bash(grep -A2 \"ExpenseFilters\\\\|time-range-filter\\\\|statistics\\\\\\\\\\\\\\\\\\\\+page\\\\|DateFilterTabs\")",
+      "Bash(grep -E \"date-range|expenses\\\\\\\\\\\\\\\\\\\\+page\")",
+      "Bash(grep -E \"d:\\\\\\\\\\\\\\\\\")"
     ]
   }
 }

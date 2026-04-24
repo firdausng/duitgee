@@ -1,21 +1,25 @@
 <script lang="ts">
     import {cn} from "$lib/utils";
 
-    type DateFilter = 'all' | 'today' | 'week' | 'month' | 'year';
+    // Accept the full DateFilter type so existing callers (that may still
+    // carry 'custom' / 'all' in state) type-check cleanly; we just don't
+    // render buttons for those removed options.
+    import type { DateFilter as AppDateFilter } from '$lib/utils';
+    type VisibleFilter = 'today' | 'yesterday' | 'week' | 'month' | 'year';
 
     type Props = {
-        currentFilter: DateFilter;
-        onFilterChange: (filter: DateFilter) => void;
+        currentFilter: AppDateFilter;
+        onFilterChange: (filter: AppDateFilter) => void;
     };
 
     let {currentFilter, onFilterChange}: Props = $props();
 
-    const filters: { value: DateFilter; label: string }[] = [
+    const filters: { value: VisibleFilter; label: string }[] = [
         {value: 'today', label: 'Today'},
+        {value: 'yesterday', label: 'Yesterday'},
         {value: 'week', label: 'This Week'},
         {value: 'month', label: 'This Month'},
         {value: 'year', label: 'This Year'},
-        {value: 'all', label: 'All Time'},
     ];
 </script>
 

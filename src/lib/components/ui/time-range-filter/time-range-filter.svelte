@@ -4,37 +4,25 @@
     import Clock from '@lucide/svelte/icons/clock';
     import Calendar from '@lucide/svelte/icons/calendar';
     import CalendarRange from '@lucide/svelte/icons/calendar-range';
-    import CalendarClock from '@lucide/svelte/icons/calendar-clock';
-    import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
-    import Globe from '@lucide/svelte/icons/globe';
 
     export interface TimeRangeFilterProps {
         value: DateFilter;
         onChange: (next: DateFilter) => void;
-        /** Hide the Custom pill (use when there's no separate date picker surface). */
-        hideCustom?: boolean;
-        /** Hide the All pill. */
-        hideAll?: boolean;
         class?: string;
     }
 </script>
 
 <script lang="ts">
-    let { value, onChange, hideCustom = false, hideAll = false, class: className }: TimeRangeFilterProps = $props();
+    let { value, onChange, class: className }: TimeRangeFilterProps = $props();
 
     type Option = { id: DateFilter; label: string; icon: typeof Clock };
-    const allOptions: Option[] = [
+    const options: Option[] = [
         { id: 'today', label: 'Today', icon: Clock },
+        { id: 'yesterday', label: 'Yesterday', icon: Clock },
         { id: 'week', label: 'Week', icon: Calendar },
         { id: 'month', label: 'Month', icon: Calendar },
         { id: 'year', label: 'Year', icon: CalendarRange },
-        { id: 'custom', label: 'Custom', icon: SlidersHorizontal },
-        { id: 'all', label: 'All', icon: Globe },
     ];
-
-    const options = $derived(
-        allOptions.filter((o) => (hideCustom ? o.id !== 'custom' : true) && (hideAll ? o.id !== 'all' : true)),
-    );
 </script>
 
 <div class={cn('flex flex-wrap items-center gap-1.5', className)} role="tablist" aria-label="Time range">

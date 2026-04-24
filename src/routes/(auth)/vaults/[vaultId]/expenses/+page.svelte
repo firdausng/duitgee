@@ -8,15 +8,26 @@
     import { Input } from '$lib/components/ui/input';
     import { Amount } from '$lib/components/ui/amount';
     import { EmptyState } from '$lib/components/ui/empty-state';
+    import { FilterPill, AddFilterPopover } from '$lib/components/ui/filter-pill';
+    import { DateRangeFilter } from '$lib/components/ui/date-range-filter';
     import { localDatetimeToUtcIso, getDateRange, type DateFilter } from '$lib/utils';
     import { createVaultFormatters } from '$lib/vaultFormatting';
     import { filterSchema } from './schemas';
+    import {
+        decodePills,
+        writePillsToSearchParams,
+        type FilterPill as FilterPillData,
+    } from '$lib/filters/filter-types';
+    import { applyFilters } from '$lib/filters/filter-eval';
+    import { paymentTypes } from '$lib/configurations/paymentTypes';
     import Search from '@lucide/svelte/icons/search';
     import Plus from '@lucide/svelte/icons/plus';
     import Receipt from '@lucide/svelte/icons/receipt';
     import Pencil from '@lucide/svelte/icons/pencil';
     import Trash2 from '@lucide/svelte/icons/trash-2';
     import ArrowRight from '@lucide/svelte/icons/arrow-right';
+    import Filter from '@lucide/svelte/icons/filter';
+    import X from '@lucide/svelte/icons/x';
 
     let { data } = $props();
     let { vaultId, vault } = data;
@@ -77,11 +88,107 @@
     const expenses = $derived(expensesResource.current || []);
     const isLoading = $derived(expensesResource.loading);
 
-    // Client-side search filter (on top of server-side date filter)
+    // Filter pills — parsed from the URL's repeated ?f= params.
+    const pills = $derived<FilterPillData[]>(decodePills(page.url.searchParams));
+
+    // Options for the AddFilterPopover — distinct values from the loaded list
+    // + static payment-type list from configurations.
+    const filterOptions = $derived.by(() => {
+        const cats = new Set<string>();
+        const funds = new Map<string, { id: string; name: string; icon?: string | null }>();
+        const members = new Map<string, { id: string; name: string }>();
+        for (const e of expenses) {
+            const c = e.category?.name;
+            if (c) cats.add(c);
+            if (e.fundId && e.fundName) funds.set(e.fundId, { id: e.fundId, name: e.fundName, icon: e.fundIcon });
+            if (e.paidBy && e.paidByName) members.set(e.paidBy, { id: e.paidBy, name: e.paidByName });
+        }
+        return {
+            category: Array.from(cats).sort(),
+            fund: Array.from(funds.values()).sort((a, b) => a.name.localeCompare(b.name)),
+            paidBy: Array.from(members.values()).sort((a, b) => a.name.localeCompare(b.name)),
+            paymentType: paymentTypes.map((p) => ({ value: p.value, label: p.label, icon: p.icon })),
+        };
+    });
+
+    function writePills(next: FilterPillData[]) {
+        const params = new URLSearchParams(page.url.searchParams);
+        writePillsToSearchParams(params, next);
+        goto(`${page.url.pathname}?${params.toString()}`, { replaceState: true, noScroll: true, keepFocus: true });
+    }
+
+    function addPill(pill: FilterPillData) {
+        // If a filter on the same field already exists, replace it (Kibana
+        // default behaviour — each field has one active filter unless the user
+        // explicitly duplicates; for v1 one-per-field is simpler).
+        const next = pills.filter((p) => p.field !== pill.field).concat(pill);
+        writePills(next);
+    }
+
+    function removePill(pill: FilterPillData) {
+        writePills(pills.filter((p) => p !== pill));
+    }
+
+    let editingPill = $state<FilterPillData | null>(null);
+
+    function updatePill(pill: FilterPillData) {
+        // Replace the pill currently being edited.
+        if (!editingPill) {
+            addPill(pill);
+            return;
+        }
+        const idx = pills.findIndex((p) => p === editingPill);
+        const next = [...pills];
+        if (idx === -1) {
+            next.push(pill);
+        } else {
+            next[idx] = pill;
+        }
+        writePills(next);
+        editingPill = null;
+    }
+
+    function displayValueFor(pill: FilterPillData): string {
+        if (pill.field === 'amount') {
+            if (pill.op === 'between') return `${fmt.currency(Number(pill.values[0] ?? 0))} – ${fmt.currency(Number(pill.values[1] ?? 0))}`;
+            return fmt.currency(Number(pill.values[0] ?? 0));
+        }
+        if (pill.field === 'fund') {
+            return pill.values
+                .map((v) => (v === '__none__' ? 'No fund' : filterOptions.fund.find((f) => f.id === v)?.name ?? v))
+                .join(', ');
+        }
+        if (pill.field === 'paidBy') {
+            return pill.values
+                .map((v) => (v === '__vault__' ? 'Vault-level' : filterOptions.paidBy.find((m) => m.id === v)?.name ?? v))
+                .join(', ');
+        }
+        if (pill.field === 'paymentType') {
+            return pill.values
+                .map((v) => paymentTypes.find((p) => p.value === v)?.label ?? v)
+                .join(', ');
+        }
+        return pill.values.join(', ');
+    }
+
+    const hasAnyFilter = $derived(
+        pills.length > 0 || !!searchQuery.trim() || (filterType && filterType !== 'all'),
+    );
+
+    function clearAllFilters() {
+        searchQuery = '';
+        params.filter = 'all';
+        params.startDate = '';
+        params.endDate = '';
+        writePills([]);
+    }
+
+    // Client-side search + pill filter (on top of server-side date filter)
     const visibleExpenses = $derived.by(() => {
-        if (!searchQuery.trim()) return expenses;
+        const afterPills = applyFilters(expenses, pills);
+        if (!searchQuery.trim()) return afterPills;
         const q = searchQuery.toLowerCase();
-        return expenses.filter((e) => {
+        return afterPills.filter((e) => {
             const note = (e.note ?? '').toLowerCase();
             const cat = e.category?.name?.toLowerCase() ?? '';
             const fund = (e.fundName ?? '').toLowerCase();
@@ -90,16 +197,14 @@
         });
     });
 
-    const filterTabs: { id: DateFilter; label: string }[] = [
-        { id: 'today', label: 'Today' },
-        { id: 'week', label: 'Week' },
-        { id: 'month', label: 'Month' },
-        { id: 'year', label: 'Year' },
-        { id: 'all', label: 'All' },
-    ];
-
-    function setFilter(next: DateFilter) {
-        params.filter = next;
+    function handleDateRangeChange(next: {
+        filter: DateFilter;
+        startDate?: string;
+        endDate?: string;
+    }) {
+        params.filter = next.filter;
+        params.startDate = next.startDate ?? '';
+        params.endDate = next.endDate ?? '';
     }
 
     function handleCreateExpense() {
@@ -156,7 +261,7 @@
         </Button>
     </div>
 
-    <!-- Search + date filters -->
+    <!-- Search + add filter + date pills + clear -->
     <div class="flex flex-col md:flex-row md:items-center gap-2">
         <div class="relative flex-1 md:max-w-xs">
             <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -167,19 +272,65 @@
                 class="pl-8"
             />
         </div>
-        <div class="flex flex-wrap gap-1.5">
-            {#each filterTabs as tab}
-                {@const active = filterType === tab.id}
-                <button
+        <AddFilterPopover
+            options={filterOptions}
+            editing={editingPill}
+            onApply={updatePill}
+        >
+            {#snippet trigger({ toggle, open })}
+                <Button
                     type="button"
-                    onclick={() => setFilter(tab.id)}
-                    class="px-3 h-8 rounded-[var(--radius-sm)] text-sm transition-colors border {active ? 'bg-primary text-primary-foreground border-primary font-medium' : 'bg-transparent text-muted-foreground border-border hover:bg-muted'}"
+                    variant="outline"
+                    size="sm"
+                    onclick={toggle}
+                    aria-expanded={open}
                 >
-                    {tab.label}
-                </button>
+                    <Filter class="size-3.5" />
+                    Add filter
+                </Button>
+            {/snippet}
+        </AddFilterPopover>
+        <DateRangeFilter
+            value={filterType}
+            startDate={params.startDate}
+            endDate={params.endDate}
+            onChange={handleDateRangeChange}
+        />
+        {#if hasAnyFilter}
+            <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onclick={clearAllFilters}
+                class="text-muted-foreground hover:text-foreground"
+            >
+                <X class="size-3.5" />
+                Clear
+            </Button>
+        {/if}
+    </div>
+
+    <!-- Active filter pills -->
+    {#if pills.length > 0}
+        <div class="flex flex-wrap gap-1.5">
+            {#each pills as pill (pill.field + pill.op + pill.values.join(','))}
+                <FilterPill
+                    {pill}
+                    displayValue={displayValueFor(pill)}
+                    onEdit={() => {
+                        editingPill = pill;
+                        // Re-open the popover via a tiny delay so the parent
+                        // renders the updated `editing` prop before opening.
+                        setTimeout(() => {
+                            const trigger = document.querySelector<HTMLButtonElement>('button[aria-expanded]');
+                            trigger?.click();
+                        }, 0);
+                    }}
+                    onRemove={() => removePill(pill)}
+                />
             {/each}
         </div>
-    </div>
+    {/if}
 
     <!-- List -->
     {#if isLoading}

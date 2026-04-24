@@ -99,7 +99,17 @@ export const formatCurrency = (
 /**
  * Date filter types for filtering expenses by time period
  */
-export type DateFilter = 'all' | 'today' | 'week' | 'month' | 'year' | 'custom';
+export type DateFilter =
+    | 'all'
+    | 'today'
+    | 'yesterday'
+    | 'week'
+    | 'month'
+    | 'year'
+    | 'last7'
+    | 'last30'
+    | 'last90'
+    | 'custom';
 
 /**
  * Calculates date range based on filter type
@@ -123,6 +133,15 @@ export function getDateRange(
         case 'today': {
             const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
             const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            return {
+                startDate: start.toISOString(),
+                endDate: end.toISOString()
+            };
+        }
+
+        case 'yesterday': {
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
+            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
             return {
                 startDate: start.toISOString(),
                 endDate: end.toISOString()
@@ -155,6 +174,18 @@ export function getDateRange(
         case 'year': {
             const start = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
             const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+            return {
+                startDate: start.toISOString(),
+                endDate: end.toISOString()
+            };
+        }
+
+        case 'last7':
+        case 'last30':
+        case 'last90': {
+            const days = dateFilter === 'last7' ? 7 : dateFilter === 'last30' ? 30 : 90;
+            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1), 0, 0, 0);
             return {
                 startDate: start.toISOString(),
                 endDate: end.toISOString()

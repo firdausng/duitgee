@@ -32,7 +32,7 @@
     // Schema for statistics page query params
     const statisticsParamsSchema = v.object({
         filterType: v.optional(v.picklist(['template', 'category', 'member']), 'template'),
-        filter: v.optional(v.picklist(['all', 'today', 'week', 'month', 'year']), 'month'),
+        filter: v.optional(v.picklist(['today', 'yesterday', 'week', 'month', 'year']), 'month'),
         filterName: v.optional(v.fallback(v.string(), ""), ""),
         startDate: v.optional(v.fallback(v.string(), ""), ""),
         endDate: v.optional(v.fallback(v.string(), ""), ""),
