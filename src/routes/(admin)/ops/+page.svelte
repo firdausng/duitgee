@@ -13,6 +13,7 @@
     import PiggyBank from '@lucide/svelte/icons/piggy-bank';
     import Receipt from '@lucide/svelte/icons/receipt';
     import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+    import { DateTimePicker } from '$lib/components/ui/date-time-picker';
 
     let { data } = $props();
 
@@ -155,15 +156,15 @@
         <CardContent class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="space-y-1.5">
-                    <Label for="cron-now">Override now (local datetime)</Label>
-                    <Input
+                    <Label for="cron-now">Override "now" <span class="text-muted-foreground font-normal">(optional)</span></Label>
+                    <DateTimePicker
                         id="cron-now"
-                        type="datetime-local"
                         bind:value={nowOverride}
+                        placeholder="Leave blank to use current time"
                         disabled={loading}
                     />
                     <p class="text-xs text-muted-foreground">
-                        Optional. Sent as UTC ISO to simulate a specific run time.
+                        Simulate a specific run time. Leave blank to run with the current time.
                     </p>
                 </div>
 
@@ -245,15 +246,15 @@
         <CardContent class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="space-y-1.5">
-                    <Label for="recurring-now">Override now (local datetime)</Label>
-                    <Input
+                    <Label for="recurring-now">Override "now" <span class="text-muted-foreground font-normal">(optional)</span></Label>
+                    <DateTimePicker
                         id="recurring-now"
-                        type="datetime-local"
                         bind:value={recurringNowOverride}
+                        placeholder="Leave blank to use current time"
                         disabled={recurringLoading}
                     />
                     <p class="text-xs text-muted-foreground">
-                        Optional. Sent as UTC ISO to simulate a specific run time.
+                        Simulate a specific run time. Leave blank to run with the current time.
                     </p>
                 </div>
 

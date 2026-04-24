@@ -2,6 +2,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import { DateTimePicker } from '$lib/components/ui/date-time-picker';
 	import { CategoryPicker } from '$lib/components/ui/category-picker';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { CalculatorInput } from '$lib/components/ui/calculator-input';
@@ -236,11 +237,7 @@
 			<!-- Date override -->
 			<div class="space-y-2">
 				<Label>Date & Time</Label>
-				<Input
-					type="datetime-local"
-					bind:value={row.date}
-					{disabled}
-				/>
+				<DateTimePicker bind:value={row.date} {disabled} />
 			</div>
 
 			<!-- Fund override -->

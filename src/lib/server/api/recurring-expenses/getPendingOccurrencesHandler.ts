@@ -24,6 +24,7 @@ export const getPendingOccurrences = async (
         .select({
             occurrence: pendingRecurringOccurrences,
             ruleName: recurringExpenses.name,
+            ruleEndAfterCount: recurringExpenses.endAfterCount,
             templateName: expenseTemplates.name,
             templateIcon: expenseTemplates.icon,
             templateCategory: expenseTemplates.defaultCategoryName,
@@ -38,6 +39,9 @@ export const getPendingOccurrences = async (
             and(
                 eq(pendingRecurringOccurrences.vaultId, query.vaultId),
                 eq(pendingRecurringOccurrences.status, 'pending'),
+                // Exclude pending items whose rule was soft-deleted. The delete
+                // handler sweeps these, but this is a safety net for any stragglers.
+                isNull(recurringExpenses.deletedAt),
             ),
         )
         .orderBy(asc(pendingRecurringOccurrences.dueDate));
@@ -45,6 +49,7 @@ export const getPendingOccurrences = async (
     return rows.map((r) => ({
         ...r.occurrence,
         ruleName: r.ruleName,
+        ruleEndAfterCount: r.ruleEndAfterCount,
         templateName: r.templateName,
         templateIcon: r.templateIcon,
         templateCategory: r.templateCategory,

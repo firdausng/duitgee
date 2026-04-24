@@ -6,6 +6,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import { DateTimePicker } from '$lib/components/ui/date-time-picker';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
 	import { CategoryPicker } from '$lib/components/ui/category-picker';
 	import { Textarea } from '$lib/components/ui/textarea';
@@ -271,13 +272,12 @@
 					<!-- Date and Time -->
 					<div class="space-y-2">
 						<Label for="date">Date & Time *</Label>
-						<Input
+						<DateTimePicker
 							id="date"
 							name="date"
-							type="datetime-local"
 							bind:value={$form.date}
 							disabled={$delayed}
-							class={$errors.date ? 'border-destructive' : ''}
+							class={$errors.date ? 'border border-destructive rounded-md' : ''}
 						/>
 						{#if $errors.date}
 							<p class="text-sm text-destructive">{$errors.date}</p>

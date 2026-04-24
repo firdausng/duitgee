@@ -22,6 +22,7 @@
     import { Button } from '$lib/components/ui/button';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
+    import { DateTimePicker } from '$lib/components/ui/date-time-picker';
     import CalendarIcon from '@lucide/svelte/icons/calendar';
     import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
     import Check from '@lucide/svelte/icons/check';
@@ -81,6 +82,13 @@
             absFromInput = startDate;
             absToInput = endDate;
             absActiveField = 'from';
+        }
+    });
+
+    // After picking a "from" date, auto-advance to the "to" field if it's still empty.
+    $effect(() => {
+        if (absActiveField === 'from' && absFromInput && !absToInput) {
+            absActiveField = 'to';
         }
     });
 
@@ -327,21 +335,19 @@
                         <Label for="dr-abs-field" class="text-xs capitalize">
                             Pick {absActiveField} date
                         </Label>
-                        <Input
-                            id="dr-abs-field"
-                            type="datetime-local"
-                            value={absActiveField === 'from' ? absFromInput : absToInput}
-                            oninput={(e) => {
-                                const v = (e.currentTarget as HTMLInputElement).value;
-                                if (absActiveField === 'from') {
-                                    absFromInput = v;
-                                    if (v && !absToInput) absActiveField = 'to';
-                                } else {
-                                    absToInput = v;
-                                }
-                            }}
-                            class="h-9 text-sm"
-                        />
+                        {#if absActiveField === 'from'}
+                            <DateTimePicker
+                                id="dr-abs-field"
+                                bind:value={absFromInput}
+                                placeholder="Pick start"
+                            />
+                        {:else}
+                            <DateTimePicker
+                                id="dr-abs-field"
+                                bind:value={absToInput}
+                                placeholder="Pick end"
+                            />
+                        {/if}
                     </div>
 
                     <div class="flex items-center justify-between gap-2">

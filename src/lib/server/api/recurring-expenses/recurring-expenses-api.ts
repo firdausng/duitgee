@@ -6,10 +6,12 @@ import {
     createRecurringExpenseSchema,
     createRecurringExpenseWithTemplateSchema,
     updateRecurringExpenseSchema,
+    updateRecurringExpenseWithTemplateSchema,
     deleteRecurringExpenseSchema,
     pauseRecurringExpenseSchema,
     resumeRecurringExpenseSchema,
     skipNextOccurrenceSchema,
+    settleRecurringExpenseSchema,
     approvePendingOccurrenceSchema,
     skipPendingOccurrenceSchema,
     getRecurringExpensesQuerySchema,
@@ -20,10 +22,12 @@ import {
 import { createRecurringExpense } from './createRecurringExpenseHandler';
 import { createRecurringExpenseWithTemplate } from './createRecurringExpenseWithTemplateHandler';
 import { updateRecurringExpense } from './updateRecurringExpenseHandler';
+import { updateRecurringExpenseWithTemplate } from './updateRecurringExpenseWithTemplateHandler';
 import { deleteRecurringExpense } from './deleteRecurringExpenseHandler';
 import { pauseRecurringExpense } from './pauseRecurringExpenseHandler';
 import { resumeRecurringExpense } from './resumeRecurringExpenseHandler';
 import { skipNextOccurrence } from './skipNextOccurrenceHandler';
+import { settleRecurringExpense } from './settleRecurringExpenseHandler';
 import { approvePendingOccurrence } from './approvePendingOccurrenceHandler';
 import { skipPendingOccurrence } from './skipPendingOccurrenceHandler';
 import { getRecurringExpenses } from './getRecurringExpensesHandler';
@@ -167,6 +171,22 @@ export const recurringExpensesApi = new Hono<App.Api>()
         },
     )
     .post(
+        '/updateRecurringExpenseWithTemplate',
+        describeRoute({ ...common, description: 'Update a recurring rule and its backing template atomically' }),
+        vValidator('json', updateRecurringExpenseWithTemplateSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const body = c.req.valid('json');
+            try {
+                const data = await updateRecurringExpenseWithTemplate(session, body, c.env);
+                return c.json({ success: true, data });
+            } catch (error) {
+                const { message, status } = errorHandler('updating recurring rule')(error);
+                return c.json({ success: false, error: message }, status as 400);
+            }
+        },
+    )
+    .post(
         '/deleteRecurringExpense',
         describeRoute({ ...common, description: 'Soft delete a recurring rule' }),
         vValidator('json', deleteRecurringExpenseSchema),
@@ -226,6 +246,22 @@ export const recurringExpensesApi = new Hono<App.Api>()
                 return c.json({ success: true, data });
             } catch (error) {
                 const { message, status } = errorHandler('skipping next occurrence')(error);
+                return c.json({ success: false, error: message }, status as 400);
+            }
+        },
+    )
+    .post(
+        '/settleRecurringExpense',
+        describeRoute({ ...common, description: 'Record a full settlement for an installment and end the rule' }),
+        vValidator('json', settleRecurringExpenseSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const body = c.req.valid('json');
+            try {
+                const data = await settleRecurringExpense(session, body, c.env);
+                return c.json({ success: true, data }, 201);
+            } catch (error) {
+                const { message, status } = errorHandler('settling recurring rule')(error);
                 return c.json({ success: false, error: message }, status as 400);
             }
         },

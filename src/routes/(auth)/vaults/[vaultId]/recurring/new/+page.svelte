@@ -23,9 +23,10 @@
     import type { VaultWithMember } from '$lib/schemas/read/vaultWithMember';
     import { CheckboxRow } from '$lib/components/ui/checkbox-row';
     import * as Tabs from '$lib/components/ui/tabs';
+    import { DateTimePicker } from '$lib/components/ui/date-time-picker';
     import ArrowRight from '@lucide/svelte/icons/arrow-right';
 
-    const BACKFILL_CAP = 12;
+    const BACKFILL_CAP = 50;
 
     let { data } = $props();
 
@@ -69,11 +70,13 @@
                 }
 
                 const backfilled = response.data?.backfilled ?? 0;
-                toast.success(
+                const suffix =
                     backfilled > 0
-                        ? `Rule created · ${backfilled} back-filled item${backfilled === 1 ? '' : 's'} in pending`
-                        : 'Recurring rule created',
-                );
+                        ? form.data.generationMode === 'auto'
+                            ? ` · ${backfilled} expense${backfilled === 1 ? '' : 's'} recorded`
+                            : ` · ${backfilled} pending item${backfilled === 1 ? '' : 's'} to review`
+                        : '';
+                toast.success(`Rule created${suffix}`);
                 await goto(`/vaults/${data.vaultId}/recurring`);
             } catch (error: any) {
                 toast.error(error?.data?.error || error?.message || 'Failed to create rule');
@@ -194,6 +197,15 @@
     <div class="flex items-center gap-3 mb-6">
         <h1 class="text-2xl font-bold">New Recurring Rule</h1>
     </div>
+
+    {#if data.duplicatingFrom}
+        <div class="mb-4 rounded-[var(--radius-md)] border border-dashed bg-muted/30 p-3 flex items-start gap-2">
+            <span class="text-xl leading-none shrink-0" aria-hidden="true">{data.duplicatingFrom.icon}</span>
+            <p class="text-sm">
+                Duplicating <span class="font-medium">{data.duplicatingFrom.name}</span> — fields are pre-filled. Review and save as a new rule. The original stays untouched.
+            </p>
+        </div>
+    {/if}
 
     <Card>
         <CardHeader>
@@ -499,10 +511,9 @@
 
                     <div class="space-y-2">
                         <Label for="anchorDate">First occurrence <span class="text-destructive">*</span></Label>
-                        <Input
+                        <DateTimePicker
                             id="anchorDate"
                             name="anchorDate"
-                            type="datetime-local"
                             bind:value={$form.anchorDate}
                             disabled={$delayed}
                         />
@@ -568,26 +579,44 @@
                         {/if}
                     </div>
 
-                    {#if backfillAvailable}
-                        <div class="rounded-md border border-dashed bg-muted/30 p-3">
-                            <CheckboxRow
-                                name="backfill"
-                                bind:checked={$form.backfill}
-                                disabled={$delayed}
-                            >
-                                {#snippet label()}
+                    <div class="rounded-md border border-dashed bg-muted/30 p-3 space-y-2">
+                        <CheckboxRow
+                            name="backfill"
+                            bind:checked={$form.backfill}
+                            disabled={$delayed || !anchorIsPast}
+                        >
+                            {#snippet label()}
+                                {#if $form.generationMode === 'auto'}
+                                    Back-fill past occurrences as real expenses
+                                {:else}
                                     Back-fill past occurrences as pending approvals
-                                {/snippet}
-                                {#snippet description()}
-                                    Walks from the anchor date forward and creates one pending
-                                    item per missed occurrence (up to {BACKFILL_CAP}).
-                                    {#if $form.backfill && backfillPreviewCount > 0}
-                                        <span class="font-medium text-foreground"> — this rule will create {backfillPreviewCount} pending item{backfillPreviewCount === 1 ? '' : 's'}.</span>
+                                {/if}
+                            {/snippet}
+                            {#snippet description()}
+                                {#if !anchorIsPast}
+                                    <span class="text-muted-foreground">Only applies when "First occurrence" is in the past. Set an earlier date to enable.</span>
+                                {:else if $form.backfill && backfillPreviewCount > 0}
+                                    {#if $form.generationMode === 'auto'}
+                                        <span class="font-medium text-foreground">This rule will record {backfillPreviewCount} expense{backfillPreviewCount === 1 ? '' : 's'}</span> immediately, dated at each past occurrence. Good for installments where earlier payments are already settled.
+                                    {:else}
+                                        <span class="font-medium text-foreground">This rule will create {backfillPreviewCount} pending item{backfillPreviewCount === 1 ? '' : 's'}</span> for you to approve.
                                     {/if}
-                                {/snippet}
-                            </CheckboxRow>
-                        </div>
-                    {/if}
+                                {:else if $form.generationMode === 'auto'}
+                                    Records one real expense per missed occurrence (up to {BACKFILL_CAP}). Use when earlier payments have already happened.
+                                {:else}
+                                    Creates one pending approval per missed occurrence (up to {BACKFILL_CAP}).
+                                {/if}
+                            {/snippet}
+                        </CheckboxRow>
+                        {#if $form.backfill && anchorIsPast && $form.generationMode === 'auto' && backfillPreviewCount > 0}
+                            <p class="text-xs text-amber-600 dark:text-amber-400 pl-7">
+                                Heads up — this writes {backfillPreviewCount} expense row{backfillPreviewCount === 1 ? '' : 's'} you'll need to delete manually if you change your mind.
+                                {#if $form.defaultFundId}
+                                    Fund balance will be deducted; insufficient balance falls through to pending reimbursement.
+                                {/if}
+                            </p>
+                        {/if}
+                    </div>
 
                     <div class="space-y-2">
                         <Label>Rule type <span class="text-destructive">*</span></Label>

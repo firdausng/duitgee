@@ -472,3 +472,48 @@
         padding: 1.5rem;
     }
 }
+
+/* ---- Installment stage tint ------------------------------------------
+ * Row decoration for installments on /recurring. Conveys "stage of life"
+ * via a 4px left border + left-fading background gradient. Tokens follow
+ * dark-mode automatically.
+ */
+.installment-stage-long {
+    border-left-color: color-mix(in oklch, var(--primary) 25%, transparent);
+    background: linear-gradient(
+        to right,
+        color-mix(in oklch, var(--primary) 6%, transparent),
+        color-mix(in oklch, var(--primary) 1%, transparent) 30%,
+        transparent 60%
+    );
+}
+
+.installment-stage-mid {
+    border-left-color: var(--accent-strong);
+    background: linear-gradient(
+        to right,
+        color-mix(in oklch, var(--accent-strong) 18%, transparent),
+        color-mix(in oklch, var(--accent-strong) 4%, transparent) 40%,
+        transparent 80%
+    );
+}
+
+.installment-stage-near {
+    border-left-color: var(--amount-positive);
+    background: linear-gradient(
+        to right,
+        color-mix(in oklch, var(--amount-positive) 22%, transparent),
+        color-mix(in oklch, var(--amount-positive) 6%, transparent) 40%,
+        transparent 85%
+    );
+}
+
+.installment-stage-done {
+    border-left-color: var(--amount-positive);
+    background: linear-gradient(
+        to right,
+        color-mix(in oklch, var(--amount-positive) 26%, transparent),
+        color-mix(in oklch, var(--amount-positive) 8%, transparent) 50%,
+        transparent 95%
+    );
+}

@@ -6,6 +6,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import { DateTimePicker } from '$lib/components/ui/date-time-picker';
 	import { ExpenseRow } from '$lib/components/ui/expense-row';
 	import type { ExpenseRowData } from '$lib/components/ui/expense-row/expense-row.svelte';
 	import { paymentTypes } from '$lib/configurations/paymentTypes';
@@ -393,13 +394,12 @@
 				<!-- Date -->
 				<div class="space-y-2">
 					<Label for="date">Date &amp; time</Label>
-					<Input
+					<DateTimePicker
 						id="date"
 						name="date"
-						type="datetime-local"
 						bind:value={$form.date}
 						disabled={isLoading}
-						class={$errors.date ? 'border-destructive' : ''}
+						class={$errors.date ? 'border border-destructive rounded-md' : ''}
 					/>
 					{#if $errors.date}
 						<p class="text-sm text-destructive">{$errors.date}</p>

@@ -35,8 +35,10 @@ export const getRecurringExpense = async (
             templateDefaultAmount: expenseTemplates.defaultAmount,
             templateDefaultCategory: expenseTemplates.defaultCategoryName,
             templateDefaultNote: expenseTemplates.defaultNote,
-            templateDefaultFundId: expenseTemplates.defaultFundId,
+            templateDefaultPaymentType: expenseTemplates.defaultPaymentType,
             templateDefaultPaidBy: expenseTemplates.defaultPaidBy,
+            templateDefaultFundId: expenseTemplates.defaultFundId,
+            templateDefaultFundPaymentMode: expenseTemplates.defaultFundPaymentMode,
         })
         .from(recurringExpenses)
         .leftJoin(expenseTemplates, eq(recurringExpenses.templateId, expenseTemplates.id))
@@ -95,8 +97,10 @@ export const getRecurringExpense = async (
             defaultAmount: row.templateDefaultAmount,
             defaultCategoryName: row.templateDefaultCategory,
             defaultNote: row.templateDefaultNote,
-            defaultFundId: row.templateDefaultFundId,
+            defaultPaymentType: row.templateDefaultPaymentType,
             defaultPaidBy: row.templateDefaultPaidBy,
+            defaultFundId: row.templateDefaultFundId,
+            defaultFundPaymentMode: row.templateDefaultFundPaymentMode,
         },
         progress: {
             paidCount: Number(paidAgg?.c ?? 0),

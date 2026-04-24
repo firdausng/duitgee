@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/server/db/schema';
-import { recurringExpenses, expenseTemplates, pendingRecurringOccurrences } from '$lib/server/db/schema';
+import { recurringExpenses, expenseTemplates } from '$lib/server/db/schema';
 import { and, eq, isNull, count } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { parseISO, formatISO } from 'date-fns';
@@ -12,14 +12,18 @@ import {
     computeNextOccurrence,
     type ScheduleUnit,
 } from '$lib/utils/recurringSchedule';
+import { processDueRecurringExpenses } from './processDueRecurringExpenses';
 import type { CreateRecurringExpenseWithTemplateRequest } from '$lib/schemas/recurringExpenses';
-
-const BACKFILL_CAP = 12;
 
 /**
  * Create a recurring rule and its backing template in a single atomic D1 batch.
  * This is the primary entry point for the /recurring/new UI — users never need
  * to create a template separately.
+ *
+ * Back-fill (data.backfill === true with a past anchor) is handled by setting
+ * nextOccurrenceAt to the anchor itself, then invoking the engine once post-commit.
+ * The engine creates real expenses for auto mode or pending items for queue mode —
+ * identical logic to normal catch-up firing.
  */
 export const createRecurringExpenseWithTemplate = async (
     session: App.AuthSession,
@@ -63,50 +67,32 @@ export const createRecurringExpenseWithTemplate = async (
         }
     }
 
-    // Pre-generate IDs so both inserts can reference each other in the batch.
     const templateId = createId();
     const ruleId = createId();
 
-    // Compute initial nextOccurrenceAt from anchor.
     const anchor = parseISO(data.anchorDate);
     const now = new UTCDate();
-    const nextOccurrence =
-        anchor.getTime() > now.getTime()
-            ? anchor
-            : computeNextOccurrence(
-                  anchor,
-                  data.scheduleUnit as ScheduleUnit,
-                  data.scheduleInterval,
-                  now,
-              );
-    const nextOccurrenceIso = formatISO(new UTCDate(nextOccurrence));
+    const shouldBackfill = data.backfill === true && anchor.getTime() <= now.getTime();
 
-    // Back-fill past occurrences (queue mode only). Walk from anchor forward,
-    // capped at BACKFILL_CAP items. Stops once the cursor passes `now`.
-    const backfillDueDates: string[] = [];
-    if (data.backfill && data.generationMode === 'queue' && anchor.getTime() <= now.getTime()) {
-        let cursor = anchor;
-        while (
-            backfillDueDates.length < BACKFILL_CAP &&
-            cursor.getTime() <= now.getTime()
-        ) {
-            backfillDueDates.push(formatISO(new UTCDate(cursor)));
-            const nextCursor = computeNextOccurrence(
+    // With back-fill: point nextOccurrenceAt at the past anchor so the engine
+    // catches up from there. Otherwise: skip to the next future occurrence.
+    const initialNextOccurrence = shouldBackfill
+        ? anchor
+        : anchor.getTime() > now.getTime()
+          ? anchor
+          : computeNextOccurrence(
                 anchor,
                 data.scheduleUnit as ScheduleUnit,
                 data.scheduleInterval,
-                cursor,
+                now,
             );
-            if (nextCursor.getTime() <= cursor.getTime()) break; // safety: no progress
-            cursor = nextCursor;
-        }
-    }
+    const initialNextOccurrenceIso = formatISO(new UTCDate(initialNextOccurrence));
 
     const audit = initialAuditFields({ userId });
 
-    // Atomic batch: template → rule (FK to template) → back-fill pending rows (FK to rule).
+    // Atomic batch: template first (rule FK references it), then rule.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const batchOps: any[] = [
+    await client.batch([
         client.insert(expenseTemplates).values({
             id: templateId,
             userId,
@@ -137,32 +123,27 @@ export const createRecurringExpenseWithTemplate = async (
             status: 'active',
             endDate: data.endDate ?? null,
             endAfterCount: data.endAfterCount ?? null,
-            nextOccurrenceAt: nextOccurrenceIso,
-            // Count back-filled items — they're real occurrences against end-after limits.
-            occurrenceCount: backfillDueDates.length,
+            nextOccurrenceAt: initialNextOccurrenceIso,
+            occurrenceCount: 0,
             ...audit,
         }),
-    ];
+    ] as any);
 
-    for (const dueDate of backfillDueDates) {
-        batchOps.push(
-            client.insert(pendingRecurringOccurrences).values({
-                id: createId(),
-                vaultId: data.vaultId,
-                recurringExpenseId: ruleId,
-                dueDate,
-                suggestedAmount: data.defaultAmount,
-                status: 'pending',
-                ...audit,
-            }),
-        );
+    // Materialize back-fill synchronously via the engine. Same code path as the
+    // cron / lazy catch-up, so fund integration + per-mode artifact creation
+    // are handled uniformly. Engine's own MAX_CATCHUP_PER_RULE (50) applies.
+    let backfilled = 0;
+    let backfillErrors: Array<{ ruleId: string; message: string }> = [];
+    if (shouldBackfill) {
+        const result = await processDueRecurringExpenses(env, { ruleId });
+        backfilled = result.autoCreated + result.queued;
+        backfillErrors = result.errors;
     }
-
-    await client.batch(batchOps as [typeof batchOps[0], ...typeof batchOps]);
 
     return {
         templateId,
         ruleId,
-        backfilled: backfillDueDates.length,
+        backfilled,
+        backfillErrors,
     };
 };
