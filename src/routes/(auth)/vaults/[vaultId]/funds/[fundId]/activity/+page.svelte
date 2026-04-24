@@ -92,10 +92,7 @@
 </svelte:head>
 
 <div class="container mx-auto py-6 px-4">
-    <div class="mb-1">
-        <Button variant="ghost" size="sm" onclick={handleBack} class="-ml-2">← Back</Button>
-    </div>
-    <h1 class="text-2xl font-bold mb-6">{fund?.name ?? 'Fund'} Activity</h1>
+        <h1 class="text-2xl font-bold mb-6">{fund?.name ?? 'Fund'} Activity</h1>
 
     <!-- Type filter -->
     <div class="mb-4">

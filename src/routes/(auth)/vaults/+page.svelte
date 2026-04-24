@@ -5,6 +5,7 @@
     import { Button } from "$lib/components/ui/button";
     import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
     import type {VaultWithMember} from "$lib/schemas/read/vaultWithMember";
+    import ChevronRight from '@lucide/svelte/icons/chevron-right';
 
 	let { data } = $props();
 
@@ -144,23 +145,24 @@
 		<!-- Vaults List -->
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 			{#each vaultsList as vaultItem (vaultItem.vaults.id)}
-				<Card class="hover:shadow-lg transition-shadow cursor-pointer" onclick={() => handleViewVault(vaultItem.vaults.id)}>
+				<Card class="group hover:border-primary/40 transition-colors cursor-pointer" onclick={() => handleViewVault(vaultItem.vaults.id)}>
 					<CardHeader>
-						<div class="flex items-start justify-between">
-							<div class="flex items-center gap-3">
+						<div class="flex items-start justify-between gap-2">
+							<div class="flex items-center gap-3 min-w-0">
 								<div
-									class="text-3xl w-12 h-12 rounded-lg flex items-center justify-center"
+									class="text-3xl w-12 h-12 rounded-lg flex items-center justify-center shrink-0"
 									style="background-color: {vaultItem.vaults.color}20;"
 								>
 									{vaultItem.vaults.icon || '🏦'}
 								</div>
-								<div>
-									<CardTitle class="text-xl">{vaultItem.vaults.name}</CardTitle>
+								<div class="min-w-0">
+									<CardTitle class="text-xl truncate">{vaultItem.vaults.name}</CardTitle>
 									{#if vaultItem.vaults.description}
-										<CardDescription class="mt-1">{vaultItem.vaults.description}</CardDescription>
+										<CardDescription class="mt-1 truncate">{vaultItem.vaults.description}</CardDescription>
 									{/if}
 								</div>
 							</div>
+							<ChevronRight class="size-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1" />
 						</div>
 					</CardHeader>
 					<CardContent>

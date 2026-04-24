@@ -13,9 +13,6 @@
         goto(`/vaults/${vaultId}/expenses/new`);
     }
 
-    // Check if we're on the statistics page to adjust button position
-    let isStatisticsPage = $derived(page.url.pathname.includes('/statistics'));
-
     let isCreateExpensePage = $derived(page.url.pathname.includes('/expenses/new'));
 
     let fabItems = new SvelteSet();
@@ -35,10 +32,7 @@
             {#each fabItems as fab}
 
                 <!-- Floating Action Button -->
-                <FloatingActionButton
-                        onclick={fab.onClick}
-                        class={isStatisticsPage ? 'bottom-[calc(7rem+env(safe-area-inset-bottom))] sm:bottom-[7rem]' : ''}
-                >
+                <FloatingActionButton onclick={fab.onClick}>
                     {#snippet icon()}
                         <svg
                                 xmlns="http://www.w3.org/2000/svg"

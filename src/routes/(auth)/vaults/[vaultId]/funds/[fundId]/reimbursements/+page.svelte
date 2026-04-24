@@ -101,7 +101,6 @@
 
 <div class="container mx-auto py-6 px-4">
     <div class="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="sm" onclick={handleBack}>← Back</Button>
         <div class="flex-1 min-w-0">
             <h1 class="text-2xl font-bold">Pending Reimbursements</h1>
             {#if fund}

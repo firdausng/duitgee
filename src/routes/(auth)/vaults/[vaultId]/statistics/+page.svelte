@@ -32,7 +32,7 @@
     // Schema for statistics page query params
     const statisticsParamsSchema = v.object({
         filterType: v.optional(v.picklist(['template', 'category', 'member']), 'template'),
-        filter: v.optional(v.picklist(['all', 'today', 'week', 'month', 'year']), 'today'),
+        filter: v.optional(v.picklist(['all', 'today', 'week', 'month', 'year']), 'month'),
         filterName: v.optional(v.fallback(v.string(), ""), ""),
         startDate: v.optional(v.fallback(v.string(), ""), ""),
         endDate: v.optional(v.fallback(v.string(), ""), ""),
@@ -66,6 +66,21 @@
     // Update dateFilter when params change
     $effect(() => {
         filter = (params.filter as DateFilter) || 'all';
+    });
+
+    // Label used in the header — honors a manual calendar range over the pill.
+    const activeRangeLabel = $derived.by(() => {
+        const hasCustomRange = params.startDate && params.endDate;
+        if (hasCustomRange) {
+            try {
+                const fmt = (s: string) =>
+                    new Date(s).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                return `${fmt(params.startDate)} – ${fmt(params.endDate)}`;
+            } catch {
+                return getDateFilterLabel(filter);
+            }
+        }
+        return getDateFilterLabel(filter);
     });
 
     // Initialize calendar from URL params or preset filter on mount
@@ -481,14 +496,27 @@
 
         <!-- Header -->
         <div class="mb-4">
-            <p class="text-xs text-muted-foreground mt-1">Expense breakdown for {getDateFilterLabel(filter)}</p>
+            <p class="text-xs text-muted-foreground mt-1">Expense breakdown for {activeRangeLabel}</p>
         </div>
 
-        <!-- Date Filter Tabs -->
-        <DateFilterTabs
-            currentFilter={filter}
-            onFilterChange={(filter) => params.filter = filter}
-        />
+        <!-- Date Filter Tabs + inline Filter trigger -->
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+            <DateFilterTabs
+                currentFilter={filter}
+                onFilterChange={(filter) => params.filter = filter}
+            />
+            {#if statistics && filterOptions.length > 1}
+                <Button variant="outline" size="sm" onclick={() => filterDrawerOpen = true}>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
+                    </svg>
+                    Filter
+                    {#if filterName}
+                        <span class="ml-1 text-xs font-normal opacity-70">· {filterName}</span>
+                    {/if}
+                </Button>
+            {/if}
+        </div>
 
         <!-- Calendar Section -->
         <CalendarSection
@@ -544,17 +572,6 @@
 
 <!-- Filter Selection FAB -->
 {#if statistics && filterOptions.length > 1}
-    <FloatingActionButton
-        onclick={() => filterDrawerOpen = true}
-    >
-        {#snippet icon()}
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
-            </svg>
-        {/snippet}
-        Filter
-    </FloatingActionButton>
-
     <!-- Filter Selection Drawer -->
     <FilterChipsDrawer
         bind:open={filterDrawerOpen}

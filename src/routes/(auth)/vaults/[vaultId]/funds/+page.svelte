@@ -74,7 +74,6 @@
 <div class="container mx-auto py-6 px-4">
     <!-- Row 1: Back + title + primary action -->
     <div class="flex items-center gap-2 mb-3">
-        <Button variant="ghost" size="sm" onclick={handleBack}>← Back</Button>
         <h1 class="text-2xl font-bold flex-1">Funds</h1>
         <Button size="sm" onclick={handleCreateFund}>+ New Fund</Button>
     </div>
@@ -134,7 +133,7 @@
                                 {#if fund.icon}
                                     <span class="text-lg">{fund.icon}</span>
                                 {/if}
-                                <span class="truncate">{fund.name}</span>
+                                <span class="truncate" title={fund.name}>{fund.name}</span>
                                 {#if fund.status === 'archived'}
                                     <span class="ml-auto text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full shrink-0">
                                         Archived

@@ -417,7 +417,7 @@
                                             {#if row.fund.icon}
                                                 <span class="text-lg shrink-0">{row.fund.icon}</span>
                                             {/if}
-                                            <span class="text-sm font-semibold truncate">{row.fund.name}</span>
+                                            <span class="text-sm font-semibold truncate" title={row.fund.name}>{row.fund.name}</span>
                                         </div>
                                         <button
                                             onclick={(e) => { e.stopPropagation(); goto(`/vaults/${vaultId}/funds/${row.fund.id}`); }}

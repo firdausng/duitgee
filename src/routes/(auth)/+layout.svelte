@@ -95,27 +95,30 @@
 				<img src="/favicon.svg" alt="DuitGee Logo" class="h-8 w-8" />
 			</a>
 
-			<!-- Vault Navigation Menu -->
+			<!-- Vault Navigation Menu (desktop tabs; drawer still available for mobile) -->
 			{#if vaultId() && vaultId() !== 'new'}
-				<nav class="flex gap-4 flex-1 pl-2">
-					<a
-						href="/vaults/{vaultId()}{searchParams()}"
-						class="relative py-2 text-xs font-medium transition-colors hover:text-primary whitespace-nowrap {page.url.pathname === `/vaults/${vaultId()}` ? 'text-primary' : 'text-muted-foreground'}"
-					>
-						Home
-						{#if page.url.pathname === `/vaults/${vaultId()}`}
-							<div class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
-						{/if}
-					</a>
-					<a
-						href="/vaults/{vaultId()}/statistics{searchParams()}"
-						class="relative py-2 text-xs font-medium transition-colors hover:text-primary whitespace-nowrap {isActive(`/vaults/${vaultId()}/statistics`) ? 'text-primary' : 'text-muted-foreground'}"
-					>
-						Statistics
-						{#if isActive(`/vaults/${vaultId()}/statistics`)}
-							<div class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
-						{/if}
-					</a>
+				{@const vId = vaultId()}
+				{@const tabs = [
+					{ href: `/vaults/${vId}`, label: 'Home', exact: true },
+					{ href: `/vaults/${vId}/expenses`, label: 'Expenses' },
+					{ href: `/vaults/${vId}/funds`, label: 'Funds' },
+					{ href: `/vaults/${vId}/templates`, label: 'Templates' },
+					{ href: `/vaults/${vId}/statistics`, label: 'Statistics' },
+					{ href: `/vaults/${vId}/members`, label: 'Members' },
+				]}
+				<nav class="hidden md:flex gap-1 flex-1 pl-2 overflow-x-auto">
+					{#each tabs as tab}
+						{@const active = tab.exact ? page.url.pathname === tab.href : isActive(tab.href)}
+						<a
+							href="{tab.href}{searchParams()}"
+							class="relative py-2 px-3 text-sm font-medium transition-colors hover:text-primary whitespace-nowrap {active ? 'text-primary' : 'text-muted-foreground'}"
+						>
+							{tab.label}
+							{#if active}
+								<div class="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full"></div>
+							{/if}
+						</a>
+					{/each}
 				</nav>
 			{/if}
 

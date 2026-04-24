@@ -31,3 +31,4 @@ vite.config.ts.timestamp-*
 .env*
 .idea
 backup
+docs/internal

@@ -59,7 +59,6 @@
 
 <div class="container mx-auto py-6 px-4">
     <div class="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="sm" onclick={handleBack}>← Back</Button>
         <h1 class="text-2xl font-bold">Deduct from Fund</h1>
     </div>
 

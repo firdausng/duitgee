@@ -13,7 +13,8 @@
     import type { Expense } from "../types";
     import type { VaultWithMember } from "$lib/schemas/read/vaultWithMember";
     import { format, parseISO } from "date-fns";
-    import { formatCurrency, getDateRangeFromCalendar, formatDateTime } from "$lib/utils";
+    import { getDateRangeFromCalendar, formatDateTime } from "$lib/utils";
+    import { createVaultFormatters } from "$lib/vaultFormatting";
 
     let { data } = $props();
     let { vaultId } = data;
@@ -80,6 +81,12 @@
     const expenses = $derived(filteredExpensesResource.current || []); // For filtered list
     const isLoadingVault = $derived(vaultResource.loading);
     const isLoadingExpenses = $derived(filteredExpensesResource.loading);
+
+    const fmt = $derived(createVaultFormatters({
+        locale: currentVault?.vaults.locale || 'en-US',
+        currency: currentVault?.vaults.currency || 'USD',
+    }));
+    const formatCurrency = $derived(fmt.currency);
 
     // Calculate daily totals for calendar display (using ALL expenses, independent of filter)
     const dailyTotals = $derived.by(() => {
