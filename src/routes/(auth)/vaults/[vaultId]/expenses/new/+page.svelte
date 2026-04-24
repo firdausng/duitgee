@@ -1,183 +1,174 @@
 <script lang="ts">
-	import { onMount } from "svelte";
-    import {afterNavigate, goto} from "$app/navigation";
-	import { ofetch } from "ofetch";
-	import { Button } from "$lib/components/ui/button";
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
-    import {resolve} from "$app/paths";
-	import {page} from "$app/state";
+    import { onMount } from 'svelte';
+    import { goto } from '$app/navigation';
+    import { ofetch } from 'ofetch';
+    import { Button } from '$lib/components/ui/button';
+    import { Card } from '$lib/components/ui/card';
+    import { page } from '$app/state';
+    import FilePlus from '@lucide/svelte/icons/file-plus';
+    import Pencil from '@lucide/svelte/icons/pencil';
+    import Plus from '@lucide/svelte/icons/plus';
+    import Loader2 from '@lucide/svelte/icons/loader-2';
+    import { createVaultFormatters } from '$lib/vaultFormatting';
 
-	let {vaultId} = page.params
+    let { vaultId } = page.params;
 
-	let templates = $state<Client.ExpenseTemplate[]>([]);
-	let isLoading = $state(true);
+    // Forward the caller's returnTo (if any) through to the form.
+    const returnToParam = $derived(page.url.searchParams.get('returnTo'));
 
-	onMount(async () => {
-		try {
-			const response = await ofetch<Client.AppResponse<Client.ExpenseTemplateData>>(
-				`/api/getExpenseTemplates?vaultId=${vaultId}`
-			);
-			templates = response.data.templates || [];
-		} catch (error) {
-			console.error("Failed to fetch templates:", error);
-			templates = [];
-		} finally {
-			isLoading = false;
-		}
-	});
-
-	function handleUseTemplate(templateId: string) {
-		goto(`/vaults/${vaultId}/expenses/new/form?templateId=${templateId}`);
-	}
-
-	function handleSkip() {
-		goto(`/vaults/${vaultId}/expenses/new/form`);
-	}
-
-    let previousPage : string = resolve(`/vaults/${vaultId}`) ;
-    afterNavigate(({from}) => {
-        previousPage = from?.url.pathname || previousPage
-    })
-
-    function handleBack() {
-        goto(previousPage);
+    function formUrl(templateId?: string): string {
+        const params = new URLSearchParams();
+        if (templateId) params.set('templateId', templateId);
+        if (returnToParam) params.set('returnTo', returnToParam);
+        const qs = params.toString();
+        return `/vaults/${vaultId}/expenses/new/form${qs ? `?${qs}` : ''}`;
     }
 
-	function handleCreateTemplate() {
-		goto(`/vaults/${vaultId}/templates/new`);
-	}
+    let templates = $state<Client.ExpenseTemplate[]>([]);
+    let isLoading = $state(true);
+    let vault = $state<{ locale?: string; currency?: string } | null>(null);
 
-	function handleEditTemplate(templateId: string) {
-		goto(`/vaults/${vaultId}/templates/${templateId}/edit`);
-	}
+    const fmt = $derived(
+        createVaultFormatters({
+            locale: vault?.locale || 'en-US',
+            currency: vault?.currency || 'USD',
+        }),
+    );
+
+    onMount(async () => {
+        try {
+            const [tplRes, vaultRes] = await Promise.all([
+                ofetch<Client.AppResponse<Client.ExpenseTemplateData>>(
+                    `/api/getExpenseTemplates?vaultId=${vaultId}`,
+                ),
+                ofetch<Client.AppResponse<{ vaults: { locale?: string; currency?: string } }>>(
+                    `/api/getVault?vaultId=${vaultId}`,
+                ).catch(() => null),
+            ]);
+            templates = tplRes.data.templates || [];
+            vault = vaultRes?.data?.vaults ?? null;
+        } catch (error) {
+            console.error('Failed to fetch templates:', error);
+            templates = [];
+        } finally {
+            isLoading = false;
+        }
+
+        // If no templates exist, picker has nothing to offer — skip straight to the form.
+        if (!isLoading && templates.length === 0) {
+            goto(formUrl(), { replaceState: true });
+        }
+    });
+
+    function handleUseTemplate(templateId: string) {
+        goto(formUrl(templateId));
+    }
+
+    function handleSkip() {
+        goto(formUrl());
+    }
+
+    function handleCreateTemplate() {
+        goto(`/vaults/${vaultId}/templates/new`);
+    }
+
+    function handleEditTemplate(templateId: string) {
+        goto(`/vaults/${vaultId}/templates/${templateId}/edit`);
+    }
 </script>
 
 <svelte:head>
-	<title>Select Template - DuitGee</title>
+    <title>New Expense - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-2 px-4">
-	{#if isLoading}
-		<!-- Loading State -->
-		<div class="flex justify-center py-16">
-			<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-		</div>
-	{:else}
-		<!-- Skip Option -->
-		<Card class="border-dashed my-2">
-			<CardContent class="flex items-center justify-between py-2">
-				<div>
-					<h3 class="font-semibold text-xs">Start from scratch</h3>
-				</div>
-				<Button onclick={handleSkip} variant="outline" class="text-sm" size="sm">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-xs" viewBox="0 0 20 20" fill="currentColor">
-						<path
-							fill-rule="evenodd"
-							d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-                    <p class="text-sm">Continue</p>
-				</Button>
-			</CardContent>
-		</Card>
+<div class="container mx-auto py-4 px-4">
+    {#if isLoading}
+        <div class="flex justify-center py-16">
+            <Loader2 class="size-8 animate-spin text-muted-foreground" />
+        </div>
+    {:else}
+        <div class="flex items-center justify-between mb-4 gap-3 flex-wrap">
+            <div>
+                <h1 class="text-xl font-semibold">Pick a template</h1>
+                <p class="text-xs text-muted-foreground">
+                    Or <button type="button" onclick={handleSkip} class="text-primary hover:underline">start from scratch</button> to enter manually.
+                </p>
+            </div>
+            <Button variant="outline" onclick={handleCreateTemplate} size="sm">
+                <Plus class="size-4" />
+                New Template
+            </Button>
+        </div>
 
-		{#if templates.length > 0}
-			<!-- Templates Grid -->
-			<div class="mb-4 flex items-center justify-between">
-				<h2 class="text-sm font-semibold">Or choose a template</h2>
-				<Button variant="outline" onclick={handleCreateTemplate} size="sm">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-						<path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-					</svg>
-					New Template
-				</Button>
-			</div>
+        <!-- Compact grid: scratch card first, then templates. 3 cols mobile
+             → 7 xl. Single-line names, usage count only, drop default amount. -->
+        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2">
+            <!-- Start from scratch card -->
+            <button
+                type="button"
+                onclick={handleSkip}
+                class="group relative rounded-[var(--radius-md)] border border-dashed border-border bg-card p-2 hover:border-primary/60 hover:bg-muted/40 transition-colors text-center"
+            >
+                <div class="flex flex-col items-center gap-1">
+                    <div class="flex items-center justify-center size-9 rounded-full bg-muted group-hover:bg-primary/10 transition-colors">
+                        <FilePlus class="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                    <div class="text-xs font-medium truncate w-full">Start from scratch</div>
+                    <p class="text-[10px] text-muted-foreground">Blank form</p>
+                </div>
+            </button>
 
-			<div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 justify-items-center">
-				{#each templates as template (template.id)}
-					<div class="w-full max-w-[200px]">
-						<Card
-							class="p-3 cursor-pointer hover:shadow-md transition-shadow duration-200 hover:border-primary/50 relative"
-							onclick={() => handleUseTemplate(template.id)}
-						>
-							<!-- Edit Button (Top Right) -->
-							<Button
-								variant="ghost"
-								size="sm"
-								onclick={(e) => {
-									e.stopPropagation();
-									handleEditTemplate(template.id);
-								}}
-								class="absolute top-1 right-1 px-1 h-6"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									class="h-3 w-3"
-									viewBox="0 0 20 20"
-									fill="currentColor"
-								>
-									<path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-								</svg>
-								<span class="sr-only">Edit</span>
-							</Button>
+            {#each templates as template (template.id)}
+                <button
+                    type="button"
+                    onclick={() => handleUseTemplate(template.id)}
+                    class="group relative rounded-[var(--radius-md)] border border-border bg-card p-2 hover:border-primary/60 hover:shadow-sm transition-all text-center"
+                    title={template.name}
+                >
+                    <!-- Edit button (hover on desktop) -->
+                    <span
+                        role="button"
+                        tabindex="0"
+                        onclick={(e) => {
+                            e.stopPropagation();
+                            handleEditTemplate(template.id);
+                        }}
+                        onkeydown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.stopPropagation();
+                                handleEditTemplate(template.id);
+                            }
+                        }}
+                        class="absolute top-0.5 right-0.5 inline-flex items-center justify-center size-5 rounded-[var(--radius-sm)] text-muted-foreground hover:bg-muted hover:text-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                        aria-label="Edit template"
+                        title="Edit template"
+                    >
+                        <Pencil class="size-3" />
+                    </span>
 
-							<div class="space-y-2">
-								<!-- Icon and Name -->
-								<div class="flex flex-col items-center text-center gap-1">
-									<div class="text-2xl">{template.icon || '📝'}</div>
-									<div class="text-xs font-medium break-words w-full">{template.name}</div>
-								</div>
-
-								<!-- Amount -->
-								<div class="space-y-0.5 text-center">
-									{#if template.defaultAmount}
-										<div class="font-bold text-sm">${template.defaultAmount.toFixed(2)}</div>
-									{/if}
-								</div>
-
-								<!-- Usage Count -->
-								{#if template.usageCount > 0}
-									<p class="text-xs text-muted-foreground text-center">
-										{template.usageCount} {template.usageCount === 1 ? 'time' : 'times'}
-									</p>
-								{/if}
-							</div>
-						</Card>
-					</div>
-				{/each}
-			</div>
-		{:else}
-			<!-- No Templates State -->
-			<Card class="border-dashed">
-				<CardContent class="flex flex-col items-center justify-center py-12">
-					<div class="rounded-full bg-muted p-6 mb-4">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-12 w-12 text-muted-foreground"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-							/>
-						</svg>
-					</div>
-					<p class="text-muted-foreground text-center mb-4">
-						No templates available yet. Create templates to speed up expense entry.
-					</p>
-					<Button variant="outline" onclick={handleCreateTemplate}>
-						<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-							<path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-						</svg>
-						Create Template
-					</Button>
-				</CardContent>
-			</Card>
-		{/if}
-	{/if}
+                    <div class="flex flex-col items-center gap-0.5">
+                        <div class="text-2xl leading-none select-none" aria-hidden="true">
+                            {template.icon || '📝'}
+                        </div>
+                        <div class="text-xs font-medium truncate w-full">
+                            {template.name}
+                        </div>
+                        {#if template.usageCount > 0}
+                            <p class="text-[10px] text-subtle-foreground">
+                                {template.usageCount}
+                            </p>
+                        {/if}
+                    </div>
+                </button>
+            {/each}
+        </div>
+    {/if}
 </div>
+
+<style>
+    @media (hover: none) {
+        :global(.group [aria-label="Edit template"]) {
+            opacity: 1;
+        }
+    }
+</style>

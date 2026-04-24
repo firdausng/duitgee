@@ -2,10 +2,26 @@ import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { sharedExpenseDefaultsSchema } from '$lib/schemas/expenses';
 
+/**
+ * Validate a `returnTo` query param to prevent open-redirect vectors.
+ * Only allow same-origin paths that are scoped to the current vault —
+ * anything else falls back to the vault home.
+ */
+function validateReturnTo(raw: string | null, vaultId: string): string {
+	const fallback = `/vaults/${vaultId}`;
+	if (!raw) return fallback;
+	// Must be a relative path (no protocol, no host, no protocol-relative).
+	if (!raw.startsWith('/') || raw.startsWith('//')) return fallback;
+	// Must stay within this vault's namespace OR be the vaults list.
+	if (raw === '/vaults' || raw.startsWith(`/vaults/${vaultId}`)) return raw;
+	return fallback;
+}
+
 export const load = async ({ params, url, fetch, locals }) => {
 	const vaultId = params.vaultId;
 	const templateId = url.searchParams.get('templateId');
 	const currentUserId = locals.currentUser?.id || '';
+	const returnTo = validateReturnTo(url.searchParams.get('returnTo'), vaultId);
 
 	// If templateId is provided, fetch template and pre-populate shared defaults
 	let template = null;
@@ -81,5 +97,6 @@ export const load = async ({ params, url, fetch, locals }) => {
 		members,
 		funds,
 		currentUserId,
+		returnTo,
 	};
 };

@@ -10,7 +10,6 @@
     import type {VaultStatistics} from "./types";
     import VaultHeader from "./VaultHeader.svelte";
     import ExpenseFilters from "./ExpenseFilters.svelte";
-    import VaultStatisticsComponent from "./VaultStatistics.svelte";
     import InviteForm from "./InviteForm.svelte";
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
     import {Toaster} from "$lib/components/ui/sonner";
@@ -18,8 +17,8 @@
     import {localDatetimeToUtcIso, getDateRange, type DateFilter} from "$lib/utils";
     import {createVaultFormatters} from "$lib/vaultFormatting";
     import {page} from "$app/state";
-    import { groupExpensesByDate, formatDate } from "./statistics/utils";
-    import ExpenseListByDate from "./statistics/ExpenseListByDate.svelte";
+    import { RecentExpenses } from "$lib/components/ui/recent-expenses";
+    import ArrowRight from "@lucide/svelte/icons/arrow-right";
     import type { Expense } from "./types";
 
     let {vaultId} = page.params
@@ -146,9 +145,6 @@
     const vaultError = $derived(vaultResource.error);
     const statisticsError = $derived(statisticsResource.error);
 
-    // Group expenses by date for display
-    const expensesByDate = $derived(groupExpensesByDate(expenses));
-
     // Create vault-specific formatters
     const vaultFormatters = $derived(
         currentVault
@@ -170,7 +166,9 @@
     }
 
     function handleCreateExpense() {
-        goto(`/vaults/${vaultId}/expenses/new`);
+        const returnTo = page.url.pathname + page.url.search;
+        const qs = new URLSearchParams({ returnTo });
+        goto(`/vaults/${vaultId}/expenses/new?${qs.toString()}`);
     }
 
     function handleEditVault() {
@@ -485,47 +483,65 @@
             </div>
         {/if}
 
-        <div class="mt-4">
-            <!-- Vault Statistics -->
-            <VaultStatisticsComponent
-                    statistics={statistics}
-                    isLoading={isLoadingStats}
-                    formatCurrency={vaultFormatters.currency}
-                    vaultId={vaultId}
-                    onCardClick={handleStatisticsCardClick}
-            />
-
-            <!-- Expense List -->
-            <div class="mt-6">
-                {#if selectedFundId}
-                    {@const selectedFund = fundRows.find(r => r.fund.id === selectedFundId)}
-                    <div class="flex items-center gap-2 mb-3 px-1">
-                        <span class="text-xs text-muted-foreground">Filtering by fund:</span>
-                        <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                            {#if selectedFund?.fund.icon}{selectedFund.fund.icon}{/if}
-                            {selectedFund?.fund.name ?? selectedFundId}
-                            <button onclick={() => { params.fundId = ''; }} class="ml-1 hover:text-primary/70" aria-label="Clear fund filter">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
+        <!-- Recent activity -->
+        <div class="mt-6">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-3 min-w-0">
+                    <h2 class="text-sm font-semibold text-muted-foreground">Recent activity</h2>
+                    {#if statistics}
+                        <span class="text-xs text-muted-foreground whitespace-nowrap">
+                            · {statistics.total.count} · <span class="font-mono">{vaultFormatters.currency(statistics.total.amount)}</span>
                         </span>
-                    </div>
-                {/if}
-                {#if isLoadingExpenses}
-                    <div class="flex justify-center py-12">
-                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                    </div>
-                {:else}
-                    <ExpenseListByDate
-                        expensesByDate={expensesByDate}
-                        onEdit={handleEditExpense}
-                        onDelete={handleDeleteExpense}
-                        formatCurrency={vaultFormatters.currency}
-                        formatDate={formatDate}
-                    />
-                {/if}
+                    {/if}
+                </div>
+                <a
+                    href="/vaults/{vaultId}/expenses{page.url.search}"
+                    class="text-xs font-medium text-primary hover:underline flex items-center gap-0.5"
+                >
+                    View all
+                    <ArrowRight class="size-3" />
+                </a>
             </div>
+
+            {#if selectedFundId}
+                {@const selectedFund = fundRows.find(r => r.fund.id === selectedFundId)}
+                <div class="flex items-center gap-2 mb-2 px-1">
+                    <span class="text-xs text-muted-foreground">Filtering by fund:</span>
+                    <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                        {#if selectedFund?.fund.icon}{selectedFund.fund.icon}{/if}
+                        {selectedFund?.fund.name ?? selectedFundId}
+                        <button onclick={() => { params.fundId = ''; }} class="ml-1 hover:text-primary/70" aria-label="Clear fund filter">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </span>
+                </div>
+            {/if}
+
+            {#if isLoadingExpenses}
+                <div class="flex justify-center py-12">
+                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+                </div>
+            {:else}
+                <RecentExpenses
+                    expenses={expenses}
+                    limit={10}
+                    onSelect={(e) => handleEditExpense(e.id)}
+                    formatCurrency={vaultFormatters.currency}
+                    formatDate={vaultFormatters.date}
+                />
+                {#if expenses.length > 10}
+                    <div class="mt-3 text-center">
+                        <a
+                            href="/vaults/{vaultId}/expenses{page.url.search}"
+                            class="text-sm font-medium text-primary hover:underline"
+                        >
+                            View all {statistics?.total.count ?? expenses.length} expenses →
+                        </a>
+                    </div>
+                {/if}
+            {/if}
         </div>
 
     {/if}

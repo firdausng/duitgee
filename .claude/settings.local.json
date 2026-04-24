@@ -7,7 +7,15 @@
       "mcp__playwright__browser_navigate",
       "mcp__playwright__browser_snapshot",
       "mcp__playwright__browser_press_key",
-      "mcp__playwright__browser_evaluate"
+      "mcp__playwright__browser_evaluate",
+      "Bash(grep -E \"\\\\[vaultId\\\\]\\\\\\\\\\\\\\\\\\\\+page\\\\.svelte\")",
+      "Bash(grep -E \"statistics\\\\\\\\\\\\\\\\+page|\\\\[vaultId\\\\]\\\\\\\\\\\\\\\\\\\\+page\\\\.svelte\")",
+      "Bash(grep -E \"quick-add-expense|\\\\[vaultId\\\\]\\\\\\\\\\\\\\\\\\\\+layout\")",
+      "mcp__playwright__browser_resize",
+      "Bash(grep -A3 \"\\\\[vaultId\\\\]\\\\\\\\\\\\\\\\\\\\+layout\\\\.svelte:30\")",
+      "Bash(grep -B1 -A3 \"vaultId.\\\\]\\\\\\\\\\\\\\\\\\\\+layout\\\\.svelte\")",
+      "Bash(grep -E \"new\\\\\\\\\\\\\\\\form\\\\\\\\\\\\\\\\\\\\+page\")",
+      "Bash(grep -E \"expandable-fab|\\\\[vaultId\\\\]\\\\\\\\\\\\\\\\\\\\+layout\\\\.svelte\")"
     ]
   }
 }

@@ -15,14 +15,14 @@
     import DateFilterTabs from "./DateFilterTabs.svelte";
     import FilterTypeTabs from "./FilterTypeTabs.svelte";
     import CurrentFilterChip from "./CurrentFilterChip.svelte";
-    import ExpenseListByDate from "./ExpenseListByDate.svelte";
     import CalendarSection from "./CalendarSection.svelte";
+    import { BreakdownBars, type BreakdownRow } from "$lib/components/ui/breakdown-bars";
     import {
         groupExpensesByDate,
-        formatCurrency,
         formatDate,
         getDateFilterLabel
     } from "./utils";
+    import { createVaultFormatters } from "$lib/vaultFormatting";
     import {type DateFilter, getDateRangeFromCalendar} from "$lib/utils";
     import {now, getLocalTimeZone, CalendarDate} from "@internationalized/date";
     import type {DateRange} from "bits-ui";
@@ -348,6 +348,14 @@
     const isLoadingExpenses = $derived(expensesResource.loading);
     const isLoadingStats = $derived(statisticsResource.loading);
 
+    const vaultFormatters = $derived(
+        createVaultFormatters({
+            locale: currentVault?.vaults.locale || 'en-US',
+            currency: currentVault?.vaults.currency || 'USD',
+        }),
+    );
+    const formatCurrency = $derived(vaultFormatters.currency);
+
     // Derive filterId from filterName and statistics data
     const filterId = $derived.by(() => {
         if (!filterName || !statistics) return undefined;
@@ -465,6 +473,53 @@
     function handleBack() {
         goto(`/vaults/${vaultId}`);
     }
+
+    // Rows for the BreakdownBars component, switching data set by filter type.
+    const breakdownRows = $derived.by<BreakdownRow[]>(() => {
+        if (!statistics) return [];
+        switch (filterType) {
+            case 'category':
+                return statistics.byCategory.map((c) => ({
+                    id: c.categoryName,
+                    label: c.categoryName || 'Uncategorized',
+                    icon: c.categoryIcon ?? null,
+                    color: null,
+                    value: c.totalAmount,
+                    count: c.count,
+                }));
+            case 'template':
+                return statistics.byTemplate.map((t) => ({
+                    id: t.templateId,
+                    label: t.templateName || 'No template',
+                    icon: t.templateIcon ?? null,
+                    color: null,
+                    value: t.totalAmount,
+                    count: t.count,
+                }));
+            case 'member':
+                return statistics.byMember.map((m) => ({
+                    id: m.userId,
+                    label: m.displayName || 'Vault-level expense',
+                    icon: null,
+                    color: null,
+                    value: m.totalAmount,
+                    count: m.count,
+                }));
+            default:
+                return [];
+        }
+    });
+
+    // Clicking a bar → drill down to the expense list, pre-filtered by search.
+    function navigateToExpenses(label: string) {
+        const qs = new URLSearchParams();
+        qs.set('filter', filter);
+        if (filter === 'custom' && params.startDate && params.endDate) {
+            qs.set('startDate', params.startDate);
+            qs.set('endDate', params.endDate);
+        }
+        goto(`/vaults/${vaultId}/expenses?${qs.toString()}`);
+    }
 </script>
 
 <svelte:head>
@@ -556,16 +611,14 @@
                 }}
             />
 
-            <!-- Expense List grouped by date -->
-            <div class="space-y-4">
-                <ExpenseListByDate
-                    expensesByDate={allExpensesByDate}
-                    onEdit={handleEditExpense}
-                    onDelete={handleDeleteExpense}
-                    formatCurrency={formatCurrency}
-                    formatDate={formatDate}
-                />
-            </div>
+            <!-- Breakdown bars for the current view type -->
+            <BreakdownBars
+                rows={breakdownRows}
+                limit={5}
+                formatCurrency={formatCurrency}
+                emptyTitle={`No ${filterType} data for this range.`}
+                onSelect={(row) => navigateToExpenses(row.label)}
+            />
         {/if}
     {/if}
 </div>

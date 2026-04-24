@@ -32,3 +32,4 @@ vite.config.ts.timestamp-*
 .idea
 backup
 docs/internal
+.playwright-mcp

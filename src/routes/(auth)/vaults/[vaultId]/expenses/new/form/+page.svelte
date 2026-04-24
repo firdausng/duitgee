@@ -2,11 +2,10 @@
 	import { superForm } from 'sveltekit-superforms';
 	import { valibotClient } from 'sveltekit-superforms/adapters';
 	import { sharedExpenseDefaultsSchema } from '$lib/schemas/expenses';
-	import { afterNavigate, goto } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { ExpenseRow } from '$lib/components/ui/expense-row';
 	import type { ExpenseRowData } from '$lib/components/ui/expense-row/expense-row.svelte';
 	import { paymentTypes } from '$lib/configurations/paymentTypes';
@@ -16,6 +15,10 @@
 	import { ofetch } from 'ofetch';
 	import { localDatetimeToUtcIso, formatDatetimeLocal } from '$lib/utils';
 	import { resolve } from '$app/paths';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import Plus from '@lucide/svelte/icons/plus';
+	import Copy from '@lucide/svelte/icons/copy';
+	import Loader2 from '@lucide/svelte/icons/loader-2';
 
 	let { data } = $props();
 	let isLoading = $state(false);
@@ -78,14 +81,44 @@
 	}
 
 	// --- Navigation ---
-	let previousPage: string = resolve(`/vaults/${data.vaultId}`);
-	afterNavigate(({ from }) => {
-		previousPage = from?.url.pathname || previousPage;
-	});
+	// returnTo is server-validated (scoped to this vault, same-origin). If the
+	// user didn't come via a returnTo-aware link, the server falls back to
+	// /vaults/[vaultId]. We prefer this over afterNavigate's `from` because
+	// that captures arbitrary pages (e.g. the picker) the user doesn't want
+	// to end up on after save.
+	const returnTo = $derived(data.returnTo ?? resolve(`/vaults/${data.vaultId}`));
 
 	function handleBack() {
-		goto(previousPage);
+		goto(returnTo);
 	}
+
+	// --- Disclosure + compact payment chips ---
+	const primaryPaymentValues = ['cash', 'debit', 'credit'];
+	const primaryPayments = paymentTypes.filter((p) => primaryPaymentValues.includes(p.value));
+	const morePayments = paymentTypes.filter((p) => !primaryPaymentValues.includes(p.value));
+
+	// Auto-show More when the active selection isn't one of the primary chips
+	// (e.g. template sets fundId + ewallet — we want the user to see ewallet selected).
+	let showMorePayments = $state(false);
+	$effect(() => {
+		if ($form.paymentType && !primaryPaymentValues.includes($form.paymentType)) {
+			showMorePayments = true;
+		}
+	});
+
+	// Auto-expand "More details" when template pre-filled fund/paid-by/payment
+	// that the user would want to see, OR when there's a validation error there.
+	const shouldExpandDetails = $derived(
+		!!data.template ||
+			!!$form.fundId ||
+			!!$form.paidBy ||
+			!primaryPaymentValues.includes($form.paymentType) ||
+			!!$errors.paymentType ||
+			!!$errors.paidBy ||
+			!!$errors.date,
+	);
+
+	const hasMultipleMembers = $derived((data.members?.length ?? 0) > 1);
 
 	// --- Submit ---
 	async function handleSubmit() {
@@ -167,7 +200,7 @@
 					: `${count} expenses created successfully`,
 			);
 
-			await goto(`/vaults/${data.vaultId}`);
+			await goto(returnTo);
 		} catch (error: any) {
 			console.error({
 				...error,
@@ -189,19 +222,19 @@
 </svelte:head>
 
 <div class="relative min-h-screen flex flex-col">
-	<div class="container mx-auto py-8 px-4 flex-1">
+	<div class="container mx-auto py-6 px-4 flex-1 pb-28">
 		<!-- Header -->
-		<div class="mb-6">
+		<div class="mb-4">
 			<h1 class="text-2xl font-bold">
 				{#if data.template}
 					Expenses from
-					<span class="text-sky-500"
-						><a href="/vaults/{data.vaultId}/templates/{data.template.id}/edit"
+					<span class="text-primary">
+						<a href="/vaults/{data.vaultId}/templates/{data.template.id}/edit"
 							>{data.template.icon} {data.template.name}</a
-						></span
-					>
+						>
+					</span>
 				{:else}
-					Create Expenses
+					New expense
 				{/if}
 			</h1>
 			{#if data.template?.description}
@@ -209,31 +242,14 @@
 			{/if}
 		</div>
 
-		<!-- Actions -->
-		<div class="flex gap-3 mb-6">
-			<Button type="button" variant="outline" onclick={handleBack} disabled={isLoading}>
-				Cancel
-			</Button>
-			<Button
-				type="button"
-				disabled={isLoading}
-				class="flex-1"
-				onclick={handleSubmit}
-			>
-				{#if isLoading}
-					Creating...
-				{:else}
-					{rows.length === 1 ? 'Done' : `Create All (${rows.length} items)`}
-				{/if}
-			</Button>
-		</div>
-
-		<!-- Expense Rows -->
-		<div class="space-y-4 mb-6">
-			<div class="flex items-center justify-between">
-				<h2 class="text-lg font-semibold">Expense Items</h2>
-				<span class="text-sm text-muted-foreground">{rows.length}/{MAX_ROWS}</span>
-			</div>
+		<!-- Expense Items (primary content) -->
+		<div class="space-y-3 mb-4">
+			{#if rows.length > 1}
+				<div class="flex items-center justify-between">
+					<h2 class="text-sm font-medium text-muted-foreground">Items</h2>
+					<span class="text-xs text-muted-foreground">{rows.length}/{MAX_ROWS}</span>
+				</div>
+			{/if}
 
 			{#each rows as row, i (row.id)}
 				<ExpenseRow
@@ -256,101 +272,127 @@
 				<Button
 					type="button"
 					variant="outline"
+					size="sm"
 					class="flex-1"
 					onclick={addRow}
 					disabled={isLoading || rows.length >= MAX_ROWS}
 				>
-					+ Add Item
+					<Plus class="size-3.5" />
+					Add item
 				</Button>
 				<Button
 					type="button"
-					variant="outline"
-					class="flex-1"
+					variant="ghost"
+					size="sm"
 					onclick={() => duplicateRow(rows[rows.length - 1].id)}
 					disabled={isLoading || rows.length >= MAX_ROWS}
 				>
-					+ Duplicate
+					<Copy class="size-3.5" />
+					Duplicate
 				</Button>
 			</div>
 		</div>
 
-		<!-- Shared Defaults -->
-		<Card>
-			<CardHeader>
-				<CardTitle>Shared Details</CardTitle>
-			</CardHeader>
-			<CardContent class="space-y-6">
-				<!-- Payment Type -->
+		<!-- Shared details (collapsed disclosure) -->
+		<details class="group rounded-[var(--radius-md)] border bg-card mb-4" open={shouldExpandDetails}>
+			<summary class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer select-none list-none">
+				<div class="min-w-0">
+					<span class="text-sm font-semibold">More details</span>
+					<p class="text-xs text-muted-foreground mt-0.5 truncate">
+						{#if $form.fundId}Fund · {/if}
+						{#if hasMultipleMembers && $form.paidBy}Paid by · {/if}
+						{paymentTypes.find((p) => p.value === $form.paymentType)?.label ?? $form.paymentType}
+						· {$form.date ? new Date($form.date).toLocaleString(undefined, { month: 'short', day: 'numeric' }) : 'now'}
+					</p>
+				</div>
+				<ChevronDown class="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+			</summary>
+
+			<div class="px-4 pb-4 space-y-5 border-t pt-4">
+				<!-- Payment Type (compact) -->
 				<div class="space-y-2">
-					<Label>Payment Type *</Label>
-					<div class="grid grid-cols-4 gap-2">
-						{#each paymentTypes as pt}
+					<Label>Payment</Label>
+					<div class="flex flex-wrap gap-1.5">
+						{#each primaryPayments as pt}
+							{@const active = $form.paymentType === pt.value}
 							<button
 								type="button"
 								onclick={() => ($form.paymentType = pt.value)}
 								disabled={isLoading}
-								class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
-									{$form.paymentType === pt.value
-										? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-1'
-										: 'border-input'}"
-								aria-label={pt.label}
+								class="inline-flex items-center gap-1.5 px-3 h-9 rounded-[var(--radius-sm)] border text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 {active ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border hover:bg-muted text-muted-foreground'}"
 							>
-								<span class="text-xl">{pt.icon}</span>
-								<span class="text-xs leading-tight">{pt.label}</span>
+								<span>{pt.icon}</span>
+								{pt.label}
 							</button>
 						{/each}
+						{#if !showMorePayments}
+							<button
+								type="button"
+								onclick={() => (showMorePayments = true)}
+								disabled={isLoading}
+								class="inline-flex items-center gap-1 px-3 h-9 rounded-[var(--radius-sm)] border border-dashed border-border text-sm text-muted-foreground hover:bg-muted"
+							>
+								<ChevronDown class="size-3.5" />
+								More
+							</button>
+						{:else}
+							{#each morePayments as pt}
+								{@const active = $form.paymentType === pt.value}
+								<button
+									type="button"
+									onclick={() => ($form.paymentType = pt.value)}
+									disabled={isLoading}
+									class="inline-flex items-center gap-1.5 px-3 h-9 rounded-[var(--radius-sm)] border text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 {active ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border hover:bg-muted text-muted-foreground'}"
+								>
+									<span>{pt.icon}</span>
+									{pt.label}
+								</button>
+							{/each}
+						{/if}
 					</div>
 					{#if $errors.paymentType}
 						<p class="text-sm text-destructive">{$errors.paymentType}</p>
 					{/if}
 				</div>
 
-				<!-- Paid By -->
-				<div class="space-y-2">
-					<Label>Paid By</Label>
-					<div class="grid grid-cols-3 gap-1">
-						<button
-							type="button"
-							onclick={() => ($form.paidBy = '')}
-							disabled={isLoading}
-							class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
-								{!$form.paidBy
-									? 'border-primary bg-primary/10 ring-1 ring-primary'
-									: 'border-input'}"
-						>
-							<span
-								class="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-base"
-								>—</span
-							>
-							<span class="leading-tight">None</span>
-						</button>
-						{#each data.members as member}
+				<!-- Paid By (hidden for solo vaults) -->
+				{#if hasMultipleMembers}
+					<div class="space-y-2">
+						<Label>Paid by</Label>
+						<div class="flex flex-wrap gap-1.5">
 							<button
 								type="button"
-								onclick={() => ($form.paidBy = member.userId)}
+								onclick={() => ($form.paidBy = '')}
 								disabled={isLoading}
-								class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
-									{$form.paidBy === member.userId
-										? 'border-primary bg-primary/10 ring-1 ring-primary'
-										: 'border-input'}"
+								class="inline-flex items-center gap-1.5 px-3 h-9 rounded-[var(--radius-sm)] border text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 {!$form.paidBy ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border hover:bg-muted text-muted-foreground'}"
 							>
-								<span
-									class="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-sm font-semibold"
-								>
-									{member.displayName.charAt(0).toUpperCase()}
-								</span>
-								<span class="leading-tight line-clamp-2">{member.displayName}</span>
+								— None
 							</button>
-						{/each}
+							{#each data.members as member}
+								{@const active = $form.paidBy === member.userId}
+								<button
+									type="button"
+									onclick={() => ($form.paidBy = member.userId)}
+									disabled={isLoading}
+									class="inline-flex items-center gap-1.5 px-3 h-9 rounded-[var(--radius-sm)] border text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 max-w-[12rem] {active ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border hover:bg-muted text-muted-foreground'}"
+									title={member.displayName}
+								>
+									<span class="flex size-5 items-center justify-center rounded-full bg-muted text-[10px] font-semibold shrink-0">
+										{member.displayName.charAt(0).toUpperCase()}
+									</span>
+									<span class="truncate">{member.displayName}</span>
+								</button>
+							{/each}
+						</div>
+						{#if $errors.paidBy}
+							<p class="text-sm text-destructive">{$errors.paidBy}</p>
+						{/if}
 					</div>
-					{#if $errors.paidBy}
-						<p class="text-sm text-destructive">{$errors.paidBy}</p>
-					{/if}
-				</div>
+				{/if}
 
-				<!-- Date and Time -->
+				<!-- Date -->
 				<div class="space-y-2">
-					<Label for="date">Date & Time *</Label>
+					<Label for="date">Date &amp; time</Label>
 					<Input
 						id="date"
 						name="date"
@@ -367,37 +409,27 @@
 				<!-- Fund -->
 				{#if data.funds && data.funds.length > 0}
 					<div class="space-y-2">
-						<Label>Fund (optional)</Label>
-						<div class="grid grid-cols-3 gap-1">
+						<Label>Fund <span class="text-xs text-muted-foreground font-normal">(optional)</span></Label>
+						<div class="flex flex-wrap gap-1.5">
 							<button
 								type="button"
 								onclick={() => ($form.fundId = null)}
 								disabled={isLoading}
-								class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
-									{!$form.fundId
-										? 'border-primary bg-primary/10 ring-1 ring-primary'
-										: 'border-input'}"
+								class="inline-flex items-center gap-1.5 px-3 h-9 rounded-[var(--radius-sm)] border text-sm transition-colors {!$form.fundId ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border hover:bg-muted text-muted-foreground'}"
 							>
-								<span class="text-xl">—</span>
-								<span class="leading-tight">No fund</span>
+								None
 							</button>
 							{#each data.funds as fund}
+								{@const active = $form.fundId === fund.id}
 								<button
 									type="button"
 									onclick={() => ($form.fundId = fund.id)}
 									disabled={isLoading}
-									class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
-										{$form.fundId === fund.id
-											? 'border-primary bg-primary/10 ring-1 ring-primary'
-											: 'border-input'}"
+									class="inline-flex items-center gap-1.5 px-3 h-9 rounded-[var(--radius-sm)] border text-sm transition-colors max-w-[14rem] {active ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border hover:bg-muted text-muted-foreground'}"
+									title={fund.name}
 								>
-									<span class="text-xl">{fund.icon ?? '💰'}</span>
-									<span class="leading-tight line-clamp-2">{fund.name}</span>
-									<span class="text-muted-foreground tabular-nums"
-										>{fund.balance.toLocaleString(undefined, {
-											minimumFractionDigits: 2,
-										})}</span
-									>
+									<span>{fund.icon ?? '💰'}</span>
+									<span class="truncate">{fund.name}</span>
 								</button>
 							{/each}
 						</div>
@@ -405,40 +437,56 @@
 
 					{#if $form.fundId}
 						<div class="space-y-2">
-							<Label>Fund Payment Mode</Label>
+							<Label>Fund payment mode</Label>
 							<div class="grid grid-cols-2 gap-2">
 								<button
 									type="button"
 									onclick={() => ($form.fundPaymentMode = 'paid_by_fund')}
 									disabled={isLoading}
-									class="rounded-md border-2 px-3 py-2.5 text-sm text-center transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
-										{$form.fundPaymentMode === 'paid_by_fund'
-											? 'border-primary bg-primary text-primary-foreground'
-											: 'border-input'}"
+									class="rounded-[var(--radius-sm)] border px-3 py-2.5 text-sm transition-colors {$form.fundPaymentMode === 'paid_by_fund' ? 'border-primary bg-primary text-primary-foreground' : 'border-border hover:bg-muted'}"
 								>
-									Paid by Fund
+									Paid by fund
 								</button>
 								<button
 									type="button"
 									onclick={() => ($form.fundPaymentMode = 'pending_reimbursement')}
 									disabled={isLoading}
-									class="rounded-md border-2 px-3 py-2.5 text-sm text-center transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
-										{$form.fundPaymentMode === 'pending_reimbursement'
-											? 'border-primary bg-primary text-primary-foreground'
-											: 'border-input'}"
+									class="rounded-[var(--radius-sm)] border px-3 py-2.5 text-sm transition-colors {$form.fundPaymentMode === 'pending_reimbursement' ? 'border-primary bg-primary text-primary-foreground' : 'border-border hover:bg-muted'}"
 								>
-									Pending Reimb.
+									Pending reimbursement
 								</button>
 							</div>
 						</div>
 					{/if}
 				{/if}
-			</CardContent>
-		</Card>
+			</div>
+		</details>
+	</div>
 
-		<!-- Mobile: Add bottom padding to account for floating elements -->
-		<div class="sm:hidden pb-24"></div>
+	<!-- Sticky bottom action bar -->
+	<div class="sticky bottom-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 z-30">
+		<div class="container mx-auto px-4 py-3 flex gap-2">
+			<Button type="button" variant="outline" onclick={handleBack} disabled={isLoading}>
+				Cancel
+			</Button>
+			<Button type="button" onclick={handleSubmit} disabled={isLoading} class="flex-1">
+				{#if isLoading}
+					<Loader2 class="size-4 animate-spin" />
+					Saving...
+				{:else if rows.length === 1}
+					Save
+				{:else}
+					Save {rows.length} items
+				{/if}
+			</Button>
+		</div>
 	</div>
 </div>
+
+<style>
+	details > summary::-webkit-details-marker {
+		display: none;
+	}
+</style>
 
 <Toaster />

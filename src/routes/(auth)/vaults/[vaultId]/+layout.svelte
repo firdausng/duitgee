@@ -1,25 +1,48 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
-    import { page } from "$app/state";
-    import { FloatingActionButton } from "$lib/components/ui/floating-action-button";
-    import { setContext } from 'svelte';
-    import { SvelteSet } from 'svelte/reactivity';
+    import { page } from '$app/state';
+    import { ofetch } from 'ofetch';
+    import { resource } from 'runed';
+    import { ExpandableFab, type ExpandableFabTemplate } from '$lib/components/ui/expandable-fab';
 
-    let { children, data } = $props();
+    let { children } = $props();
 
-    let {vaultId} = page.params
-
-    function handleNewExpense() {
-        goto(`/vaults/${vaultId}/expenses/new`);
-    }
+    let { vaultId } = page.params;
 
     let isCreateExpensePage = $derived(page.url.pathname.includes('/expenses/new'));
 
-    let fabItems = new SvelteSet();
-    fabItems.add({
-        label: 'Add Expense',
-        onClick: handleNewExpense
-    });
+    // Current page URL for returnTo propagation.
+    const returnToParam = $derived(encodeURIComponent(page.url.pathname + page.url.search));
+
+    // Fetch top-used templates for the FAB shortcuts. Refetches on navigation so
+    // usage counts stay fresh after a save (which invalidates pages and bumps counts).
+    const templatesResource = resource(
+        () => [vaultId, page.url.pathname] as const,
+        async ([id]) => {
+            try {
+                const response = await ofetch<{
+                    success: boolean;
+                    data: { templates: ExpandableFabTemplate[] };
+                }>(`/api/getExpenseTemplates?vaultId=${id}`);
+                return response.data?.templates ?? [];
+            } catch {
+                return [] as ExpandableFabTemplate[];
+            }
+        },
+    );
+    const templates = $derived(templatesResource.current ?? []);
+
+    // URL builders — all propagate returnTo so the form lands the user back
+    // on the page they started from.
+    const resolveTemplateHref = $derived(
+        (templateId: string) =>
+            `/vaults/${vaultId}/expenses/new/form?templateId=${templateId}&returnTo=${returnToParam}`,
+    );
+    const scratchHref = $derived(
+        `/vaults/${vaultId}/expenses/new/form?returnTo=${returnToParam}`,
+    );
+    const browseHref = $derived(
+        `/vaults/${vaultId}/expenses/new?returnTo=${returnToParam}`,
+    );
 </script>
 
 <div>
@@ -27,31 +50,10 @@
 </div>
 
 {#if !isCreateExpensePage}
-    <div class="fixed bottom-6 right-6 z-40">
-        <div class="relative">
-            {#each fabItems as fab}
-
-                <!-- Floating Action Button -->
-                <FloatingActionButton onclick={fab.onClick}>
-                    {#snippet icon()}
-                        <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="w-5 h-5"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                        >
-                            <path
-                                    fill-rule="evenodd"
-                                    d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                                    clip-rule="evenodd"
-                            />
-                        </svg>
-                    {/snippet}
-                    {fab.label}
-                </FloatingActionButton>
-            {/each}
-        </div>
-    </div>
-
+    <ExpandableFab
+        {templates}
+        {resolveTemplateHref}
+        {scratchHref}
+        {browseHref}
+    />
 {/if}
-

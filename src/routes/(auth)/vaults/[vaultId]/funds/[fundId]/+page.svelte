@@ -9,6 +9,10 @@
     import { toast } from 'svelte-sonner';
     import FundTransactionList from '$lib/components/fund-activity/FundTransactionList.svelte';
     import type { FundTransaction } from '$lib/components/fund-activity/FundTransactionList.svelte';
+    import ArrowRight from '@lucide/svelte/icons/arrow-right';
+    import Archive from '@lucide/svelte/icons/archive';
+    import Plus from '@lucide/svelte/icons/plus';
+    import Minus from '@lucide/svelte/icons/minus';
 
     let { vaultId, fundId } = page.params;
 
@@ -267,24 +271,50 @@
 
         <!-- Actions -->
         {#if fund.status !== 'archived'}
-            <div class="grid gap-3 sm:grid-cols-2">
-                <Button onclick={handleTopUp} class="w-full">Top Up</Button>
-                <Button variant="outline" onclick={handleDeduct} class="w-full">Deduct</Button>
-                <Button variant="outline" onclick={handleReimbursements} class="w-full">
-                    Pending Reimbursements
+            <!-- Primary: Top Up + Deduct -->
+            <div class="flex gap-2">
+                <Button onclick={handleTopUp} class="flex-1">
+                    <Plus class="size-4" />
+                    Top Up
                 </Button>
-                <Button variant="outline" onclick={handleCycles} class="w-full">
-                    Cycle History
-                </Button>
-                <Button variant="outline" onclick={handleActivity} class="w-full sm:col-span-2">
-                    Activity History
+                <Button variant="outline" onclick={handleDeduct} class="flex-1">
+                    <Minus class="size-4" />
+                    Deduct
                 </Button>
             </div>
 
-            <!-- Archive -->
-            <div class="mt-6">
+            <!-- Navigation: list views as inline link rows -->
+            <div class="rounded-[var(--radius-md)] border bg-card divide-y overflow-hidden">
+                <button
+                    type="button"
+                    onclick={handleReimbursements}
+                    class="w-full flex items-center justify-between px-4 py-3 hover:bg-muted transition-colors text-left"
+                >
+                    <span class="text-sm font-medium">Pending reimbursements</span>
+                    <ArrowRight class="size-4 text-muted-foreground" />
+                </button>
+                <button
+                    type="button"
+                    onclick={handleCycles}
+                    class="w-full flex items-center justify-between px-4 py-3 hover:bg-muted transition-colors text-left"
+                >
+                    <span class="text-sm font-medium">Cycle history</span>
+                    <ArrowRight class="size-4 text-muted-foreground" />
+                </button>
+                <button
+                    type="button"
+                    onclick={handleActivity}
+                    class="w-full flex items-center justify-between px-4 py-3 hover:bg-muted transition-colors text-left"
+                >
+                    <span class="text-sm font-medium">Activity history</span>
+                    <ArrowRight class="size-4 text-muted-foreground" />
+                </button>
+            </div>
+
+            <!-- Destructive: archive -->
+            <div>
                 {#if showArchiveConfirm}
-                    <div class="border border-destructive rounded-lg p-4 space-y-3">
+                    <div class="border border-destructive rounded-[var(--radius-md)] p-4 space-y-3 bg-destructive/5">
                         <p class="text-sm text-destructive font-medium">
                             Archive this fund? The active cycle will be closed and no more top-ups or new expenses can be tagged to it.
                         </p>
@@ -295,7 +325,7 @@
                                 disabled={isArchiving}
                                 class="flex-1"
                             >
-                                {isArchiving ? 'Archiving...' : 'Confirm Archive'}
+                                {isArchiving ? 'Archiving...' : 'Confirm archive'}
                             </Button>
                             <Button
                                 variant="outline"
@@ -307,23 +337,34 @@
                         </div>
                     </div>
                 {:else}
-                    <Button
-                        variant="outline"
+                    <button
+                        type="button"
                         onclick={handleArchive}
-                        class="w-full text-destructive hover:text-destructive"
+                        class="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors"
                     >
-                        Archive Fund
-                    </Button>
+                        <Archive class="size-3.5" />
+                        Archive this fund
+                    </button>
                 {/if}
             </div>
         {:else}
-            <div class="grid gap-3 sm:grid-cols-2">
-                <Button variant="outline" onclick={handleCycles} class="w-full">
-                    Cycle History
-                </Button>
-                <Button variant="outline" onclick={handleActivity} class="w-full">
-                    Activity History
-                </Button>
+            <div class="rounded-[var(--radius-md)] border bg-card divide-y overflow-hidden">
+                <button
+                    type="button"
+                    onclick={handleCycles}
+                    class="w-full flex items-center justify-between px-4 py-3 hover:bg-muted transition-colors text-left"
+                >
+                    <span class="text-sm font-medium">Cycle history</span>
+                    <ArrowRight class="size-4 text-muted-foreground" />
+                </button>
+                <button
+                    type="button"
+                    onclick={handleActivity}
+                    class="w-full flex items-center justify-between px-4 py-3 hover:bg-muted transition-colors text-left"
+                >
+                    <span class="text-sm font-medium">Activity history</span>
+                    <ArrowRight class="size-4 text-muted-foreground" />
+                </button>
             </div>
         {/if}
     {/if}

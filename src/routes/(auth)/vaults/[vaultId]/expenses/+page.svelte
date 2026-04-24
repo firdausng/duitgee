@@ -1,5 +1,6 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
+    import { page } from '$app/state';
     import { useSearchParams } from 'runed/kit';
     import { ofetch } from 'ofetch';
     import { resource } from 'runed';
@@ -102,7 +103,9 @@
     }
 
     function handleCreateExpense() {
-        goto(`/vaults/${vaultId}/expenses/new`);
+        const returnTo = page.url.pathname + page.url.search;
+        const qs = new URLSearchParams({ returnTo });
+        goto(`/vaults/${vaultId}/expenses/new?${qs.toString()}`);
     }
 
     function handleEditExpense(expenseId: string) {
