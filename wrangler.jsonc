@@ -23,6 +23,9 @@
   "placement": {
     "mode": "smart"
   },
+  "triggers": {
+    "crons": ["0 1 * * *"]
+  },
   "d1_databases": [
     {
       "binding": "DB",
@@ -45,15 +48,19 @@
   ],
   "vars": {
     "ADMIN_EMAILS": "mail4frenz@gmail.com",
-    "BASE_PATH": "http://localhost:5173",
-    "BETTER_AUTH_URL": "http://localhost:5173",
+    "BASE_PATH": "http://localhost:5205",
+    "BETTER_AUTH_URL": "http://localhost:5205",
     "CALLBACK_PATH": "/vaults",
     "ENVIRONMENT": "development",
     "EMAIL_FROM": "support@mail.duitgee.com",
-    "VAULT_LIMIT": 1
+    "VAULT_LIMIT": 1,
+    "CRON_SECRET": "duitgee@svelte@d2d2c215-a912-4812-bae6-18e739133cff"
   },
   "env": {
     "staging": {
+      "triggers": {
+        "crons": ["0 1 * * *"]
+      },
       "vars": {
         "ADMIN_EMAILS": "mail4frenz@gmail.com",
         "BASE_PATH": "https://duitgee.com",
@@ -61,10 +68,14 @@
         "CALLBACK_PATH": "/vaults",
         "ENVIRONMENT": "staging",
         "EMAIL_FROM": "support@mail.duitgee.com",
-        "VAULT_LIMIT": 1
+        "VAULT_LIMIT": 1,
+        "CRON_SECRET": "duitgee@svelte@d2d2c215-a912-4812-bae6-18e739133cff"
       }
     },
     "production": {
+      "triggers": {
+        "crons": ["0 1 * * *"]
+      },
       "routes": [
         {
           "pattern": "duitgee.com",
@@ -78,7 +89,8 @@
         "CALLBACK_PATH": "/vaults",
         "ENVIRONMENT": "production",
         "EMAIL_FROM": "support@mail.duitgee.com",
-        "VAULT_LIMIT": 1
+        "VAULT_LIMIT": 1,
+        "CRON_SECRET": "duitgee@svelte@d2d2c215-a912-4812-bae6-18e739133cff"
       },
       "d1_databases": [
         {

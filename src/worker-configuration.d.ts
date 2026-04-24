@@ -5,14 +5,15 @@ declare namespace Cloudflare {
 	interface Env {
 		KV: KVNamespace;
 		ADMIN_EMAILS: string;
-		BASE_PATH: "http://localhost:5173" | "https://duitgee.com";
-		BETTER_AUTH_URL: "http://localhost:5173" | "https://duitgee.com";
+		BASE_PATH: "http://localhost:5205" | "https://duitgee.com";
+		BETTER_AUTH_URL: "http://localhost:5205" | "https://duitgee.com";
         TRUSTED_ORIGINS: string;
         BETTER_AUTH_SECRET: string;
         GOOGLE_CLIENT_ID: string;
         GOOGLE_CLIENT_SECRET: string;
         POSTHOG_KEY: string;
         RESEND_API_KEY: string;
+        CRON_SECRET: string;
 		CALLBACK_PATH: string;
 		ENVIRONMENT: "development" | "staging" | "production";
 		EMAIL_FROM: string;
