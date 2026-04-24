@@ -5,6 +5,7 @@
     import { resource } from 'runed';
     import { Button } from '$lib/components/ui/button';
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+    import { CheckboxRow } from '$lib/components/ui/checkbox-row';
     import { Toaster } from '$lib/components/ui/sonner';
     import { toast } from 'svelte-sonner';
     import RefreshCw from '@lucide/svelte/icons/refresh-cw';
@@ -150,14 +151,13 @@
         </Card>
     {:else}
         {#if archivedCount > 0}
-            <label class="flex items-center gap-2 mb-4 cursor-pointer w-fit">
-                <input
-                    type="checkbox"
-                    class="rounded border-input"
-                    bind:checked={showArchivedFunds}
-                />
-                <span class="text-sm text-muted-foreground">Show archived funds ({archivedCount})</span>
-            </label>
+            <CheckboxRow bind:checked={showArchivedFunds} class="mb-4 w-fit">
+                {#snippet label()}
+                    <span class="text-sm font-normal text-muted-foreground">
+                        Show archived funds ({archivedCount})
+                    </span>
+                {/snippet}
+            </CheckboxRow>
         {/if}
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {#each visibleRows as row (row.fund.id)}

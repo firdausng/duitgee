@@ -5,6 +5,7 @@
     import { resource } from 'runed';
     import { Button } from '$lib/components/ui/button';
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+    import { Checkbox } from '$lib/components/ui/checkbox';
     import { Toaster } from '$lib/components/ui/sonner';
     import { toast } from 'svelte-sonner';
     import X from '@lucide/svelte/icons/x';
@@ -100,6 +101,15 @@
     const totalSelected = $derived(
         pending.filter((p) => selected.has(p.transaction.id)).reduce((sum, p) => sum + p.expense.amount, 0)
     );
+
+    // Header checkbox state. `indeterminate` while selection is partial.
+    const allChecked = $derived(pending.length > 0 && selected.size === pending.length);
+    const someChecked = $derived(selected.size > 0 && selected.size < pending.length);
+
+    function toggleAll() {
+        if (allChecked) clearSelection();
+        else selectAll();
+    }
 
     async function handleSettle() {
         if (selected.size === 0) {
@@ -198,11 +208,22 @@
     {:else}
         <!-- Settle bar -->
         <div class="mb-4 flex flex-wrap items-center gap-3">
-            <Button variant="outline" size="sm" onclick={selectAll}>Select All</Button>
+            <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <Checkbox
+                    size="md"
+                    checked={allChecked}
+                    indeterminate={someChecked}
+                    onCheckedChange={toggleAll}
+                />
+                <span class="text-sm font-medium">
+                    {selected.size > 0
+                        ? `${selected.size} of ${pending.length} selected`
+                        : `Select all (${pending.length})`}
+                </span>
+            </label>
             {#if selected.size > 0}
-                <Button variant="outline" size="sm" onclick={clearSelection}>Clear</Button>
                 <span class="text-sm text-muted-foreground">
-                    {selected.size} selected — Total: {totalSelected.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    · Total: {totalSelected.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
                 <Button onclick={handleSettle} disabled={isSettling} class="ml-auto">
                     {isSettling ? 'Settling...' : 'Settle Selected'}
@@ -221,14 +242,13 @@
                         >
                             <Card class={selected.has(item.transaction.id) ? 'border-primary bg-primary/5' : 'hover:shadow-sm'}>
                                 <CardContent class="py-3 px-4 flex items-center gap-3">
-                                    <div class="flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center
-                                        {selected.has(item.transaction.id) ? 'bg-primary border-primary' : 'border-muted-foreground'}">
-                                        {#if selected.has(item.transaction.id)}
-                                            <svg class="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                                            </svg>
-                                        {/if}
-                                    </div>
+                                    <Checkbox
+                                        size="md"
+                                        checked={selected.has(item.transaction.id)}
+                                        tabindex={-1}
+                                        aria-hidden="true"
+                                        class="shrink-0 pointer-events-none"
+                                    />
                                     <div class="flex-1 min-w-0">
                                         <p class="font-medium truncate">{item.expense.note || '(no description)'}</p>
                                         <p class="text-xs text-muted-foreground">

@@ -7,6 +7,7 @@
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+    import { CheckboxRow } from '$lib/components/ui/checkbox-row';
     import { IconCombobox } from '$lib/components/ui/icon-combobox';
     import { iconData } from '$lib/configurations/icons';
     import { Toaster } from '$lib/components/ui/sonner';
@@ -55,8 +56,8 @@
     // Carry-over is only relevant for scheduled (non-manual) replenishment types
     const showCarryOver = $derived(data.replenishmentType !== 'manual');
 
-    function handleCarryOverToggle(e: Event) {
-        if (!(e.target as HTMLInputElement).checked) {
+    function handleCarryOverToggle(checked: boolean) {
+        if (!checked) {
             $form.carryOverFundId = '';
         }
     }
@@ -208,22 +209,17 @@
                 <!-- Carry Over Balance (only for scheduled types) -->
                 {#if showCarryOver}
                     <div class="rounded-lg border p-4 space-y-3">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <p class="text-sm font-medium">Carry Over Balance</p>
-                                <p class="text-xs text-muted-foreground mt-0.5">
-                                    Transfer remaining balance to another fund when this cycle ends
-                                </p>
-                            </div>
-                            <input
-                                type="checkbox"
-                                name="carryOverBalance"
-                                bind:checked={$form.carryOverBalance}
-                                onchange={handleCarryOverToggle}
-                                disabled={$delayed}
-                                class="mt-1 h-4 w-4 rounded border-input"
-                            />
-                        </div>
+                        <CheckboxRow
+                            name="carryOverBalance"
+                            bind:checked={$form.carryOverBalance}
+                            onCheckedChange={handleCarryOverToggle}
+                            disabled={$delayed}
+                        >
+                            {#snippet label()}Carry over balance{/snippet}
+                            {#snippet description()}
+                                Transfer remaining balance to another fund when this cycle ends.
+                            {/snippet}
+                        </CheckboxRow>
                         {#if $form.carryOverBalance}
                             <div class="space-y-2">
                                 <Label for="carryOverFundId">Transfer To</Label>

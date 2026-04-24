@@ -24,6 +24,7 @@
     import { Button } from '$lib/components/ui/button';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
+    import { Checkbox } from '$lib/components/ui/checkbox';
     import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 
     let { options, editing = null, onApply, trigger }: AddFilterPopoverProps = $props();
@@ -232,32 +233,32 @@
                                 {#each options.category as v (v)}
                                     {@const active = selectedValues.includes(v)}
                                     <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
-                                        <input type="checkbox" checked={active} onchange={() => toggleValue(v)} class="accent-primary" />
+                                        <Checkbox checked={active} onCheckedChange={() => toggleValue(v)} />
                                         <span class="truncate">{v || '—'}</span>
                                     </label>
                                 {/each}
                             {:else if field === 'fund'}
                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
-                                    <input type="checkbox" checked={selectedValues.includes('__none__')} onchange={() => toggleValue('__none__')} class="accent-primary" />
+                                    <Checkbox checked={selectedValues.includes('__none__')} onCheckedChange={() => toggleValue('__none__')} />
                                     <span class="text-muted-foreground">No fund</span>
                                 </label>
                                 {#each options.fund as fund (fund.id)}
                                     {@const active = selectedValues.includes(fund.id)}
                                     <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
-                                        <input type="checkbox" checked={active} onchange={() => toggleValue(fund.id)} class="accent-primary" />
+                                        <Checkbox checked={active} onCheckedChange={() => toggleValue(fund.id)} />
                                         <span>{fund.icon ?? '💰'}</span>
                                         <span class="truncate">{fund.name}</span>
                                     </label>
                                 {/each}
                             {:else if field === 'paidBy'}
                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
-                                    <input type="checkbox" checked={selectedValues.includes('__vault__')} onchange={() => toggleValue('__vault__')} class="accent-primary" />
+                                    <Checkbox checked={selectedValues.includes('__vault__')} onCheckedChange={() => toggleValue('__vault__')} />
                                     <span class="text-muted-foreground">Vault-level</span>
                                 </label>
                                 {#each options.paidBy as member (member.id)}
                                     {@const active = selectedValues.includes(member.id)}
                                     <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
-                                        <input type="checkbox" checked={active} onchange={() => toggleValue(member.id)} class="accent-primary" />
+                                        <Checkbox checked={active} onCheckedChange={() => toggleValue(member.id)} />
                                         <span class="truncate">{member.name}</span>
                                     </label>
                                 {/each}
@@ -265,7 +266,7 @@
                                 {#each options.paymentType as pt (pt.value)}
                                     {@const active = selectedValues.includes(pt.value)}
                                     <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
-                                        <input type="checkbox" checked={active} onchange={() => toggleValue(pt.value)} class="accent-primary" />
+                                        <Checkbox checked={active} onCheckedChange={() => toggleValue(pt.value)} />
                                         <span>{pt.icon ?? ''}</span>
                                         <span class="truncate">{pt.label}</span>
                                     </label>
@@ -274,9 +275,9 @@
                         </div>
                     {/if}
 
-                    <!-- Negation toggle -->
+                    <!-- Negation toggle — destructive variant signals that it inverts the whole filter. -->
                     <label class="flex items-center gap-2 px-2 py-1 text-xs cursor-pointer">
-                        <input type="checkbox" bind:checked={negated} class="accent-destructive" />
+                        <Checkbox bind:checked={negated} variant="destructive" />
                         <span class="text-muted-foreground">Negate <span class="font-semibold">NOT</span></span>
                     </label>
 
