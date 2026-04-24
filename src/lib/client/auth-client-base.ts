@@ -1,24 +1,28 @@
-import {createAuthClient} from "better-auth/client";
-import {plugins} from "$lib/better-auth";
+import { createAuthClient } from 'better-auth/client';
+import { adminClient, anonymousClient, organizationClient } from 'better-auth/client/plugins';
 
-export const authClientBase = ({basePath}: {basePath:string}) => createAuthClient({
-    baseURL: basePath,
-    plugins: plugins,
-    session: {
-        cookieCache: {
-            enabled: true,
-            maxAge: 5 * 60 // Cache duration in seconds
-        }
-    }
-});
+const clientPlugins = [adminClient(), anonymousClient(), organizationClient()];
 
-export const adminAuthClientBase = ({basePath}: {basePath:string}) => createAuthClient({
-    baseURL: basePath,
-    plugins: plugins,
-    session: {
-        cookieCache: {
-            enabled: true,
-            maxAge: 5 * 60 // Cache duration in seconds
-        }
-    }
-});
+export const authClientBase = ({ basePath }: { basePath: string }) =>
+    createAuthClient({
+        baseURL: basePath,
+        plugins: clientPlugins,
+        session: {
+            cookieCache: {
+                enabled: true,
+                maxAge: 5 * 60, // Cache duration in seconds
+            },
+        },
+    });
+
+export const adminAuthClientBase = ({ basePath }: { basePath: string }) =>
+    createAuthClient({
+        baseURL: basePath,
+        plugins: clientPlugins,
+        session: {
+            cookieCache: {
+                enabled: true,
+                maxAge: 5 * 60,
+            },
+        },
+    });

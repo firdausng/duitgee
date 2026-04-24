@@ -5,11 +5,12 @@ import type { PageServerLoad } from './$types';
 
 const PAGE_SIZE = 50;
 
-export const load: PageServerLoad = async ({ platform, url }) => {
+export const load: PageServerLoad = async ({ platform, url, locals }) => {
     if (platform === undefined) {
         throw new Error('No platform');
     }
     const authClient = drizzle(platform.env.AUTH_DB, { schema: authSchema });
+    const currentUserId = locals.currentUser?.id ?? null;
 
     const q = url.searchParams.get('q')?.trim() ?? '';
     const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
@@ -55,5 +56,6 @@ export const load: PageServerLoad = async ({ platform, url }) => {
             totalPages: Math.max(1, Math.ceil(totalRow.n / PAGE_SIZE)),
         },
         query: q,
+        currentUserId,
     };
 };

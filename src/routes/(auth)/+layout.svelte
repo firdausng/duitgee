@@ -42,6 +42,17 @@
         await goto('/login');
     }
 
+    let stoppingImpersonation = $state(false);
+    async function stopImpersonating() {
+        stoppingImpersonation = true;
+        try {
+            await authClient.admin.stopImpersonating();
+            window.location.href = '/ops/users';
+        } catch {
+            stoppingImpersonation = false;
+        }
+    }
+
 	function closeDrawer() {
 		drawerOpen = false;
 	}
@@ -54,6 +65,28 @@
 </script>
 
 <div class="min-h-screen bg-background">
+	{#if data.isImpersonating}
+		<div class="sticky top-0 z-[60] w-full bg-amber-500/90 text-amber-950 text-sm">
+			<div class="container mx-auto flex h-9 max-w-screen-2xl items-center justify-between gap-4 px-4">
+				<div class="flex items-center gap-2 min-w-0">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4 shrink-0"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/></svg>
+					<span class="truncate">
+						Impersonating <strong>{data.user?.name || data.user?.email}</strong>
+						{#if data.user?.email && data.user?.name}
+							<span class="opacity-75">({data.user.email})</span>
+						{/if}
+					</span>
+				</div>
+				<button
+					onclick={stopImpersonating}
+					disabled={stoppingImpersonation}
+					class="shrink-0 rounded-md bg-amber-950 text-amber-50 px-2.5 py-0.5 text-xs font-medium hover:bg-amber-900 disabled:opacity-50"
+				>
+					{stoppingImpersonation ? 'Stopping...' : 'Stop'}
+				</button>
+			</div>
+		</div>
+	{/if}
 	<!-- Header -->
 	<header class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
 		<div class="container mx-auto flex h-14 max-w-screen-2xl items-center justify-between px-4">

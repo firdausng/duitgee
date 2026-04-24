@@ -3,7 +3,7 @@ import * as schema from '$lib/server/db/schema';
 import { expenseTemplates } from '$lib/server/db/schema';
 import { eq, isNull, and } from 'drizzle-orm';
 import type { GetExpenseTemplateQuery } from '$lib/schemas/expenseTemplates';
-import { checkVaultPermission } from '$lib/server/utils/vaultPermissions';
+import { getUserVaultRole } from '$lib/server/utils/vaultPermissions';
 
 export const getExpenseTemplate = async (
 	session: App.AuthSession,
@@ -13,9 +13,9 @@ export const getExpenseTemplate = async (
 	const client = drizzle(env.DB, { schema });
 	const { vaultId, id } = query;
 
-	// Check if user is a member of this vault
-	const hasAccess = await checkVaultPermission(session.user.id, vaultId, 'canEditExpenses', env);
-	if (!hasAccess) {
+	// Any active vault member can read templates
+	const role = await getUserVaultRole(session.user.id, vaultId, env);
+	if (!role) {
 		throw new Error('You do not have access to this vault');
 	}
 

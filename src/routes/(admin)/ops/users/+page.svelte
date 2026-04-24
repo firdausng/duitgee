@@ -5,12 +5,31 @@
     import Search from '@lucide/svelte/icons/search';
     import ChevronLeft from '@lucide/svelte/icons/chevron-left';
     import ChevronRight from '@lucide/svelte/icons/chevron-right';
+    import LogIn from '@lucide/svelte/icons/log-in';
+    import Loader2 from '@lucide/svelte/icons/loader-2';
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
+    import { authClientBase } from '$lib/client/auth-client-base';
 
     let { data } = $props();
 
     let searchInput = $state(data.query);
+    let impersonatingId = $state<string | null>(null);
+    let impersonateError = $state<string | null>(null);
+
+    const authClient = $derived(authClientBase({ basePath: page.url.origin }));
+
+    async function impersonate(userId: string) {
+        impersonatingId = userId;
+        impersonateError = null;
+        try {
+            await authClient.admin.impersonateUser({ userId });
+            window.location.href = '/vaults';
+        } catch (err) {
+            impersonateError = err instanceof Error ? err.message : 'Failed to impersonate';
+            impersonatingId = null;
+        }
+    }
 
     function runSearch(e: SubmitEvent) {
         e.preventDefault();
@@ -73,6 +92,7 @@
                             <th class="px-4 py-2 font-medium">Role</th>
                             <th class="px-4 py-2 font-medium">Flags</th>
                             <th class="px-4 py-2 font-medium text-right">Created</th>
+                            <th class="px-4 py-2 font-medium text-right"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -125,11 +145,28 @@
                                 <td class="px-4 py-2 text-right text-muted-foreground text-xs whitespace-nowrap">
                                     {formatDate(user.createdAt)}
                                 </td>
+                                <td class="px-4 py-2 text-right">
+                                    {#if user.id !== data.currentUserId && user.role !== 'admin' && !user.banned}
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            disabled={impersonatingId !== null}
+                                            onclick={() => impersonate(user.id)}
+                                        >
+                                            {#if impersonatingId === user.id}
+                                                <Loader2 class="size-3.5 animate-spin" />
+                                            {:else}
+                                                <LogIn class="size-3.5" />
+                                            {/if}
+                                            Impersonate
+                                        </Button>
+                                    {/if}
+                                </td>
                             </tr>
                         {/each}
                         {#if data.users.length === 0}
                             <tr>
-                                <td colspan="5" class="px-4 py-10 text-center text-muted-foreground">
+                                <td colspan="6" class="px-4 py-10 text-center text-muted-foreground">
                                     No users match.
                                 </td>
                             </tr>
@@ -139,6 +176,12 @@
             </div>
         </CardContent>
     </Card>
+
+    {#if impersonateError}
+        <div class="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            {impersonateError}
+        </div>
+    {/if}
 
     {#if data.pagination.totalPages > 1}
         <div class="flex items-center justify-between">

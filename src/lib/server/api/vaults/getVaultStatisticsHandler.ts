@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
 import { expenses, expenseTemplates, vaultMembers } from "$lib/server/db/schema";
 import { eq, and, sql, isNull } from "drizzle-orm";
-import { checkVaultPermission } from "$lib/server/utils/vaultPermissions";
+import { getUserVaultRole } from "$lib/server/utils/vaultPermissions";
 import { categoryData } from "$lib/configurations/categories";
 
 export const getVaultStatistics = async (
@@ -14,9 +14,9 @@ export const getVaultStatistics = async (
     const client = drizzle(env.DB, { schema });
     const { startDate, endDate, fundId } = options || {};
 
-    // Check if user has access to this vault
-    const hasAccess = await checkVaultPermission(session.user.id, vaultId, 'canEditVault', env);
-    if (!hasAccess) {
+    // Any active vault member can read statistics
+    const role = await getUserVaultRole(session.user.id, vaultId, env);
+    if (!role) {
         throw new Error('You do not have access to this vault');
     }
 

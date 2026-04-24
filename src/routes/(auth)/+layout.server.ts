@@ -23,5 +23,6 @@ export const load: LayoutServerLoad = async ({locals, url, params, platform, fet
         basePath: platform.env.BASE_PATH,
         vaults,
         user: locals.currentUser,
+        isImpersonating: !!locals.currentSession?.session?.impersonatedBy,
     };
 }
