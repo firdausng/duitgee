@@ -1,9 +1,11 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
+    import { onMount } from 'svelte';
     import { useSearchParams } from 'runed/kit';
     import { ofetch } from 'ofetch';
     import { resource } from 'runed';
+    import { isToday, isYesterday } from 'date-fns';
     import { Button } from '$lib/components/ui/button';
     import { Input } from '$lib/components/ui/input';
     import { Amount } from '$lib/components/ui/amount';
@@ -12,6 +14,7 @@
     import { DateRangeFilter } from '$lib/components/ui/date-range-filter';
     import { localDatetimeToUtcIso, getDateRange, type DateFilter } from '$lib/utils';
     import { createVaultFormatters } from '$lib/vaultFormatting';
+    import { groupExpensesByDay } from '$lib/utils/groupExpensesByDay';
     import { filterSchema } from './schemas';
     import {
         decodePills,
@@ -29,6 +32,10 @@
     import ArrowRight from '@lucide/svelte/icons/arrow-right';
     import Filter from '@lucide/svelte/icons/filter';
     import X from '@lucide/svelte/icons/x';
+    import CalendarDays from '@lucide/svelte/icons/calendar-days';
+    import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+
+    const GROUP_BY_DAY_STORAGE_KEY = 'dg:expenses:groupByDay';
 
     let { data } = $props();
     let { vaultId, vault } = data;
@@ -55,6 +62,7 @@
         fundId: string | null;
         fundName: string | null;
         fundIcon: string | null;
+        recurringExpenseId: string | null;
         date: string;
     };
 
@@ -240,6 +248,26 @@
 
     // Total of currently visible expenses
     const visibleTotal = $derived(visibleExpenses.reduce((sum, e) => sum + e.amount, 0));
+
+    // Group-by-day toggle (persisted in localStorage, shared across vaults)
+    let groupByDay = $state(false);
+
+    onMount(() => {
+        groupByDay = localStorage.getItem(GROUP_BY_DAY_STORAGE_KEY) === 'true';
+    });
+
+    function toggleGroupByDay() {
+        groupByDay = !groupByDay;
+        localStorage.setItem(GROUP_BY_DAY_STORAGE_KEY, String(groupByDay));
+    }
+
+    const dayGroups = $derived(groupByDay ? groupExpensesByDay(visibleExpenses) : []);
+
+    function dayLabel(dayStart: Date): string {
+        if (isToday(dayStart)) return 'Today';
+        if (isYesterday(dayStart)) return 'Yesterday';
+        return fmt.date(dayStart.toISOString());
+    }
 </script>
 
 <svelte:head>
@@ -297,6 +325,17 @@
             endDate={params.endDate}
             onChange={handleDateRangeChange}
         />
+        <Button
+            type="button"
+            variant={groupByDay ? 'default' : 'outline'}
+            size="sm"
+            onclick={toggleGroupByDay}
+            aria-pressed={groupByDay}
+            title={groupByDay ? 'Turn off day grouping' : 'Group by day'}
+        >
+            <CalendarDays class="size-3.5" />
+            <span class="hidden sm:inline">Group by day</span>
+        </Button>
         {#if hasAnyFilter}
             <Button
                 type="button"
@@ -391,84 +430,115 @@
                 </EmptyState>
             {/if}
         </div>
-    {:else}
-        <div class="border rounded-[var(--radius-md)] bg-card divide-y divide-border overflow-hidden">
-            {#each visibleExpenses as expense (expense.id)}
-                {@const isNegative = expense.amount > 0}
-                <div class="group flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors">
-                    <!-- Category icon -->
-                    <span
-                        class="text-xl leading-none shrink-0 select-none"
-                        style={expense.category?.color ? `background: ${expense.category.color}15; padding: 6px; border-radius: var(--radius-sm);` : ''}
-                        aria-hidden="true"
-                    >
-                        {expense.category?.icon ?? '📝'}
-                    </span>
-
-                    <!-- Middle: description + metadata -->
-                    <div class="flex-1 min-w-0">
-                        <!-- Title on its own full-width row -->
-                        <p class="font-medium break-words">
-                            {expense.note || expense.category?.name || 'Expense'}
-                        </p>
-                        <!-- Meta on left, amount + date stacked on right -->
-                        <div class="flex items-start justify-between gap-2 mt-0.5">
-                            <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground min-w-0">
-                                {#if expense.category?.name}
-                                    <span>{expense.category.name}</span>
-                                {/if}
-                                {#if expense.fundName}
-                                    <span class="opacity-50">·</span>
-                                    <span title={expense.fundName}>
-                                        {expense.fundIcon ?? ''} {expense.fundName}
-                                    </span>
-                                {/if}
-                                {#if expense.paidByName}
-                                    <span class="opacity-50">·</span>
-                                    <span>{expense.paidByName}</span>
-                                {/if}
-                            </div>
-                            <div class="shrink-0 flex flex-col items-end gap-0.5">
-                                <Amount
-                                    value={isNegative ? -expense.amount : expense.amount}
-                                    sign="negative"
-                                    showSign={false}
-                                    formatted={fmt.currency(expense.amount)}
-                                    size="sm"
-                                />
-                                <span class="text-xs text-muted-foreground whitespace-nowrap">
-                                    {fmt.date(expense.date)}
-                                </span>
-                            </div>
-                        </div>
+    {:else if groupByDay}
+        <div class="flex flex-col gap-4">
+            {#each dayGroups as group (group.dayKey)}
+                <div>
+                    <div class="flex items-center justify-between gap-3 px-1 pb-1.5">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            {dayLabel(group.dayStartLocal)}
+                        </span>
+                        <span class="text-xs text-muted-foreground whitespace-nowrap">
+                            {group.count} {group.count === 1 ? 'entry' : 'entries'}
+                            · <span class="font-mono">{fmt.currency(group.total)}</span>
+                        </span>
                     </div>
-
-                    <!-- Actions (show on hover at md+, always visible on mobile) -->
-                    <div class="flex gap-1 shrink-0 opacity-0 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                        <button
-                            type="button"
-                            onclick={() => handleEditExpense(expense.id)}
-                            class="p-1.5 rounded-[var(--radius-sm)] hover:bg-muted text-muted-foreground hover:text-foreground"
-                            aria-label="Edit"
-                            title="Edit"
-                        >
-                            <Pencil class="size-3.5" />
-                        </button>
-                        <button
-                            type="button"
-                            onclick={() => handleDeleteExpense(expense.id)}
-                            class="p-1.5 rounded-[var(--radius-sm)] hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                            aria-label="Delete"
-                            title="Delete"
-                        >
-                            <Trash2 class="size-3.5" />
-                        </button>
+                    <div class="border rounded-[var(--radius-md)] bg-card divide-y divide-border overflow-hidden">
+                        {#each group.items as expense (expense.id)}
+                            {@render expenseRow(expense)}
+                        {/each}
                     </div>
                 </div>
             {/each}
         </div>
+    {:else}
+        <div class="border rounded-[var(--radius-md)] bg-card divide-y divide-border overflow-hidden">
+            {#each visibleExpenses as expense (expense.id)}
+                {@render expenseRow(expense)}
+            {/each}
+        </div>
     {/if}
 </div>
+
+{#snippet expenseRow(expense: Expense)}
+    {@const isNegative = expense.amount > 0}
+    <div class="group flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors">
+        <!-- Category icon -->
+        <span
+            class="text-xl leading-none shrink-0 select-none"
+            style={expense.category?.color ? `background: ${expense.category.color}15; padding: 6px; border-radius: var(--radius-sm);` : ''}
+            aria-hidden="true"
+        >
+            {expense.category?.icon ?? '📝'}
+        </span>
+
+        <!-- Middle: description + metadata -->
+        <div class="flex-1 min-w-0">
+            <!-- Title on its own full-width row -->
+            <p class="font-medium break-words">
+                {expense.note || expense.category?.name || 'Expense'}
+                {#if expense.recurringExpenseId}
+                    <RefreshCw
+                        class="inline-block size-3 text-muted-foreground align-middle ml-1 shrink-0"
+                        aria-label="From recurring rule"
+                    />
+                {/if}
+            </p>
+            <!-- Meta on left, amount + date stacked on right -->
+            <div class="flex items-start justify-between gap-2 mt-0.5">
+                <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground min-w-0">
+                    {#if expense.category?.name}
+                        <span>{expense.category.name}</span>
+                    {/if}
+                    {#if expense.fundName}
+                        <span class="opacity-50">·</span>
+                        <span title={expense.fundName}>
+                            {expense.fundIcon ?? ''} {expense.fundName}
+                        </span>
+                    {/if}
+                    {#if expense.paidByName}
+                        <span class="opacity-50">·</span>
+                        <span>{expense.paidByName}</span>
+                    {/if}
+                </div>
+                <div class="shrink-0 flex flex-col items-end gap-0.5">
+                    <Amount
+                        value={isNegative ? -expense.amount : expense.amount}
+                        sign="negative"
+                        showSign={false}
+                        formatted={fmt.currency(expense.amount)}
+                        size="sm"
+                    />
+                    <span class="text-xs text-muted-foreground whitespace-nowrap">
+                        {fmt.date(expense.date)}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions (show on hover at md+, always visible on mobile) -->
+        <div class="flex gap-1 shrink-0 opacity-0 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+            <button
+                type="button"
+                onclick={() => handleEditExpense(expense.id)}
+                class="p-1.5 rounded-[var(--radius-sm)] hover:bg-muted text-muted-foreground hover:text-foreground"
+                aria-label="Edit"
+                title="Edit"
+            >
+                <Pencil class="size-3.5" />
+            </button>
+            <button
+                type="button"
+                onclick={() => handleDeleteExpense(expense.id)}
+                class="p-1.5 rounded-[var(--radius-sm)] hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                aria-label="Delete"
+                title="Delete"
+            >
+                <Trash2 class="size-3.5" />
+            </button>
+        </div>
+    </div>
+{/snippet}
 
 <style>
     /* Make hover-action buttons visible on touch devices too. */

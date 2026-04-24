@@ -1,8 +1,16 @@
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/server/db/schema';
 import * as authSchema from '$lib/server/db/better-auth-schema';
-import { funds, fundPolicies, vaults, fundCycles, expenses } from '$lib/server/db/schema';
-import { and, eq, isNull, isNotNull, count, or, gte, ne } from 'drizzle-orm';
+import {
+    funds,
+    fundPolicies,
+    vaults,
+    fundCycles,
+    expenses,
+    recurringExpenses,
+    expenseTemplates,
+} from '$lib/server/db/schema';
+import { and, eq, isNull, isNotNull, count, or, gte, ne, asc } from 'drizzle-orm';
 import { subDays } from 'date-fns';
 import type { PageServerLoad } from './$types';
 
@@ -23,6 +31,7 @@ export const load: PageServerLoad = async ({ platform }) => {
         [proVaultCount],
         [fundCount],
         [expenseCount],
+        [recurringCount],
     ] = await Promise.all([
         authClient
             .select({ n: count() })
@@ -51,6 +60,15 @@ export const load: PageServerLoad = async ({ platform }) => {
             .from(funds)
             .where(and(isNull(funds.deletedAt), eq(funds.status, 'active'))),
         client.select({ n: count() }).from(expenses).where(isNull(expenses.deletedAt)),
+        client
+            .select({ n: count() })
+            .from(recurringExpenses)
+            .where(
+                and(
+                    isNull(recurringExpenses.deletedAt),
+                    eq(recurringExpenses.status, 'active'),
+                ),
+            ),
     ]);
 
     const rows = await client
@@ -80,8 +98,33 @@ export const load: PageServerLoad = async ({ platform }) => {
         )
         .orderBy(funds.name);
 
+    const recurringRules = await client
+        .select({
+            ruleId: recurringExpenses.id,
+            ruleName: recurringExpenses.name,
+            vaultId: recurringExpenses.vaultId,
+            vaultName: vaults.name,
+            templateName: expenseTemplates.name,
+            scheduleUnit: recurringExpenses.scheduleUnit,
+            scheduleInterval: recurringExpenses.scheduleInterval,
+            generationMode: recurringExpenses.generationMode,
+            nextOccurrenceAt: recurringExpenses.nextOccurrenceAt,
+        })
+        .from(recurringExpenses)
+        .innerJoin(vaults, eq(vaults.id, recurringExpenses.vaultId))
+        .leftJoin(expenseTemplates, eq(expenseTemplates.id, recurringExpenses.templateId))
+        .where(
+            and(
+                eq(recurringExpenses.status, 'active'),
+                isNull(recurringExpenses.deletedAt),
+                isNull(vaults.deletedAt),
+            ),
+        )
+        .orderBy(asc(recurringExpenses.nextOccurrenceAt));
+
     return {
         fundsWithPolicy: rows,
+        recurringRules,
         stats: {
             users: userCount.n,
             anonymousUsers: anonymousCount.n,
@@ -90,6 +133,7 @@ export const load: PageServerLoad = async ({ platform }) => {
             proVaults: proVaultCount.n,
             funds: fundCount.n,
             expenses: expenseCount.n,
+            recurring: recurringCount.n,
         },
     };
 };

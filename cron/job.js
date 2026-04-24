@@ -20,23 +20,28 @@ worker_default.scheduled = async (event, env, ctx) => {
 
     const origin = env.BASE_PATH || 'https://duitgee.com';
 
-    try {
-        const req = new Request(`${origin}/_cron/funds`, {
-            method: 'POST',
-            headers: {
-                'content-type': 'application/json',
-                'x-cron-secret': env.CRON_SECRET,
-            },
-            body: JSON.stringify({}),
-        });
-        const res = await worker_default.fetch(req, env, ctx);
-        const body = await res.text();
-        if (!res.ok) {
-            console.error('[CRON] funds job failed', res.status, body);
-        } else {
-            console.log('[CRON] funds job ok', body);
+    const runJob = async (path, label) => {
+        try {
+            const req = new Request(`${origin}${path}`, {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                    'x-cron-secret': env.CRON_SECRET,
+                },
+                body: JSON.stringify({}),
+            });
+            const res = await worker_default.fetch(req, env, ctx);
+            const body = await res.text();
+            if (!res.ok) {
+                console.error(`[CRON] ${label} failed`, res.status, body);
+            } else {
+                console.log(`[CRON] ${label} ok`, body);
+            }
+        } catch (err) {
+            console.error(`[CRON] ${label} threw`, err);
         }
-    } catch (err) {
-        console.error('[CRON] funds job threw', err);
-    }
+    };
+
+    await runJob('/_cron/funds', 'funds job');
+    await runJob('/_cron/recurring-expenses', 'recurring-expenses job');
 };

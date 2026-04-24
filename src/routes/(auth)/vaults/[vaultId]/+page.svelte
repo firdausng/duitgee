@@ -1,5 +1,6 @@
 <script lang="ts">
     import {goto} from "$app/navigation";
+    import {onMount} from "svelte";
     import {useSearchParams} from "runed/kit";
     import {ofetch} from "ofetch";
     import {resource} from "runed";
@@ -24,7 +25,10 @@
     import Receipt from "@lucide/svelte/icons/receipt";
     import Plus from "@lucide/svelte/icons/plus";
     import Globe from "@lucide/svelte/icons/globe";
+    import CalendarDays from "@lucide/svelte/icons/calendar-days";
     import type { Expense } from "./types";
+
+    const GROUP_BY_DAY_STORAGE_KEY = 'dg:expenses:groupByDay';
 
     let {vaultId} = page.params
 
@@ -57,6 +61,16 @@
     let inviteEmail = $state('');
     let inviteRole = $state<'admin' | 'member'>('member');
     let isInviting = $state(false);
+    let groupByDay = $state(false);
+
+    onMount(() => {
+        groupByDay = localStorage.getItem(GROUP_BY_DAY_STORAGE_KEY) === 'true';
+    });
+
+    function toggleGroupByDay() {
+        groupByDay = !groupByDay;
+        localStorage.setItem(GROUP_BY_DAY_STORAGE_KEY, String(groupByDay));
+    }
 
     // Filter state - derived from URL query params
     let filterType = $derived(params.filter as DateFilter);
@@ -501,13 +515,25 @@
                         </span>
                     {/if}
                 </div>
-                <a
-                    href="/vaults/{vaultId}/expenses{page.url.search}"
-                    class="text-xs font-medium text-primary hover:underline flex items-center gap-0.5"
-                >
-                    View all
-                    <ArrowRight class="size-3" />
-                </a>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button
+                        type="button"
+                        onclick={toggleGroupByDay}
+                        aria-pressed={groupByDay}
+                        title={groupByDay ? 'Turn off day grouping' : 'Group by day'}
+                        class="inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-xs {groupByDay ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}"
+                    >
+                        <CalendarDays class="size-3" />
+                        <span class="hidden sm:inline">Group by day</span>
+                    </button>
+                    <a
+                        href="/vaults/{vaultId}/expenses{page.url.search}"
+                        class="text-xs font-medium text-primary hover:underline flex items-center gap-0.5"
+                    >
+                        View all
+                        <ArrowRight class="size-3" />
+                    </a>
+                </div>
             </div>
 
             {#if selectedFundId}
@@ -563,6 +589,7 @@
                 <RecentExpenses
                     expenses={expenses}
                     limit={10}
+                    grouped={groupByDay}
                     onSelect={(e) => handleEditExpense(e.id)}
                     formatCurrency={vaultFormatters.currency}
                     formatDate={vaultFormatters.date}

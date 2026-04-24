@@ -19,6 +19,7 @@ export type Expense = {
     fundName: string | null;
     fundIcon: string | null;
     templateId: string | null;
+    recurringExpenseId: string | null;
     date: string;
     createdAt: string | null;
     createdBy: string;

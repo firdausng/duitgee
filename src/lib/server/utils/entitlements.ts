@@ -2,14 +2,14 @@ import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/server/db/schema';
 import { vaults } from '$lib/server/db/schema';
 import { and, eq, isNull } from 'drizzle-orm';
-import { type FundEntitlement, hasEntitlement } from '$lib/configurations/plans';
+import { type Entitlement, hasEntitlement } from '$lib/configurations/plans';
 
 /**
  * Check if a vault's plan includes the given entitlement.
  */
 export const checkVaultEntitlement = async (
     vaultId: string,
-    entitlement: FundEntitlement,
+    entitlement: Entitlement,
     env: Cloudflare.Env
 ): Promise<boolean> => {
     const client = drizzle(env.DB, { schema });
@@ -32,7 +32,7 @@ export const checkVaultEntitlement = async (
 export const requireVaultEntitlement = async (
     session: App.AuthSession,
     vaultId: string,
-    entitlement: FundEntitlement,
+    entitlement: Entitlement,
     env: Cloudflare.Env
 ): Promise<void> => {
     const allowed = await checkVaultEntitlement(vaultId, entitlement, env);

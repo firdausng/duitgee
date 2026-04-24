@@ -7,6 +7,8 @@
 	import { page } from "$app/state";
     import * as Drawer from "$lib/components/ui/drawer/index.js";
 	import { Separator } from "$lib/components/ui/separator";
+	import { ofetch } from "ofetch";
+	import { resource } from "runed";
 
 	let { children, data } = $props();
 
@@ -31,6 +33,23 @@
 		const search = page.url.search;
 		return search || '';
 	});
+
+	// Pending recurring approvals count — drives the Recurring nav badge.
+	const pendingResource = resource(
+		() => vaultId(),
+		async (id) => {
+			if (!id || id === 'new') return 0;
+			try {
+				const res = await ofetch<{ success: boolean; data: unknown[] }>(
+					`/api/getPendingOccurrences?vaultId=${id}`,
+				);
+				return (res.data ?? []).length;
+			} catch {
+				return 0;
+			}
+		},
+	);
+	const pendingCount = $derived(pendingResource.current ?? 0);
 
 	// Check if current path matches the link
 	function isActive(href: string): boolean {
@@ -99,21 +118,27 @@
 			{#if vaultId() && vaultId() !== 'new'}
 				{@const vId = vaultId()}
 				{@const tabs = [
-					{ href: `/vaults/${vId}`, label: 'Home', exact: true },
-					{ href: `/vaults/${vId}/expenses`, label: 'Expenses' },
-					{ href: `/vaults/${vId}/funds`, label: 'Funds' },
-					{ href: `/vaults/${vId}/templates`, label: 'Templates' },
-					{ href: `/vaults/${vId}/statistics`, label: 'Statistics' },
-					{ href: `/vaults/${vId}/members`, label: 'Members' },
+					{ href: `/vaults/${vId}`, label: 'Home', exact: true, badge: 0 },
+					{ href: `/vaults/${vId}/expenses`, label: 'Expenses', badge: 0 },
+					{ href: `/vaults/${vId}/funds`, label: 'Funds', badge: 0 },
+					{ href: `/vaults/${vId}/templates`, label: 'Templates', badge: 0 },
+					{ href: `/vaults/${vId}/recurring`, label: 'Recurring', badge: pendingCount },
+					{ href: `/vaults/${vId}/statistics`, label: 'Statistics', badge: 0 },
+					{ href: `/vaults/${vId}/members`, label: 'Members', badge: 0 },
 				]}
 				<nav class="hidden md:flex gap-1 flex-1 pl-2 overflow-x-auto">
 					{#each tabs as tab}
 						{@const active = tab.exact ? page.url.pathname === tab.href : isActive(tab.href)}
 						<a
 							href="{tab.href}{searchParams()}"
-							class="relative py-2 px-3 text-sm font-medium transition-colors hover:text-primary whitespace-nowrap {active ? 'text-primary' : 'text-muted-foreground'}"
+							class="relative py-2 px-3 text-sm font-medium transition-colors hover:text-primary whitespace-nowrap inline-flex items-center gap-1.5 {active ? 'text-primary' : 'text-muted-foreground'}"
 						>
 							{tab.label}
+							{#if tab.badge > 0}
+								<span class="inline-flex items-center justify-center min-w-[1.25rem] h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
+									{tab.badge}
+								</span>
+							{/if}
 							{#if active}
 								<div class="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full"></div>
 							{/if}
@@ -303,12 +328,13 @@
 		{#if vaultId() && vaultId() !== 'new'}
 			{@const vId = vaultId()}
 			{@const mobileTabs = [
-				{ href: `/vaults/${vId}`, label: 'Home', exact: true },
-				{ href: `/vaults/${vId}/expenses`, label: 'Expenses' },
-				{ href: `/vaults/${vId}/funds`, label: 'Funds' },
-				{ href: `/vaults/${vId}/templates`, label: 'Templates' },
-				{ href: `/vaults/${vId}/statistics`, label: 'Statistics' },
-				{ href: `/vaults/${vId}/members`, label: 'Members' },
+				{ href: `/vaults/${vId}`, label: 'Home', exact: true, badge: 0 },
+				{ href: `/vaults/${vId}/expenses`, label: 'Expenses', badge: 0 },
+				{ href: `/vaults/${vId}/funds`, label: 'Funds', badge: 0 },
+				{ href: `/vaults/${vId}/templates`, label: 'Templates', badge: 0 },
+				{ href: `/vaults/${vId}/recurring`, label: 'Recurring', badge: pendingCount },
+				{ href: `/vaults/${vId}/statistics`, label: 'Statistics', badge: 0 },
+				{ href: `/vaults/${vId}/members`, label: 'Members', badge: 0 },
 			]}
 			<nav
 				class="md:hidden flex gap-1 overflow-x-auto border-t bg-background px-2 py-1 scrollbar-hide"
@@ -318,9 +344,14 @@
 					{@const active = tab.exact ? page.url.pathname === tab.href : isActive(tab.href)}
 					<a
 						href="{tab.href}{searchParams()}"
-						class="relative shrink-0 py-1.5 px-3 text-sm font-medium transition-colors hover:text-primary whitespace-nowrap {active ? 'text-primary' : 'text-muted-foreground'}"
+						class="relative shrink-0 py-1.5 px-3 text-sm font-medium transition-colors hover:text-primary whitespace-nowrap inline-flex items-center gap-1.5 {active ? 'text-primary' : 'text-muted-foreground'}"
 					>
 						{tab.label}
+						{#if tab.badge > 0}
+							<span class="inline-flex items-center justify-center min-w-[1.25rem] h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
+								{tab.badge}
+							</span>
+						{/if}
 						{#if active}
 							<div class="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full"></div>
 						{/if}

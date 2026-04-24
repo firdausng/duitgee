@@ -13,6 +13,7 @@ export interface VaultPermissions {
     canEditVault: boolean;
     canDeleteVault: boolean;
     canManageFunds: boolean;
+    canManageRecurring: boolean;
 }
 
 export const getUserVaultRole = async (userId: string, vaultId: string, env: Cloudflare.Env): Promise<VaultRole | null> => {
@@ -49,7 +50,8 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
             canManageMembers: false,
             canEditVault: false,
             canDeleteVault: false,
-            canManageFunds: false
+            canManageFunds: false,
+            canManageRecurring: false
         };
     }
 
@@ -63,7 +65,8 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
                 canManageMembers: true,
                 canEditVault: true,
                 canDeleteVault: true,
-                canManageFunds: true
+                canManageFunds: true,
+                canManageRecurring: true
             };
 
         case 'admin':
@@ -75,7 +78,8 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
                 canManageMembers: true,
                 canEditVault: true,
                 canDeleteVault: false,
-                canManageFunds: true
+                canManageFunds: true,
+                canManageRecurring: true
             };
 
         case 'member':
@@ -87,7 +91,8 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
                 canManageMembers: false,
                 canEditVault: false,
                 canDeleteVault: false,
-                canManageFunds: false
+                canManageFunds: false,
+                canManageRecurring: false
             };
 
         default:

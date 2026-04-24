@@ -10,6 +10,7 @@ export type VaultWithMember = {
         iconType: string | null;
         organizationId: string | null;
         isDefault: boolean;
+        planId: string;
         createdAt: string | null;
         createdBy: string;
         updatedAt: string | null;

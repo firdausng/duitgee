@@ -5,6 +5,7 @@ import {and, desc, asc, eq, isNull, sql} from "drizzle-orm";
 import {categoryData} from "$lib/configurations/categories";
 import {createSelectSchema} from "drizzle-valibot";
 import {parse} from "valibot";
+import {processDueRecurringExpenses} from "$lib/server/api/recurring-expenses/processDueRecurringExpenses";
 
 export const getExpenses = async (
     vaultId: string,
@@ -15,6 +16,15 @@ export const getExpenses = async (
     const client = drizzle(env.DB, { schema });
     const { page = 1, limit = 10, startDate, endDate, fundId } = options || {};
     const offset = (page - 1) * limit;
+
+    // Lazy catch-up: materialize any due recurring occurrences so the list
+    // reflects reality even if the cron hasn't run yet. Safe to fail silently —
+    // worst case the user sees stale data for a moment.
+    try {
+        await processDueRecurringExpenses(env, { vaultId });
+    } catch (error) {
+        console.error({ message: 'Lazy recurring catch-up failed', vaultId, error });
+    }
 
     let whereClause = and(
         eq(expenses.vaultId, vaultId),
@@ -71,6 +81,7 @@ export const getExpenses = async (
             fundName: row.fundName || null,
             fundIcon: row.fundIcon || null,
             templateId: parsedExpense.expenseTemplateId || null,
+            recurringExpenseId: parsedExpense.recurringExpenseId || null,
             vaultId: parsedExpense.vaultId || undefined,
             category: categoryData.categories.find(c => c.name === parsedExpense.categoryName) || null,
         }
