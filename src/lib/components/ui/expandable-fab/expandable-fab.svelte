@@ -43,9 +43,10 @@
     let fabRef: HTMLButtonElement | null = $state(null);
 
     const hasTemplates = $derived(templates.length > 0);
-    const visibleTemplates = $derived(templates.slice(0, 3));
+    const TOP_COUNT = 5;
+    const visibleTemplates = $derived(templates.slice(0, TOP_COUNT));
     const browseLabel = $derived(
-        templates.length > 3
+        templates.length > TOP_COUNT
             ? `Browse all ${templates.length} templates`
             : hasTemplates
               ? 'Browse templates'

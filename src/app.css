@@ -238,33 +238,29 @@
    ============================================================ */
 .cookieConsentWrapper {
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    bottom: 1rem;
+    right: 1rem;
     z-index: 9999;
     font-family: var(--font-sans);
-    padding: 1rem;
+    /* Compact corner banner instead of full-width overlay */
+    max-width: calc(100vw - 2rem);
+    width: 380px;
 }
 
 .cookieConsent {
-    max-width: 1280px;
-    margin: 0 auto;
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    padding: 1.5rem;
+    padding: 1rem;
     box-shadow: var(--shadow-md);
     backdrop-filter: blur(8px);
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.5rem;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
 .cookieConsent__Left {
     flex: 1;
-    min-width: 250px;
 }
 
 .cookieConsent__Content {
@@ -274,16 +270,16 @@
 }
 
 .cookieConsent__Title {
-    font-size: 1.25rem;
-    font-weight: 700;
+    font-size: 0.875rem;
+    font-weight: 600;
     color: var(--foreground);
     margin: 0;
 }
 
 .cookieConsent__Description {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     color: var(--muted-foreground);
-    line-height: 1.5;
+    line-height: 1.45;
     margin: 0;
 }
 
@@ -310,9 +306,9 @@
     justify-content: center;
     white-space: nowrap;
     border-radius: var(--radius-sm);
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     font-weight: 500;
-    padding: 0.5rem 1rem;
+    padding: 0.375rem 0.75rem;
     transition: all var(--duration-fast);
     cursor: pointer;
     border: 1px solid var(--border);
@@ -463,23 +459,13 @@
     height: 1.25rem;
 }
 
-@media (max-width: 768px) {
-    .cookieConsent {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 1rem;
-    }
-
-    .cookieConsent__Left {
-        min-width: unset;
-    }
-
-    .cookieConsent__Right {
-        flex-direction: column;
-    }
-
-    .cookieConsent__Button {
-        width: 100%;
+@media (max-width: 640px) {
+    .cookieConsentWrapper {
+        bottom: 0.5rem;
+        right: 0.5rem;
+        left: 0.5rem;
+        width: auto;
+        max-width: none;
     }
 
     .cookieConsentOperations__List {

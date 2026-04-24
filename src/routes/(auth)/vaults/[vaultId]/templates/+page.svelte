@@ -4,6 +4,7 @@
 	import { ofetch } from "ofetch";
 	import { Button } from "$lib/components/ui/button";
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
+	import { createVaultFormatters } from "$lib/vaultFormatting";
 
 	let { data } = $props();
 	let { vaultId } = data;
@@ -25,13 +26,27 @@
 
 	let templates = $state<ExpenseTemplate[]>([]);
 	let isLoading = $state(true);
+	let vault = $state<{ locale?: string; currency?: string } | null>(null);
+
+	const fmt = $derived(
+		createVaultFormatters({
+			locale: vault?.locale || 'en-US',
+			currency: vault?.currency || 'USD',
+		}),
+	);
 
 	onMount(async () => {
 		try {
-			const response = await ofetch<{ success: boolean; data: { templates: ExpenseTemplate[] } }>(
-				`/api/getExpenseTemplates?vaultId=${vaultId}`
-			);
-			templates = response.data.templates || [];
+			const [tplRes, vaultRes] = await Promise.all([
+				ofetch<{ success: boolean; data: { templates: ExpenseTemplate[] } }>(
+					`/api/getExpenseTemplates?vaultId=${vaultId}`,
+				),
+				ofetch<{ success: boolean; data: { vaults: { locale?: string; currency?: string } } }>(
+					`/api/getVault?vaultId=${vaultId}`,
+				).catch(() => null),
+			]);
+			templates = tplRes.data.templates || [];
+			vault = vaultRes?.data?.vaults ?? null;
 		} catch (error) {
 			console.error("Failed to fetch templates:", error);
 			templates = [];
@@ -86,45 +101,49 @@
 		<div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 justify-items-center">
 			{#each templates as template (template.id)}
 				<div class="w-full max-w-[200px]">
-					<Card class="p-3 cursor-pointer hover:shadow-md transition-shadow duration-200 hover:border-primary/50 relative">
-						<!-- Edit Button (Top Right) -->
-						<Button
-							variant="ghost"
-							size="sm"
-							onclick={() => handleEditTemplate(template.id)}
-							class="absolute top-1 right-1 px-1 h-6"
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								class="h-3 w-3"
-								viewBox="0 0 20 20"
-								fill="currentColor"
+					<button
+						type="button"
+						onclick={() => handleEditTemplate(template.id)}
+						class="group block w-full text-left"
+						aria-label="Edit {template.name}"
+					>
+						<Card class="p-3 hover:shadow-md hover:border-primary/50 transition-all duration-200 relative">
+							<!-- Edit pencil (affordance, hover-emphasized) -->
+							<span
+								class="absolute top-1 right-1 inline-flex items-center justify-center size-6 rounded-[var(--radius-sm)] text-muted-foreground group-hover:text-foreground transition-colors"
+								aria-hidden="true"
 							>
-								<path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-							</svg>
-							<span class="sr-only">Edit</span>
-						</Button>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									class="h-3 w-3"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+								>
+									<path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+								</svg>
+							</span>
 
-						<div class="space-y-2">
-							<!-- Icon and Name -->
-							<div class="flex flex-col items-center text-center gap-1">
-								<div class="text-2xl">{template.icon || '📝'}</div>
-								<div class="text-xs font-medium break-words w-full">{template.name}</div>
+							<div class="space-y-2">
+								<!-- Icon and Name -->
+								<div class="flex flex-col items-center text-center gap-1">
+									<div class="text-2xl">{template.icon || '📝'}</div>
+									<div class="text-xs font-medium break-words w-full">{template.name}</div>
+								</div>
+
+								<!-- Amount -->
+								{#if template.defaultAmount}
+									<div class="font-mono font-semibold text-sm text-center">{fmt.currency(template.defaultAmount)}</div>
+								{/if}
+
+								<!-- Usage Count -->
+								{#if template.usageCount > 0}
+									<p class="text-xs text-muted-foreground text-center">
+										{template.usageCount} {template.usageCount === 1 ? 'time' : 'times'}
+									</p>
+								{/if}
 							</div>
-
-							<!-- Amount -->
-							{#if template.defaultAmount}
-								<div class="font-bold text-sm text-center">${template.defaultAmount.toFixed(2)}</div>
-							{/if}
-
-							<!-- Usage Count -->
-							{#if template.usageCount > 0}
-								<p class="text-xs text-muted-foreground text-center">
-									{template.usageCount} {template.usageCount === 1 ? 'time' : 'times'}
-								</p>
-							{/if}
-						</div>
-					</Card>
+						</Card>
+					</button>
 				</div>
 			{/each}
 		</div>

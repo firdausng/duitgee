@@ -14,20 +14,18 @@
 		<div class="container relative mx-auto px-4 py-12 md:py-16 lg:py-24">
 			<div class="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
 				<!-- Left: Content -->
-				<div class="space-y-6 md:space-y-8">
-					<div class="inline-block">
-						<span class="text-xs font-semibold uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 px-3 py-1 rounded-full">
-							No drama expense tracking
-						</span>
-					</div>
+				<div class="space-y-5 md:space-y-6">
+					<h2 class="text-lg md:text-xl lg:text-2xl text-muted-foreground font-medium">
+						Shared expense tracking for couples, roommates, and families.
+					</h2>
 					<h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-none">
 						Track Money,<br />
 						<span class="text-primary">Not Drama</span>
 					</h1>
-					<p class="text-base md:text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-lg">
+					<p class="text-base md:text-lg text-muted-foreground leading-relaxed max-w-lg">
 						Stop fighting over who paid for what. Create shared vaults, track expenses instantly, and keep everyone on the same page.
 					</p>
-					<div class="flex flex-col sm:flex-row gap-3 md:gap-4">
+					<div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 md:gap-4 pt-2">
 						<a href="/register" class="group">
 							<Button size="lg" class="text-base md:text-lg px-6 md:px-8 h-12 md:h-14 w-full sm:w-auto group-hover:scale-105 transition-transform">
 								Start Tracking Free
@@ -36,10 +34,8 @@
 								</svg>
 							</Button>
 						</a>
-						<a href="/login">
-							<Button variant="outline" size="lg" class="text-base md:text-lg px-6 md:px-8 h-12 md:h-14 w-full sm:w-auto hover:bg-accent">
-								Sign In
-							</Button>
+						<a href="/login" class="text-sm md:text-base text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+							Already have an account? Sign in
 						</a>
 					</div>
 				</div>

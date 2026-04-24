@@ -18,7 +18,11 @@
     import {createVaultFormatters} from "$lib/vaultFormatting";
     import {page} from "$app/state";
     import { RecentExpenses } from "$lib/components/ui/recent-expenses";
+    import { EmptyState } from "$lib/components/ui/empty-state";
     import ArrowRight from "@lucide/svelte/icons/arrow-right";
+    import Receipt from "@lucide/svelte/icons/receipt";
+    import Plus from "@lucide/svelte/icons/plus";
+    import Globe from "@lucide/svelte/icons/globe";
     import type { Expense } from "./types";
 
     let {vaultId} = page.params
@@ -522,6 +526,35 @@
             {#if isLoadingExpenses}
                 <div class="flex justify-center py-12">
                     <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+                </div>
+            {:else if expenses.length === 0}
+                <div class="rounded-[var(--radius-md)] border bg-card">
+                    <EmptyState
+                        icon={Receipt}
+                        title="No expenses in this range"
+                        description={filterType && filterType !== 'all'
+                            ? 'Widen the range or add one to get started.'
+                            : 'Add your first expense to get started.'}
+                    >
+                        {#snippet secondary()}
+                            {#if filterType && filterType !== 'all'}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onclick={() => (params.filter = 'all')}
+                                >
+                                    <Globe class="size-4" />
+                                    Show all time
+                                </Button>
+                            {/if}
+                        {/snippet}
+                        {#snippet primary()}
+                            <Button size="sm" onclick={handleCreateExpense}>
+                                <Plus class="size-4" />
+                                Add expense
+                            </Button>
+                        {/snippet}
+                    </EmptyState>
                 </div>
             {:else}
                 <RecentExpenses
