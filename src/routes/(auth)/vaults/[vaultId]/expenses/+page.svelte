@@ -38,6 +38,8 @@
     import CalendarDays from '@lucide/svelte/icons/calendar-days';
     import RefreshCw from '@lucide/svelte/icons/refresh-cw';
     import MoreVertical from '@lucide/svelte/icons/more-vertical';
+    import Download from '@lucide/svelte/icons/download';
+    import Upload from '@lucide/svelte/icons/upload';
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 
     const GROUP_BY_DAY_STORAGE_KEY = 'dg:expenses:groupByDay';
@@ -267,6 +269,23 @@
         goto(`/vaults/${vaultId}/expenses/new?${qs.toString()}`);
     }
 
+    function handleExportCsv() {
+        // Build URL with the same date filter currently visible. We deliberately
+        // don't forward the client-side pill/search filters — those are applied
+        // post-fetch and don't map to backend query params. Users get the date
+        // window they're looking at, plus everything else.
+        const dateRange = getDateRangeWithCustom();
+        const urlParams = new URLSearchParams({ vaultId });
+        if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
+        if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
+        // Triggers a browser download via Content-Disposition on the response.
+        window.location.href = `/api/exportExpenses?${urlParams.toString()}`;
+    }
+
+    function handleImportCsv() {
+        goto(`/vaults/${vaultId}/expenses/import`);
+    }
+
     function handleEditExpense(expenseId: string) {
         goto(`/vaults/${vaultId}/expenses/${expenseId}/edit`);
     }
@@ -329,10 +348,30 @@
                 · <span class="font-mono">{fmt.currency(visibleTotal)}</span>
             </p>
         </div>
-        <Button onclick={handleCreateExpense} size="sm">
-            <Plus class="size-4" />
-            <span class="hidden md:inline">Add Expense</span>
-        </Button>
+        <div class="flex items-center gap-2">
+            <DropdownMenu.Root>
+                <DropdownMenu.Trigger
+                    class="inline-flex items-center justify-center gap-1.5 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 text-sm font-medium"
+                    aria-label="More expense actions"
+                >
+                    <MoreVertical class="size-4" />
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Content align="end" class="min-w-[12rem]">
+                    <DropdownMenu.Item onclick={handleExportCsv}>
+                        <Download class="size-4" />
+                        Export CSV
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item onclick={handleImportCsv}>
+                        <Upload class="size-4" />
+                        Import CSV
+                    </DropdownMenu.Item>
+                </DropdownMenu.Content>
+            </DropdownMenu.Root>
+            <Button onclick={handleCreateExpense} size="sm">
+                <Plus class="size-4" />
+                <span class="hidden md:inline">Add Expense</span>
+            </Button>
+        </div>
     </div>
 
     <!-- Search + add filter + date pills + clear -->

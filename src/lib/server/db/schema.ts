@@ -104,6 +104,9 @@ export const expenses = sqliteTable('expenses', {
     fundId: text('fund_id'), // No FK - soft reference to funds.id
     fundPaymentMode: text('fund_payment_mode'), // 'paid_by_fund' | 'pending_reimbursement'
     fundTransactionId: text('fund_transaction_id'), // No FK - soft reference to fundTransactions.id
+    // CSV import provenance — stamped on expenses created via import; null otherwise.
+    // Used to power "undo import" by soft-deleting all rows from a single batch.
+    importBatchId: text('import_batch_id'),
     // Audit fields
     createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
     createdBy: text('created_by').notNull(), // User ID as string, no FK constraint - who created the record (different from userId which is who the expense is for)
@@ -115,6 +118,7 @@ export const expenses = sqliteTable('expenses', {
     vaultIdIdx: index('idx_expenses_vault').on(table.vaultId),
     fundIdIdx: index('idx_expenses_fund').on(table.fundId),
     recurringExpenseIdIdx: index('idx_expenses_recurring').on(table.recurringExpenseId),
+    importBatchIdx: index('idx_expenses_import_batch').on(table.vaultId, table.importBatchId),
 }));
 
 // RecurringExpenses - rules that generate expenses on a schedule

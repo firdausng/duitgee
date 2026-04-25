@@ -10,7 +10,9 @@ export type Entitlement =
     | 'recurring:custom_interval'
     | 'recurring:auto_generation'
     | 'attachment:scan'
-    | 'attachment:multiple';
+    | 'attachment:multiple'
+    | 'expense:export'
+    | 'expense:import';
 
 export interface Plan {
     id: string;
@@ -27,6 +29,7 @@ export const PLANS: Plan[] = [
         entitlements: [
             'fund:create',
             'recurring:create',
+            'expense:export',
         ],
     },
     {
@@ -45,6 +48,8 @@ export const PLANS: Plan[] = [
             'recurring:auto_generation',
             'attachment:scan',
             'attachment:multiple',
+            'expense:export',
+            'expense:import',
         ],
     },
 ];
@@ -110,5 +115,13 @@ export const ENTITLEMENT_LABELS: Record<Entitlement, { name: string; description
     'attachment:multiple': {
         name: 'More attachments per expense',
         description: 'Attach up to 20 receipts to a single expense (5 on Free).',
+    },
+    'expense:export': {
+        name: 'Export expenses to CSV',
+        description: 'Download your expenses as a spreadsheet — your data, in your hands.',
+    },
+    'expense:import': {
+        name: 'Import expenses from CSV',
+        description: 'Bulk-import expenses from a spreadsheet — migrate from another app or backfill history.',
     },
 };

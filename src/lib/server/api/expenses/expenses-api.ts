@@ -11,11 +11,21 @@ import {
     updateExpenseRequestSchema,
     deleteExpenseRequestSchema
 } from "$lib/schemas/expenses";
+import {
+    exportExpensesQuerySchema,
+    confirmImportPayloadSchema,
+} from "$lib/schemas/csv";
 import {createExpense} from "$lib/server/api/expenses/createExpenseHandler";
 import {createExpenses} from "$lib/server/api/expenses/createExpensesHandler";
 import {getExpense} from "$lib/server/api/expenses/getExpenseHandler";
 import {updateExpense} from "$lib/server/api/expenses/updateExpenseHandler";
 import {deleteExpense} from "$lib/server/api/expenses/deleteExpenseHandler";
+import {exportExpenses} from "$lib/server/api/expenses/exportExpensesHandler";
+import {previewImportExpenses} from "$lib/server/api/expenses/previewImportExpensesHandler";
+import {
+    confirmImportExpenses,
+    undoImportExpenses,
+} from "$lib/server/api/expenses/confirmImportExpensesHandler";
 
 const EXPENSE_TAG = ['Expense'];
 const commonExpenseConfig = {
@@ -231,6 +241,163 @@ export const expensesApi = new Hono<App.Api>()
                     success: false,
                     error: error instanceof Error ? error.message : 'Failed to update expense'
                 }, status);
+            }
+        })
+    // Query: Export all expenses for a vault as CSV (GET, streamed)
+    .get(
+        '/exportExpenses',
+        describeRoute({
+            ...commonExpenseConfig,
+            description: 'Export expenses to CSV. Streams the response.',
+            responses: {
+                200: {
+                    description: 'CSV file',
+                    content: {
+                        'text/csv': {},
+                    },
+                },
+            },
+        }),
+        vValidator('query', exportExpensesQuerySchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const query = c.req.valid('query');
+            try {
+                const { stream, fileName } = await exportExpenses(session, query, c.env);
+                return new Response(stream, {
+                    status: 200,
+                    headers: {
+                        'Content-Type': 'text/csv; charset=utf-8',
+                        'Content-Disposition': `attachment; filename="${fileName}"`,
+                        'Cache-Control': 'no-store',
+                    },
+                });
+            } catch (error) {
+                console.error({ message: 'Error exporting expenses', error });
+                const status = error instanceof Error && error.message.toLowerCase().includes('entitlement') ? 403 : 400;
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to export expenses',
+                }, status);
+            }
+        })
+    // Command: Preview a CSV import — parse, validate, return normalized rows + errors (POST, multipart)
+    .post(
+        '/previewImportExpenses',
+        describeRoute({
+            ...commonExpenseConfig,
+            description: 'Preview a CSV import without writing. Multipart body: vaultId + file.',
+            responses: {
+                200: {
+                    description: 'Preview result',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.any()),
+                        },
+                    },
+                },
+            },
+        }),
+        async (c) => {
+            const session = c.get('currentSession');
+
+            let vaultId: string;
+            let csvText: string;
+            try {
+                const form = await c.req.parseBody();
+                const rawVaultId = form['vaultId'];
+                const file = form['file'];
+                if (typeof rawVaultId !== 'string' || !rawVaultId) {
+                    return c.json({ success: false, error: 'vaultId is required' }, 400);
+                }
+                if (!(file instanceof File)) {
+                    return c.json({ success: false, error: 'file is required' }, 400);
+                }
+                vaultId = rawVaultId;
+                csvText = await file.text();
+            } catch (err) {
+                console.error('Failed to parse import multipart body:', err);
+                return c.json({ success: false, error: 'Invalid multipart body' }, 400);
+            }
+
+            try {
+                const result = await previewImportExpenses(session, vaultId, csvText, c.env);
+                return c.json({ success: true, data: result });
+            } catch (error) {
+                console.error({ message: 'Error previewing CSV import', error });
+                const status = error instanceof Error && error.message.toLowerCase().includes('entitlement') ? 403 : 400;
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to preview import',
+                }, status);
+            }
+        })
+    // Command: Confirm a previewed CSV import — persists rows (POST, JSON)
+    .post(
+        '/confirmImportExpenses',
+        describeRoute({
+            ...commonExpenseConfig,
+            description: 'Confirm and persist a previewed CSV import.',
+            responses: {
+                200: {
+                    description: 'Import result',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.any()),
+                        },
+                    },
+                },
+            },
+        }),
+        vValidator('json', confirmImportPayloadSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+            try {
+                const result = await confirmImportExpenses(session, data, c.env);
+                return c.json({ success: true, data: result });
+            } catch (error) {
+                console.error({ message: 'Error confirming CSV import', error });
+                const status = error instanceof Error && error.message.toLowerCase().includes('entitlement') ? 403 : 400;
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to import expenses',
+                }, status);
+            }
+        })
+    // Command: Undo an import by soft-deleting all expenses stamped with the importBatchId
+    .post(
+        '/undoImportExpenses',
+        describeRoute({
+            ...commonExpenseConfig,
+            description: 'Soft-delete all expenses from a previous CSV import.',
+            responses: {
+                200: {
+                    description: 'Undo result',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.any()),
+                        },
+                    },
+                },
+            },
+        }),
+        vValidator('json', v.object({
+            vaultId: v.string(),
+            importBatchId: v.string(),
+        })),
+        async (c) => {
+            const session = c.get('currentSession');
+            const { vaultId, importBatchId } = c.req.valid('json');
+            try {
+                const result = await undoImportExpenses(session, vaultId, importBatchId, c.env);
+                return c.json({ success: true, data: result });
+            } catch (error) {
+                console.error({ message: 'Error undoing CSV import', error });
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to undo import',
+                }, 400);
             }
         })
     // Command: Delete expense (POST)

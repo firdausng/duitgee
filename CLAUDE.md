@@ -132,8 +132,13 @@ The API follows RPC (Remote Procedure Call) style with CQRS (Command Query Respo
 - `GET /api/getExpenses?vaultId=xxx&page=1&limit=10` - Get expenses list with pagination/filters
 - `GET /api/getExpense?vaultId=xxx&id=xxx` - Get single expense
 - `POST /api/createExpense` - Create new expense
+- `POST /api/createExpenses` - Create up to 20 expenses in one batch
 - `POST /api/updateExpense` - Update an existing expense
 - `POST /api/deleteExpense` - Soft delete an expense
+- `GET /api/exportExpenses?vaultId=xxx&...` - Stream all expenses as CSV (free; gated by `expense:export`)
+- `POST /api/previewImportExpenses` - Multipart `(vaultId, file)`; parses + validates a CSV without writing. Returns `{ importToken, totalRows, validRows, errors, newTagNames }`
+- `POST /api/confirmImportExpenses` - JSON `{ vaultId, importToken, skipInvalid, rows }` echoed from preview; persists rows in 50-row batches stamped with `importBatchId`
+- `POST /api/undoImportExpenses` - JSON `{ vaultId, importBatchId }`; soft-deletes every expense from a previous import
 
 *Expense Templates API:*
 - `GET /api/getExpenseTemplates?vaultId=xxx` - Get all expense templates for a vault
@@ -414,16 +419,24 @@ The app has a **two-tier plan system** that gates fund features per vault. This 
 
 | Plan ID | Name | Included Entitlements |
 |---------|------|-----------------------|
-| `plan_free` | Free | `fund:create` only |
-| `plan_pro` | Pro | All 6 entitlements |
+| `plan_free` | Free | `fund:create`, `recurring:create`, `expense:export` |
+| `plan_pro` | Pro | All entitlements |
 
-**Entitlement types** (`FundEntitlement` in `plans.ts`):
+**Entitlement types** (`Entitlement` in `plans.ts`):
 - `fund:create` — Create a fund (free + pro; limited to 1 on free)
 - `fund:create_multiple` — Create more than one active fund per vault (pro)
 - `fund:auto_replenishment` — Use `fixed_amount` or `top_to_ceiling` replenishment (pro)
 - `fund:cycle_history` — View past fund cycles; free plan only sees the active cycle (pro)
 - `fund:transfer` — Transfer balance between funds (pro)
 - `fund:cross_fund_reimbursement` — View and settle reimbursements across all funds (pro)
+- `recurring:create` — Create a recurring rule (free, capped at 5)
+- `recurring:create_multiple` — Beyond the 5-rule cap (pro)
+- `recurring:custom_interval` — Beyond daily/weekly/monthly/yearly (pro)
+- `recurring:auto_generation` — Auto-generate recurring expenses (pro)
+- `attachment:scan` — AI-powered receipt scanning (pro)
+- `attachment:multiple` — Up to 20 attachments per expense (pro)
+- `expense:export` — Download expenses as CSV (free + pro; data-out is a baseline trust feature)
+- `expense:import` — Bulk-import expenses from CSV (pro)
 
 **Storage:** Each vault has a `planId` column (default `'plan_free'`). No FK constraint — plan definitions live in code (`PLANS` array).
 
@@ -456,6 +469,27 @@ await requireVaultEntitlement(session, vaultId, 'fund:create', env);      // pla
 | Enforced by | `requireVaultPermission()` | `requireVaultEntitlement()` |
 | Gates | CRUD actions by role | Feature availability by plan |
 | Falls back to | Deny | `plan_free` |
+
+### CSV Import / Export
+
+The expenses module supports CSV export and import. Endpoints live in `src/lib/server/api/expenses/`; schemas in `src/lib/schemas/csv.ts`; CSV parser/serializer in `src/lib/server/utils/csv.ts` (papaparse-based).
+
+**Endpoints:**
+- `GET /api/exportExpenses` — streams a CSV via `ReadableStream` so the 128MB Worker heap is safe even on tens of thousands of expenses. Filters: `startDate`, `endDate`, `categoryName`, `memberIds`, `fundId`. Permission: any active vault member. Entitlement: `expense:export` (free).
+- `POST /api/previewImportExpenses` — multipart `(vaultId, file)`. Parses + validates without writing. Returns `{ importToken, validRows, errors, newTagNames }`. Entitlement: `expense:import` (pro).
+- `POST /api/confirmImportExpenses` — JSON body echoes the preview's normalized rows back. Auto-creates missing tags, then inserts expenses + tag assignments in `IMPORT_BATCH_SIZE` (=50) row batches. Stamps every row with `importBatchId` (the importToken).
+- `POST /api/undoImportExpenses` — soft-deletes every expense with the given `importBatchId` for the vault.
+
+**Hard limits** (in `src/lib/schemas/csv.ts`):
+- `MAX_IMPORT_ROWS = 10_000` — files above this are rejected with guidance to split. Keeps imports under the 30s Worker CPU budget.
+- `IMPORT_BATCH_SIZE = 50` — D1 has no cross-statement transactions; each batch is atomic but the import as a whole is not. On mid-import failure, prior batches are persisted; the response returns `{ success: false, importedCount, importBatchId, failedAtRow }` and the user can call `undoImportExpenses`.
+
+**CSV column schema:**
+`id, date, amount, category, paymentType, note, paidByEmail, tags (semicolon-joined), fundName, createdAt, createdBy`. Headers are stable. On import, `id`/`createdBy`/`fundName` are export-only and ignored. `paidByEmail` is resolved against active vault members (auth DB join); unknown emails error per row. Categories are looked up by name with case-insensitive match and fall through to free-form (matching `createExpense` behavior). Missing tags are auto-created on confirm.
+
+**No duplicate detection on import** — re-importing the same file twice doubles your data. By design: expenses have no natural unique key, and hash-dedup risks silent loss when the dedup is wrong. Surface this clearly in import UIs.
+
+**Storage:** `expenses.importBatchId` (text, nullable) — null on regular expenses, set on imported ones. Indexed by `(vaultId, importBatchId)` for fast undo.
 
 ### Plan Design Philosophy for New Features
 

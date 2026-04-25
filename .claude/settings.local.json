@@ -70,7 +70,8 @@
       "WebFetch(domain:developers.cloudflare.com)",
       "Read(//tmp/**)",
       "WebSearch",
-      "Bash(grep -A 4 -E \"expenseId..edit\\\\\\\\\\\\\\\\.\\\\+page\\\\\\\\\\\\\\\\.\\(server|svelte\\)\")"
+      "Bash(grep -A 4 -E \"expenseId..edit\\\\\\\\\\\\\\\\.\\\\+page\\\\\\\\\\\\\\\\.\\(server|svelte\\)\")",
+      "Bash(pnpm add *)"
     ]
   }
 }
