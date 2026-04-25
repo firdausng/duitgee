@@ -23,6 +23,7 @@
         SpendHeroCard,
         PendingActionsCard,
         CategoryBreakdownCard,
+        EmptyVaultChecklist,
     } from "$lib/components/home";
     import ArrowRight from "@lucide/svelte/icons/arrow-right";
     import ExternalLink from "@lucide/svelte/icons/external-link";
@@ -68,9 +69,21 @@
     let isInviting = $state(false);
     let groupByDay = $state(false);
 
+    // Per-vault dismissal of the empty-vault welcome checklist.
+    const checklistDismissalKey = $derived(`dg:checklist-dismissed:${vaultId}`);
+    let checklistDismissed = $state(false);
     onMount(() => {
         groupByDay = localStorage.getItem(GROUP_BY_DAY_STORAGE_KEY) === 'true';
+        checklistDismissed = localStorage.getItem(checklistDismissalKey) === 'true';
     });
+    function dismissChecklist() {
+        checklistDismissed = true;
+        try {
+            localStorage.setItem(checklistDismissalKey, 'true');
+        } catch {
+            // ignore
+        }
+    }
 
     function toggleGroupByDay() {
         groupByDay = !groupByDay;
@@ -159,6 +172,22 @@
         { debounce: 300 },
     );
 
+    // All-time expense count — drives the empty-vault checklist signal.
+    // Cheap, cached query that ignores date filters.
+    const allTimeCountResource = resource(
+        () => [vaultId, refetchKey] as const,
+        async ([id]) => {
+            try {
+                const res = await ofetch<{ success: boolean; data: VaultStatistics }>(
+                    `/api/getVaultStatistics?vaultId=${id}`,
+                );
+                return res.data?.total?.count ?? 0;
+            } catch {
+                return 1; // fail-safe — don't show checklist if the API errors
+            }
+        },
+    );
+
     // Pending recurring count — for the PendingActionsCard.
     const pendingRecurringResource = resource(
         () => [vaultId, refetchKey] as const,
@@ -236,6 +265,9 @@
     const pendingReimbursements = $derived(
         pendingReimbursementsResource.current ?? { count: 0, total: 0 },
     );
+    const allTimeExpenseCount = $derived(allTimeCountResource.current ?? null);
+    const isEmptyVault = $derived(allTimeExpenseCount === 0);
+    const showChecklist = $derived(isEmptyVault && !checklistDismissed);
     const isLoadingVault = $derived(vaultResource.loading);
     const isLoadingStats = $derived(statisticsResource.loading);
     const isLoadingExpenses = $derived(expensesResource.loading);
@@ -469,17 +501,29 @@
                 onCancel={toggleInviteForm}
         />
 
-        <!-- Spend hero — period selector + big amount + delta vs prior period -->
+        <!-- Spend hero — replaced by the welcome checklist for brand-new vaults. -->
         <div class="mb-3">
-            <SpendHeroCard
-                {filterType}
-                currentAmount={statistics?.total.amount ?? 0}
-                currentCount={statistics?.total.count ?? 0}
-                priorAmount={priorStats?.total.amount ?? null}
-                loading={isLoadingStats}
-                onFilterChange={(filter) => { params.filter = filter; }}
-                formatCurrency={vaultFormatters.currency}
-            />
+            {#if showChecklist}
+                <EmptyVaultChecklist
+                    {vaultId}
+                    hasFunds={fundRows.length > 0}
+                    memberCount={currentVault.vaultMembers ? 1 : 1}
+                    onAddExpense={handleCreateExpense}
+                    onCreateFund={() => goto(`/vaults/${vaultId}/funds/new`)}
+                    onInviteMember={() => { showInviteForm = true; }}
+                    onDismiss={dismissChecklist}
+                />
+            {:else}
+                <SpendHeroCard
+                    {filterType}
+                    currentAmount={statistics?.total.amount ?? 0}
+                    currentCount={statistics?.total.count ?? 0}
+                    priorAmount={priorStats?.total.amount ?? null}
+                    loading={isLoadingStats}
+                    onFilterChange={(filter) => { params.filter = filter; }}
+                    formatCurrency={vaultFormatters.currency}
+                />
+            {/if}
         </div>
 
         <!-- Pending actions — recurring approvals + cross-fund reimbursements (conditional) -->

@@ -6,6 +6,7 @@
     import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
     import type {VaultWithMember} from "$lib/schemas/read/vaultWithMember";
     import ChevronRight from '@lucide/svelte/icons/chevron-right';
+    import { FirstVaultWizard } from '$lib/components/onboarding';
 
 	let { data } = $props();
 
@@ -113,34 +114,15 @@
 			<p class="mt-4 text-muted-foreground">Loading vaults...</p>
 		</div>
 	{:else if vaultsList.length === 0}
-		<!-- Empty State -->
-		<Card class="border-dashed">
-			<CardContent class="flex flex-col items-center justify-center py-16 px-4">
-				<div class="rounded-full bg-primary/10 p-6 mb-4">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-12 w-12 text-primary"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-						/>
-					</svg>
-				</div>
-				<h2 class="text-2xl font-semibold mb-2">No vaults yet</h2>
-				<p class="text-muted-foreground text-center max-w-md mb-6">
-					Create your first vault to start tracking expenses. Vaults help you organize expenses by project, category, or team.
-				</p>
-				<Button onclick={handleCreateVault} size="lg">
-					Create Your First Vault
-				</Button>
-			</CardContent>
-		</Card>
+		<!-- First-vault wizard — replaces the static empty state. -->
+		<div class="text-center mb-6">
+			<h2 class="text-2xl font-semibold">Welcome to DuitGee</h2>
+			<p class="text-muted-foreground mt-1">Let's set up your first vault — it takes 30 seconds.</p>
+		</div>
+		<FirstVaultWizard
+			creatorId={currentUser?.id ?? ''}
+			onCancel={handleCreateVault}
+		/>
 	{:else}
 		<!-- Vaults List -->
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

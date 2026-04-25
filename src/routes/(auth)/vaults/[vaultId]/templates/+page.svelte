@@ -5,6 +5,9 @@
 	import { Button } from "$lib/components/ui/button";
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
 	import { createVaultFormatters } from "$lib/vaultFormatting";
+	import { EmptyState } from "$lib/components/ui/empty-state";
+	import FileText from "@lucide/svelte/icons/file-text";
+	import Plus from "@lucide/svelte/icons/plus";
 
 	let { data } = $props();
 	let { vaultId } = data;
@@ -150,32 +153,19 @@
 	{:else}
 		<!-- No Templates State -->
 		<Card class="border-dashed">
-			<CardContent class="flex flex-col items-center justify-center py-12">
-				<div class="rounded-full bg-muted p-6 mb-4">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-12 w-12 text-muted-foreground"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-						/>
-					</svg>
-				</div>
-				<p class="text-muted-foreground text-center mb-4">
-					No templates available yet. Create templates to speed up expense entry.
-				</p>
-				<Button onclick={handleCreateTemplate}>
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-						<path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-					</svg>
-					Create Template
-				</Button>
+			<CardContent class="px-4">
+				<EmptyState
+					icon={FileText}
+					title="No templates yet"
+					description="Templates are reusable expense shapes — fill in the bits you always type, save as a template, and tap once next time."
+				>
+					{#snippet primary()}
+						<Button onclick={handleCreateTemplate}>
+							<Plus class="size-4" />
+							Create your first template
+						</Button>
+					{/snippet}
+				</EmptyState>
 			</CardContent>
 		</Card>
 	{/if}

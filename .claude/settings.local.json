@@ -46,7 +46,9 @@
       "Bash(awk '/vaults..vaultId...\\\\\\\\+page\\\\.svelte:/{p=NR} \\(NR-p<5\\)&&p{print NR\": \"$0}' /tmp/check-phase2.out)",
       "Bash(grep -n \"vaultId\\\\\\\\]\" /tmp/check-phase2.out)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5206/)",
-      "mcp__playwright__browser_console_messages"
+      "mcp__playwright__browser_console_messages",
+      "Bash(grep -n \"pending.length === 0\\\\|pending\\\\\\\\.length === 0\\\\|empty\\\\|caught up\" \"D:/projects/duitgee-app/src/routes/\\(auth\\)/vaults/[vaultId]/reimbursements/+page.svelte\")",
+      "Bash(grep -B1 -A4 \"settings\\\\\\\\\\\\\\\\\\\\|onboarding\\\\\\\\\\\\\\\\\\\\|home.\\\\\\\\\\(EmptyVault\\\\\\\\|FirstVault\\\\\\\\|appearance\\\\\\\\|account\\\\\\\\|plan\\\\\\\\|danger\" /tmp/check-phase3.out)"
     ]
   }
 }
