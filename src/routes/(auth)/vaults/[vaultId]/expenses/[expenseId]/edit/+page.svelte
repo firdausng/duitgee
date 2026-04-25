@@ -10,6 +10,7 @@
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
 	import { CategoryPicker } from '$lib/components/ui/category-picker';
 	import { TagPicker, type TagOption } from '$lib/components/ui/tag-picker';
+	import { AttachmentPicker } from '$lib/components/ui/attachment-picker';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { CalculatorInput } from '$lib/components/ui/calculator-input';
 	import { categoryData } from '$lib/configurations/categories';
@@ -93,6 +94,16 @@
 
 	$effect(() => {
 		$form.tagIds = selectedTagIds;
+	});
+
+	// Attachments — bound to $form.attachmentIds via the picker.
+	let selectedAttachmentIds = $state<string[]>(
+		($form.attachmentIds as string[] | undefined)
+			?? ((data.expense.attachments ?? []) as Array<{ id: string }>).map((a) => a.id),
+	);
+
+	$effect(() => {
+		$form.attachmentIds = selectedAttachmentIds;
 	});
 
 	async function handleCreateTag(name: string): Promise<TagOption> {
@@ -243,6 +254,15 @@
 						tags={availableTags}
 						bind:value={selectedTagIds}
 						onCreate={handleCreateTag}
+						disabled={$delayed}
+					/>
+
+					<!-- Attachments / Receipts -->
+					<AttachmentPicker
+						vaultId={data.vaultId}
+						label="Receipts"
+						initial={data.expense.attachments ?? []}
+						bind:value={selectedAttachmentIds}
 						disabled={$delayed}
 					/>
 

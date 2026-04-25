@@ -1,6 +1,6 @@
 import {drizzle} from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
-import {expenses, expenseTags, expenseTagAssignments} from "$lib/server/db/schema";
+import {expenses, expenseTags, expenseTagAssignments, attachments, expenseAttachments} from "$lib/server/db/schema";
 import {and, eq, isNull} from "drizzle-orm";
 import {paymentData} from "$lib/configurations/payments";
 import {categoryData} from "$lib/configurations/categories";
@@ -27,18 +27,33 @@ export const getExpense = async (
         return undefined;
     }
 
-    const tagRows = await client
-        .select({
-            id: expenseTags.id,
-            name: expenseTags.name,
-            color: expenseTags.color,
-        })
-        .from(expenseTagAssignments)
-        .innerJoin(expenseTags, eq(expenseTagAssignments.tagId, expenseTags.id))
-        .where(and(
-            eq(expenseTagAssignments.expenseId, expenseId),
-            isNull(expenseTags.deletedAt),
-        ));
+    const [tagRows, attachmentRows] = await Promise.all([
+        client
+            .select({
+                id: expenseTags.id,
+                name: expenseTags.name,
+                color: expenseTags.color,
+            })
+            .from(expenseTagAssignments)
+            .innerJoin(expenseTags, eq(expenseTagAssignments.tagId, expenseTags.id))
+            .where(and(
+                eq(expenseTagAssignments.expenseId, expenseId),
+                isNull(expenseTags.deletedAt),
+            )),
+        client
+            .select({
+                id: attachments.id,
+                fileName: attachments.fileName,
+                mimeType: attachments.mimeType,
+                fileSize: attachments.fileSize,
+            })
+            .from(expenseAttachments)
+            .innerJoin(attachments, eq(expenseAttachments.attachmentId, attachments.id))
+            .where(and(
+                eq(expenseAttachments.expenseId, expenseId),
+                isNull(attachments.deletedAt),
+            )),
+    ]);
 
     // Transform to match our Expense type with additional fields
     return {
@@ -55,5 +70,6 @@ export const getExpense = async (
         fundId: expenseResult.fundId ?? null,
         fundPaymentMode: expenseResult.fundPaymentMode ?? null,
         tags: tagRows,
+        attachments: attachmentRows,
     };
 };

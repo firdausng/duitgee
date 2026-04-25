@@ -24,7 +24,9 @@
     "mode": "smart"
   },
   "triggers": {
-    "crons": ["0 1 * * *"]
+    "crons": [
+      "0 1 * * *"
+    ]
   },
   "d1_databases": [
     {
@@ -46,6 +48,12 @@
       "id": "145768d744d94a52be422f635bebb851"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "ATTACHMENTS_BUCKET",
+      "bucket_name": "duitgee-attachments-dev"
+    }
+  ],
   "vars": {
     "ADMIN_EMAILS": "mail4frenz@gmail.com",
     "BASE_PATH": "http://localhost:5205",
@@ -59,7 +67,9 @@
   "env": {
     "staging": {
       "triggers": {
-        "crons": ["0 1 * * *"]
+        "crons": [
+          "0 1 * * *"
+        ]
       },
       "vars": {
         "ADMIN_EMAILS": "mail4frenz@gmail.com",
@@ -74,7 +84,9 @@
     },
     "production": {
       "triggers": {
-        "crons": ["0 1 * * *"]
+        "crons": [
+          "0 1 * * *"
+        ]
       },
       "routes": [
         {
@@ -110,6 +122,12 @@
         {
           "binding": "KV",
           "id": "37ba36f23a9e4149a41dc45c20ad98b0"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "ATTACHMENTS_BUCKET",
+          "bucket_name": "duitgee-prod"
         }
       ]
     }

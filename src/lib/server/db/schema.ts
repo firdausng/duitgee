@@ -327,3 +327,31 @@ export const expenseTagAssignments = sqliteTable('expense_tag_assignments', {
     pk: primaryKey({ columns: [table.expenseId, table.tagId] }),
     tagIdIdx: index('idx_expense_tag_assignments_tag').on(table.tagId),
 }));
+
+// Attachments - file objects stored in Cloudflare R2, metadata + audit fields here
+export const attachments = sqliteTable('attachments', {
+    id: text('id').primaryKey().$defaultFn(() => createId()),
+    vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
+    fileName: text('file_name').notNull(),
+    mimeType: text('mime_type').notNull(),
+    fileSize: integer('file_size').notNull(), // bytes
+    r2Key: text('r2_key').notNull(),
+    // Audit fields
+    createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
+    createdBy: text('created_by').notNull(),
+    deletedAt: text('deleted_at'),
+    deletedBy: text('deleted_by'),
+}, (table) => ({
+    vaultIdIdx: index('idx_attachments_vault').on(table.vaultId),
+}));
+
+// ExpenseAttachments - many-to-many join between expenses and attachments
+export const expenseAttachments = sqliteTable('expense_attachments', {
+    expenseId: text('expense_id').notNull().references(() => expenses.id, { onDelete: 'cascade' }),
+    attachmentId: text('attachment_id').notNull().references(() => attachments.id, { onDelete: 'cascade' }),
+    createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
+    createdBy: text('created_by').notNull(),
+}, (table) => ({
+    pk: primaryKey({ columns: [table.expenseId, table.attachmentId] }),
+    attachmentIdIdx: index('idx_expense_attachments_attachment').on(table.attachmentId),
+}));

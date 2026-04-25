@@ -5,6 +5,7 @@
 	import { DateTimePicker } from '$lib/components/ui/date-time-picker';
 	import { CategoryPicker } from '$lib/components/ui/category-picker';
 	import { IconRenderer } from '$lib/components/ui/icon-renderer';
+	import { AttachmentPicker } from '$lib/components/ui/attachment-picker';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { CalculatorInput } from '$lib/components/ui/calculator-input';
 	import { cn } from '$lib/utils';
@@ -47,6 +48,7 @@
 		date?: string;
 		fundId?: string | null;
 		fundPaymentMode?: 'paid_by_fund' | 'pending_reimbursement' | null;
+		attachmentIds?: string[];
 		errors: { amount?: string; categoryName?: string };
 	};
 
@@ -64,6 +66,8 @@
 		/** When provided with 2+ entries, shows a chip row narrowing to those categories.
 		 *  The full category picker stays available below as an escape hatch. */
 		allowedCategoryNames?: string[];
+		/** Vault scope — required by the AttachmentPicker for upload/delete API calls. */
+		vaultId: string;
 		onremove: () => void;
 		onduplicate: () => void;
 	}
@@ -80,9 +84,17 @@
 		funds,
 		paymentTypes,
 		allowedCategoryNames,
+		vaultId,
 		onremove,
 		onduplicate,
 	}: ExpenseRowProps = $props();
+
+	// Local mirror of the row's attachment IDs so AttachmentPicker can bind into
+	// it. Synced back into row.attachmentIds via $effect.
+	let rowAttachmentIds = $state<string[]>(row.attachmentIds ?? []);
+	$effect(() => {
+		row.attachmentIds = rowAttachmentIds;
+	});
 
 	// Resolve allowed-category metadata from the static config so we can render icons.
 	const allowedCategoryChips = $derived.by(() => {
@@ -211,6 +223,15 @@
 			rows={1}
 		/>
 	</div>
+
+	<!-- Per-row receipts -->
+	<AttachmentPicker
+		{vaultId}
+		label="Receipts"
+		bind:value={rowAttachmentIds}
+		{disabled}
+		maxFiles={5}
+	/>
 
 	<!-- Expand toggle for per-row overrides -->
 	<button

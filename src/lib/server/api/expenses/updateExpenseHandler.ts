@@ -1,7 +1,7 @@
 import {drizzle} from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
 import type {UpdateExpenseRequest} from "$lib/schemas/expenses";
-import {expenses, expenseTagAssignments, expenseTags} from "$lib/server/db/schema";
+import {expenses, expenseTagAssignments, expenseTags, attachments, expenseAttachments} from "$lib/server/db/schema";
 import {and, eq, inArray, isNull} from "drizzle-orm";
 import {updateAuditFields} from "$lib/server/utils/audit";
 import {requireVaultPermission} from "$lib/server/utils/vaultPermissions";
@@ -13,7 +13,7 @@ export const updateExpense = async (
     env: Cloudflare.Env
 ) => {
     const client = drizzle(env.DB, { schema });
-    const { id, vaultId, fundId, fundPaymentMode, tagIds, ...updateFields } = data;
+    const { id, vaultId, fundId, fundPaymentMode, tagIds, attachmentIds, ...updateFields } = data;
     const userId = session.user.id;
 
     await requireVaultPermission(session, vaultId, 'canEditExpenses', env);
@@ -116,6 +116,40 @@ export const updateExpense = async (
                 .values(uniqueTagIds.map((tagId) => ({
                     expenseId: id,
                     tagId,
+                    createdBy: userId,
+                })));
+        }
+    }
+
+    // Replace attachment assignments if attachmentIds was provided. Undefined = no change.
+    if (attachmentIds !== undefined) {
+        const uniqueIds = Array.from(new Set(attachmentIds));
+
+        if (uniqueIds.length > 0) {
+            const validAttachments = await client
+                .select({ id: attachments.id })
+                .from(attachments)
+                .where(and(
+                    inArray(attachments.id, uniqueIds),
+                    eq(attachments.vaultId, vaultId),
+                    isNull(attachments.deletedAt),
+                ));
+
+            if (validAttachments.length !== uniqueIds.length) {
+                throw new Error('One or more attachments do not belong to this vault');
+            }
+        }
+
+        await client
+            .delete(expenseAttachments)
+            .where(eq(expenseAttachments.expenseId, id));
+
+        if (uniqueIds.length > 0) {
+            await client
+                .insert(expenseAttachments)
+                .values(uniqueIds.map((attachmentId) => ({
+                    expenseId: id,
+                    attachmentId,
                     createdBy: userId,
                 })));
         }

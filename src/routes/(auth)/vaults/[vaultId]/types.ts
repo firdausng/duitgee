@@ -28,6 +28,7 @@ export type Expense = {
     deletedAt: string | null;
     deletedBy: string | null;
     tags?: Array<{ id: string; name: string; color: string | null }>;
+    attachments?: Array<{ id: string; fileName: string; mimeType: string; fileSize: number }>;
 };
 
 export type VaultStatistics = {

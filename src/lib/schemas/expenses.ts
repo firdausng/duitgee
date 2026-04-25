@@ -48,6 +48,8 @@ export const createExpenseSchema = v.object({
     fundPaymentMode: v.optional(v.nullable(v.picklist(['paid_by_fund', 'pending_reimbursement']))),
     // Tag IDs (vault-scoped) - optional list of expense_tags.id to assign on create
     tagIds: v.optional(v.array(v.string())),
+    // Attachment IDs - vault-scoped, must be already uploaded as orphans
+    attachmentIds: v.optional(v.array(v.string())),
 })
 
 export type CreateExpense = v.InferOutput<typeof createExpenseSchema>;
@@ -88,6 +90,9 @@ export const createExpenseItemSchema = v.object({
     date: v.optional(v.string()),
     fundId: v.optional(v.nullable(v.string())),
     fundPaymentMode: v.optional(v.nullable(v.picklist(['paid_by_fund', 'pending_reimbursement']))),
+    // Per-row attachments — each row's own receipts/files. No shared option:
+    // batch creates are typically heterogeneous (different expenses, different receipts).
+    attachmentIds: v.optional(v.array(v.string())),
 });
 
 export type CreateExpenseItem = v.InferOutput<typeof createExpenseItemSchema>;
@@ -175,6 +180,8 @@ export const updateExpenseRequestSchema = v.object({
     fundPaymentMode: v.optional(v.nullable(v.picklist(['paid_by_fund', 'pending_reimbursement']))),
     // Tag IDs — undefined = no change, [] = clear, [...] = replace full set
     tagIds: v.optional(v.array(v.string())),
+    // Attachment IDs — same semantics as tagIds. Replaces full set when provided.
+    attachmentIds: v.optional(v.array(v.string())),
 });
 export type UpdateExpenseRequest = v.InferOutput<typeof updateExpenseRequestSchema>;
 

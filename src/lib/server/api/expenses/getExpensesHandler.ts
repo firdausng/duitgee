@@ -1,6 +1,6 @@
 import {drizzle} from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
-import {expenses, vaultMembers, vaults, funds, expenseTags, expenseTagAssignments} from "$lib/server/db/schema";
+import {expenses, vaultMembers, vaults, funds, expenseTags, expenseTagAssignments, attachments, expenseAttachments} from "$lib/server/db/schema";
 import {and, desc, asc, eq, inArray, isNull, sql} from "drizzle-orm";
 import {categoryData} from "$lib/configurations/categories";
 import {createSelectSchema} from "drizzle-valibot";
@@ -68,27 +68,68 @@ export const getExpenses = async (
 
     const expenseIds = expensesList.map(e => e.id);
 
-    // Fetch tag assignments for the page in one query, then group by expense
+    // Fetch tag and attachment assignments for the page, then group by expense.
+    // D1 caps each query at ~100 bound parameters, so an `inArray(col, ids)` with
+    // 100+ expense IDs blows the limit. We chunk to stay safely under it.
     const tagsByExpense = new Map<string, Array<{ id: string; name: string; color: string | null }>>();
-    if (expenseIds.length > 0) {
-        const tagRows = await client
-            .select({
-                expenseId: expenseTagAssignments.expenseId,
-                id: expenseTags.id,
-                name: expenseTags.name,
-                color: expenseTags.color,
-            })
-            .from(expenseTagAssignments)
-            .innerJoin(expenseTags, eq(expenseTagAssignments.tagId, expenseTags.id))
-            .where(and(
-                inArray(expenseTagAssignments.expenseId, expenseIds),
-                isNull(expenseTags.deletedAt),
-            ));
+    const attachmentsByExpense = new Map<string, Array<{ id: string; fileName: string; mimeType: string; fileSize: number }>>();
 
-        for (const row of tagRows) {
+    const D1_PARAM_CHUNK = 50;
+    const idChunks: string[][] = [];
+    for (let i = 0; i < expenseIds.length; i += D1_PARAM_CHUNK) {
+        idChunks.push(expenseIds.slice(i, i + D1_PARAM_CHUNK));
+    }
+
+    if (idChunks.length > 0) {
+        // All chunked queries run in parallel — each individual query stays
+        // under D1's 100-parameter limit.
+        const [tagBatches, attachmentBatches] = await Promise.all([
+            Promise.all(
+                idChunks.map((batch) =>
+                    client
+                        .select({
+                            expenseId: expenseTagAssignments.expenseId,
+                            id: expenseTags.id,
+                            name: expenseTags.name,
+                            color: expenseTags.color,
+                        })
+                        .from(expenseTagAssignments)
+                        .innerJoin(expenseTags, eq(expenseTagAssignments.tagId, expenseTags.id))
+                        .where(and(
+                            inArray(expenseTagAssignments.expenseId, batch),
+                            isNull(expenseTags.deletedAt),
+                        )),
+                ),
+            ),
+            Promise.all(
+                idChunks.map((batch) =>
+                    client
+                        .select({
+                            expenseId: expenseAttachments.expenseId,
+                            id: attachments.id,
+                            fileName: attachments.fileName,
+                            mimeType: attachments.mimeType,
+                            fileSize: attachments.fileSize,
+                        })
+                        .from(expenseAttachments)
+                        .innerJoin(attachments, eq(expenseAttachments.attachmentId, attachments.id))
+                        .where(and(
+                            inArray(expenseAttachments.expenseId, batch),
+                            isNull(attachments.deletedAt),
+                        )),
+                ),
+            ),
+        ]);
+
+        for (const row of tagBatches.flat()) {
             const list = tagsByExpense.get(row.expenseId) ?? [];
             list.push({ id: row.id, name: row.name, color: row.color });
             tagsByExpense.set(row.expenseId, list);
+        }
+        for (const row of attachmentBatches.flat()) {
+            const list = attachmentsByExpense.get(row.expenseId) ?? [];
+            list.push({ id: row.id, fileName: row.fileName, mimeType: row.mimeType, fileSize: row.fileSize });
+            attachmentsByExpense.set(row.expenseId, list);
         }
     }
 
@@ -111,6 +152,7 @@ export const getExpenses = async (
             vaultId: parsedExpense.vaultId || undefined,
             category: categoryData.categories.find(c => c.name === parsedExpense.categoryName) || null,
             tags: tagsByExpense.get(parsedExpense.id) ?? [],
+            attachments: attachmentsByExpense.get(parsedExpense.id) ?? [],
         }
     });
 

@@ -58,7 +58,11 @@
       "Bash(grep -n \"DateTimePicker\\\\|fundId\\\\|Item \\\\\\\\\\\\$\" \"D:/projects/duitgee-app/src/routes/\\(auth\\)/vaults/[vaultId]/expenses/new/form/+page.svelte\")",
       "Bash(grep -n \"CategoryPicker$\\\\|categories={categoryData\" \"D:/projects/duitgee-app/src/routes/\\(auth\\)/vaults/[vaultId]/templates/[templateId]/edit/+page.svelte\")",
       "Bash(grep -l \"platform.env\\\\|locals.currentSession\\\\|platform\\\\\\\\.env\" \"D:/projects/duitgee-app/src/routes/\\(auth\\)/vaults/[vaultId]/\" -r)",
-      "Bash(grep -n \"function handleBack\\\\|}\\);\\\\\\\\s*$\" \"D:/projects/duitgee-app/src/routes/\\(auth\\)/vaults/[vaultId]/expenses/[expenseId]/edit/+page.svelte\")"
+      "Bash(grep -n \"function handleBack\\\\|}\\);\\\\\\\\s*$\" \"D:/projects/duitgee-app/src/routes/\\(auth\\)/vaults/[vaultId]/expenses/[expenseId]/edit/+page.svelte\")",
+      "Bash(grep -E \"^d:\\\\\\\\\\\\\\\\.*\\\\.ts\")",
+      "Bash(git stash *)",
+      "Bash(grep -n \"TagPicker$\\\\|<TagPicker\" \"D:/projects/duitgee-app/src/routes/\\(auth\\)/vaults/[vaultId]/expenses/[expenseId]/edit/+page.svelte\")",
+      "Bash(grep -n \"</div>\\\\s*$\\\\|{/each}\" \"src/routes/\\(auth\\)/vaults/[vaultId]/expenses/+page.svelte\")"
     ]
   }
 }

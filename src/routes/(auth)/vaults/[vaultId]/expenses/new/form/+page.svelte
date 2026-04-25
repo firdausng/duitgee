@@ -43,6 +43,7 @@
 		$form.tagIds = sharedTagIds;
 	});
 
+
 	async function handleCreateTag(name: string): Promise<TagOption> {
 		const response: any = await ofetch('/api/createTag', {
 			method: 'POST',
@@ -71,6 +72,7 @@
 			expanded: false,
 			// Default to current local time so the date input is pre-filled when the row is expanded.
 			date: formatDatetimeLocal(new Date()),
+			attachmentIds: [],
 			errors: {},
 		};
 	}
@@ -102,6 +104,9 @@
 			date: source.date,
 			fundId: source.fundId,
 			fundPaymentMode: source.fundPaymentMode,
+			// Attachments are NOT copied — duplicating typically means
+			// "another similar item", not "same receipt twice".
+			attachmentIds: [],
 			errors: {},
 		};
 		const idx = rows.findIndex((r) => r.id === rowId);
@@ -208,6 +213,10 @@
 					...(row.expanded && row.fundPaymentMode !== undefined
 						? { fundPaymentMode: row.fundPaymentMode }
 						: {}),
+					// Per-row attachments — each row's own receipts
+					...(row.attachmentIds && row.attachmentIds.length > 0
+						? { attachmentIds: row.attachmentIds }
+						: {}),
 				})),
 			};
 
@@ -286,6 +295,7 @@
 					index={i}
 					canRemove={rows.length > 1}
 					disabled={isLoading}
+					vaultId={data.vaultId}
 					categories={categoryData.categories}
 					categoryGroups={categoryData.categoryGroups}
 					members={data.members}

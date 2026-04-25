@@ -4,7 +4,7 @@ import type {CreateExpense} from "$lib/schemas/expenses";
 import {createId} from "@paralleldrive/cuid2";
 import {categoryData} from "$lib/configurations/categories";
 import {initialAuditFields} from "$lib/server/utils/audit";
-import {expenses, expenseTagAssignments, expenseTags, expenseTemplates} from "$lib/server/db/schema";
+import {expenses, expenseTagAssignments, expenseTags, expenseTemplates, attachments, expenseAttachments} from "$lib/server/db/schema";
 import {and, eq, inArray, isNull, sql} from "drizzle-orm";
 import {formatISO} from "date-fns";
 import {UTCDate} from "@date-fns/utc";
@@ -17,7 +17,7 @@ export const createExpense = async (
 ) => {
     const client = drizzle(env.DB, { schema });
     const expenseId = createId();
-    const { templateId, fundId, fundPaymentMode, tagIds, ...expenseFields } = data;
+    const { templateId, fundId, fundPaymentMode, tagIds, attachmentIds, ...expenseFields } = data;
     const userId = session.user.id;
 
     // If expense is tagged to a fund, create the fund transaction first so we
@@ -80,6 +80,29 @@ export const createExpense = async (
                 .values(validTags.map((t) => ({
                     expenseId,
                     tagId: t.id,
+                    createdBy: userId,
+                })));
+        }
+    }
+
+    // Apply attachment links if any attachments were specified
+    if (attachmentIds && attachmentIds.length > 0) {
+        const uniqueIds = Array.from(new Set(attachmentIds));
+        const validAttachments = await client
+            .select({ id: attachments.id })
+            .from(attachments)
+            .where(and(
+                inArray(attachments.id, uniqueIds),
+                eq(attachments.vaultId, data.vaultId),
+                isNull(attachments.deletedAt),
+            ));
+
+        if (validAttachments.length > 0) {
+            await client
+                .insert(expenseAttachments)
+                .values(validAttachments.map((a) => ({
+                    expenseId,
+                    attachmentId: a.id,
                     createdBy: userId,
                 })));
         }

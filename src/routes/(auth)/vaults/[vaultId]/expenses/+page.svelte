@@ -26,6 +26,7 @@
     import { categoryData } from '$lib/configurations/categories';
     import { IconRenderer } from '$lib/components/ui/icon-renderer';
     import { TagChips } from '$lib/components/ui/tag-chips';
+    import Paperclip from '@lucide/svelte/icons/paperclip';
     import Search from '@lucide/svelte/icons/search';
     import Plus from '@lucide/svelte/icons/plus';
     import Receipt from '@lucide/svelte/icons/receipt';
@@ -70,6 +71,7 @@
         recurringExpenseId: string | null;
         date: string;
         tags?: Array<{ id: string; name: string; color: string | null }>;
+        attachments?: Array<{ id: string; fileName: string; mimeType: string; fileSize: number }>;
     };
 
     const params = useSearchParams(filterSchema);
@@ -88,22 +90,51 @@
         return getDateRange(filterType);
     }
 
+    // Server-side pagination — 25 rows per page. `page` is 1-based and lives in the URL.
+    const PAGE_SIZE = 25;
+    const currentPage = $derived(Math.max(1, Number(params.page) || 1));
+
+    type PaginationMeta = { page: number; limit: number; total: number; pages: number };
+
     const expensesResource = resource(
-        () => [vaultId, filterType, params.startDate, params.endDate, refetchKey] as const,
-        async ([id]) => {
+        () => [vaultId, filterType, params.startDate, params.endDate, currentPage, refetchKey] as const,
+        async ([id, , , , p]) => {
             const dateRange = getDateRangeWithCustom();
-            const urlParams = new URLSearchParams({ vaultId: id, page: '1', limit: '200' });
+            const urlParams = new URLSearchParams({
+                vaultId: id,
+                page: String(p),
+                limit: String(PAGE_SIZE),
+            });
             if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
             if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
-            const response = await ofetch<{ expenses: Expense[]; pagination: unknown }>(
+            return await ofetch<{ expenses: Expense[]; pagination: PaginationMeta }>(
                 `/api/getExpenses?${urlParams.toString()}`,
             );
-            return response.expenses || [];
         },
     );
 
-    const expenses = $derived(expensesResource.current || []);
+    const expenses = $derived(expensesResource.current?.expenses ?? []);
+    const pagination = $derived<PaginationMeta>(
+        expensesResource.current?.pagination ?? { page: currentPage, limit: PAGE_SIZE, total: 0, pages: 0 },
+    );
     const isLoading = $derived(expensesResource.loading);
+
+    function gotoPage(p: number) {
+        const next = Math.max(1, Math.min(p, pagination.pages || 1));
+        if (next === currentPage) return;
+        params.page = String(next);
+        // Pagination resets back to top — natural behavior for "next page" affordance.
+        if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Reset to page 1 whenever filter type / date range changes — otherwise users
+    // stuck on page 5 of "this year" hop to page 5 of "this week" and see nothing.
+    $effect(() => {
+        // Track filter inputs but trigger reset only when they actually change.
+        const _trigger = `${filterType}|${params.startDate}|${params.endDate}`;
+        void _trigger;
+        if (currentPage !== 1) params.page = '1';
+    });
 
     // Filter pills — parsed from the URL's repeated ?f= params.
     const pills = $derived<FilterPillData[]>(decodePills(page.url.searchParams));
@@ -471,6 +502,36 @@
                 {@render expenseRow(expense)}
             {/each}
         </div>
+
+        <!-- Pagination — hidden when only one page worth of data. -->
+        {#if pagination.pages > 1}
+            <div class="mt-3 flex items-center justify-between gap-2 text-sm">
+                <span class="text-muted-foreground">
+                    Page {pagination.page} of {pagination.pages}
+                    <span class="opacity-60">· {pagination.total} total</span>
+                </span>
+                <div class="flex items-center gap-1">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onclick={() => gotoPage(currentPage - 1)}
+                        disabled={currentPage <= 1 || isLoading}
+                    >
+                        Prev
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onclick={() => gotoPage(currentPage + 1)}
+                        disabled={currentPage >= pagination.pages || isLoading}
+                    >
+                        Next
+                    </Button>
+                </div>
+            </div>
+        {/if}
     {/if}
 </div>
 
@@ -537,6 +598,16 @@
                 {/if}
                 <span class="opacity-50">·</span>
                 <span class="whitespace-nowrap">{fmt.date(expense.date)}</span>
+                {#if expense.attachments && expense.attachments.length > 0}
+                    <span class="opacity-50">·</span>
+                    <span
+                        class="inline-flex items-center gap-0.5"
+                        title={`${expense.attachments.length} attachment${expense.attachments.length === 1 ? '' : 's'}`}
+                    >
+                        <Paperclip class="size-3" />
+                        {expense.attachments.length}
+                    </span>
+                {/if}
             </div>
             {#if expense.tags && expense.tags.length > 0}
                 <TagChips tags={expense.tags} class="mt-1" />

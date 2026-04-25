@@ -3,6 +3,7 @@
     import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
     import { IconRenderer } from "$lib/components/ui/icon-renderer";
     import { TagChips } from "$lib/components/ui/tag-chips";
+    import Paperclip from "@lucide/svelte/icons/paperclip";
     import { getPaymentTypeIcon, getPaymentTypeLabel } from "$lib/configurations/paymentTypes";
     import type { Expense } from "./types";
     import { scale } from "svelte/transition";
@@ -116,6 +117,15 @@
                                     {#if expense.paidBy}
                                         <span class="text-xs text-muted-foreground">
                                             Paid by: {expense.paidByName}
+                                        </span>
+                                    {/if}
+                                    {#if expense.attachments && expense.attachments.length > 0}
+                                        <span
+                                            class="inline-flex items-center gap-1 text-xs text-muted-foreground"
+                                            title={`${expense.attachments.length} attachment${expense.attachments.length === 1 ? '' : 's'}`}
+                                        >
+                                            <Paperclip class="size-3" />
+                                            {expense.attachments.length}
                                         </span>
                                     {/if}
                                 </div>

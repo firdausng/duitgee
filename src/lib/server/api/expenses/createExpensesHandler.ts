@@ -4,7 +4,7 @@ import type { CreateExpensesRequest } from '$lib/schemas/expenses';
 import { createId } from '@paralleldrive/cuid2';
 import { categoryData } from '$lib/configurations/categories';
 import { initialAuditFields, updateAuditFields } from '$lib/server/utils/audit';
-import { expenses, expenseTags, expenseTagAssignments, expenseTemplates, funds, fundCycles, fundTransactions } from '$lib/server/db/schema';
+import { expenses, expenseTags, expenseTagAssignments, expenseTemplates, attachments, expenseAttachments, funds, fundCycles, fundTransactions } from '$lib/server/db/schema';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { formatISO } from 'date-fns';
 import { UTCDate } from '@date-fns/utc';
@@ -21,6 +21,7 @@ interface ResolvedItem {
     paidBy: string | null;
     fundId: string | null;
     fundPaymentMode: string | null;
+    attachmentIds: string[];
 }
 
 export const createExpenses = async (
@@ -53,6 +54,7 @@ export const createExpenses = async (
             item.fundPaymentMode !== undefined
                 ? item.fundPaymentMode
                 : (data.shared.fundPaymentMode ?? null),
+        attachmentIds: Array.from(new Set(item.attachmentIds ?? [])),
     }));
 
     // 2. Group fund-tagged items by fundId
@@ -214,6 +216,38 @@ export const createExpenses = async (
                     client.insert(expenseTagAssignments).values({
                         expenseId: item.expenseId,
                         tagId,
+                        createdBy: userId,
+                    }),
+                );
+            }
+        }
+    }
+
+    // 4f. Per-row attachment links — each row gets its own receipts.
+    // Validate ALL referenced IDs in a single query to keep subrequest count down.
+    const allAttachmentIds = Array.from(
+        new Set(resolvedItems.flatMap((item) => item.attachmentIds)),
+    );
+    if (allAttachmentIds.length > 0) {
+        const validAttachments = await client
+            .select({ id: attachments.id })
+            .from(attachments)
+            .where(and(
+                inArray(attachments.id, allAttachmentIds),
+                eq(attachments.vaultId, data.vaultId),
+                isNull(attachments.deletedAt),
+            ));
+
+        if (validAttachments.length !== allAttachmentIds.length) {
+            throw new Error('One or more attachments do not belong to this vault');
+        }
+
+        for (const item of resolvedItems) {
+            for (const attachmentId of item.attachmentIds) {
+                batchOps.push(
+                    client.insert(expenseAttachments).values({
+                        expenseId: item.expenseId,
+                        attachmentId,
                         createdBy: userId,
                     }),
                 );

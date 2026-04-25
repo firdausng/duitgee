@@ -25,6 +25,7 @@
     import { groupExpensesByDay } from '$lib/utils/groupExpensesByDay';
     import { isToday, isYesterday } from 'date-fns';
     import Receipt from '@lucide/svelte/icons/receipt';
+    import Paperclip from '@lucide/svelte/icons/paperclip';
     import RefreshCw from '@lucide/svelte/icons/refresh-cw';
     import Pencil from '@lucide/svelte/icons/pencil';
     import Trash2 from '@lucide/svelte/icons/trash-2';
@@ -117,6 +118,16 @@
                 {/if}
                 <span class="opacity-50">·</span>
                 <span class="whitespace-nowrap">{formatDate(expense.date)}</span>
+                {#if expense.attachments && expense.attachments.length > 0}
+                    <span class="opacity-50">·</span>
+                    <span
+                        class="inline-flex items-center gap-0.5"
+                        title={`${expense.attachments.length} attachment${expense.attachments.length === 1 ? '' : 's'}`}
+                    >
+                        <Paperclip class="size-3" />
+                        {expense.attachments.length}
+                    </span>
+                {/if}
             </div>
             {#if expense.tags && expense.tags.length > 0}
                 <TagChips tags={expense.tags} class="mt-1" />
