@@ -12,22 +12,24 @@ import {
     type ScanAttachmentResponse,
 } from '$lib/schemas/scanAttachment';
 
-const MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
+// Text model parses the markdown that env.AI.toMarkdown() produces for both
+// PDFs (text-layer extraction) and images (object detection + Gemma summary).
+const TEXT_MODEL = '@cf/meta/llama-3.1-8b-instruct';
 
 // Per-user daily scan cap and per-attachment dedupe window. Both keyed in KV.
 const DAILY_SCAN_LIMIT = 50;
 const DEDUPE_TTL_SECONDS = 60 * 60 * 24; // 24 hours
 
-const SUPPORTED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const SUPPORTED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const SUPPORTED_PDF_MIME_TYPES = new Set(['application/pdf']);
 
-/**
- * Build the prompt fed to the vision model. Inlines the Lean Core category
- * names so the model picks one of ours. Strict JSON-only contract — anything
- * else is treated as a malformed response.
- */
-function buildPrompt(): string {
+function buildTextPrompt(markdown: string): string {
     const categoryNames = categoryData.categories.map((c) => c.name);
-    return `You are extracting structured data from a receipt or invoice image.
+    return `You are extracting structured data from a receipt or invoice. Below is the markdown content extracted from a receipt or invoice file:
+
+---
+${markdown}
+---
 
 Return ONLY valid JSON matching this schema. No prose, no markdown fences:
 {
@@ -134,8 +136,10 @@ export const scanAttachment = async (
         .limit(1);
 
     if (!row) throw new Error('Attachment not found');
-    if (!SUPPORTED_MIME_TYPES.has(row.mimeType)) {
-        throw new Error('Scan supports JPEG, PNG, or WebP images only');
+    const isImage = SUPPORTED_IMAGE_MIME_TYPES.has(row.mimeType);
+    const isPdf = SUPPORTED_PDF_MIME_TYPES.has(row.mimeType);
+    if (!isImage && !isPdf) {
+        throw new Error('Scan supports JPEG, PNG, WebP images, or PDF documents');
     }
 
     // 5. Pull the file bytes from R2.
@@ -143,55 +147,56 @@ export const scanAttachment = async (
     if (!obj) throw new Error('Attachment file is missing from storage');
     const bytes = new Uint8Array(await obj.arrayBuffer());
 
-    // 6. Call the vision model.
+    // 6. Unified flow: env.AI.toMarkdown() handles both PDFs (text extraction)
+    //    and images (object detection + Gemma summarization). The text LLM then
+    //    parses whatever markdown comes back into our JSON contract.
     //
-    // Llama-3.2-11b-vision-instruct requires a one-time per-account license
-    // acceptance. Cloudflare returns error code 5016 the first time the model
-    // is called, with instructions to submit `prompt: 'agree'` to accept the
-    // Meta Community License. We handle that transparently: on 5016, send the
-    // `agree` prompt, then retry the original call once.
-    //
-    // Important: by deploying this handler you are accepting the Meta Llama
-    // Community License (https://github.com/meta-llama/llama-models/blob/main/models/llama3_2/LICENSE)
-    // and Acceptable Use Policy. Cloudflare requires the deployer to also
-    // confirm that they are NOT domiciled in, nor have a principal place of
-    // business in, the European Union. Only ship this code if that holds.
-    const callAi = () =>
-        env.AI.run(MODEL, {
-            prompt: buildPrompt(),
-            image: Array.from(bytes),
-            max_tokens: 512,
-        } as never);
-
+    //    Heads-up on images: Cloudflare's image→markdown path uses scene
+    //    summarization rather than OCR, so dense receipt text may be lossy.
+    //    We're trying it to compare quality vs. the Llama vision direct path.
     let aiRaw: unknown;
-    try {
-        aiRaw = await callAi();
-    } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        const isLicenseError = message.includes('5016') || /submit the prompt 'agree'/i.test(message);
+    {
+        let markdown: string;
+        try {
+            // toMarkdown's binding type always reports an array; runtime returns
+            // either a single result or array depending on input. Normalize.
+            const raw = await env.AI.toMarkdown({
+                name: row.fileName,
+                blob: new Blob([bytes as unknown as ArrayBuffer], { type: row.mimeType }),
+            } as never);
+            const conversion = (Array.isArray(raw) ? raw[0] : raw) as {
+                format: 'markdown' | 'error';
+                data?: string;
+                error?: string;
+            };
 
-        if (isLicenseError) {
-            console.warn('Llama vision model requires license acceptance — submitting agree and retrying.');
-            try {
-                await env.AI.run(MODEL, { prompt: 'agree' } as never);
-            } catch (acceptErr) {
-                console.error('Failed to accept Llama license:', acceptErr);
-                throw new Error(
-                    'Scan unavailable: this Cloudflare account has not accepted the Llama vision model license yet, and auto-accept failed.',
-                );
+            if (!conversion || conversion.format === 'error' || !conversion.data) {
+                throw new Error(conversion?.error || 'Conversion returned no text');
             }
-            // Retry the actual scan after license acceptance.
-            try {
-                aiRaw = await callAi();
-            } catch (retryErr) {
-                const cause = retryErr instanceof Error ? retryErr.message : String(retryErr);
-                console.error('AI scan failed after license accept:', retryErr);
-                throw new Error(`Scan failed: ${cause}`);
-            }
-        } else {
-            // Surface other errors so we can see what's actually wrong (model not
-            // found, image too large, rate limited, etc.)
-            console.error('AI scan failed:', err);
+            markdown = conversion.data;
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            console.error('toMarkdown conversion failed:', err);
+            throw new Error(`Could not read ${isPdf ? 'PDF' : 'image'}: ${message}`);
+        }
+
+        if (!markdown.trim()) {
+            throw new Error(
+                isPdf
+                    ? 'PDF has no extractable text — try a screenshot of the receipt instead'
+                    : 'Could not read text from image',
+            );
+        }
+
+        try {
+            // TEXT_MODEL may not be in the static AiModels typegen; cast through never.
+            aiRaw = await env.AI.run(TEXT_MODEL as never, {
+                prompt: buildTextPrompt(markdown),
+                max_tokens: 512,
+            } as never);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            console.error('Text scan failed:', err);
             throw new Error(`Scan failed: ${message}`);
         }
     }

@@ -172,12 +172,14 @@
     let scanResult = $state<ScanApplyPayload | null>(null);
     let scanModalOpen = $state(false);
 
+    const isScannable = (mime: string) => isImage(mime) || isPdf(mime);
+
     async function handleScan(item: AttachmentMeta) {
         if (!canScan || disabled) return;
         if (item.status !== 'ready') return;
-        // Only images can be scanned. Server enforces the same.
-        if (!isImage(item.mimeType)) {
-            toast.error('Scan supports JPEG, PNG, or WebP images only');
+        // Images and PDFs are scannable — server enforces the same.
+        if (!isScannable(item.mimeType)) {
+            toast.error('Scan supports JPEG, PNG, WebP images, or PDF documents');
             return;
         }
         if (scanningId) return; // already running
@@ -462,10 +464,10 @@
                         </a>
                     {/if}
 
-                    <!-- Scan button — only on ready images and only when canScan is on.
+                    <!-- Scan button — on ready images & PDFs when canScan is on.
                          Successful scans get a small ✨ indicator; subsequent clicks
                          re-open the cached preview from the server-side dedupe cache. -->
-                    {#if item.status === 'ready' && isImage(item.mimeType) && canScan}
+                    {#if item.status === 'ready' && isScannable(item.mimeType) && canScan}
                         <button
                             type="button"
                             onclick={() => handleScan(item)}
