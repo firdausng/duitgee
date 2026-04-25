@@ -536,6 +536,21 @@
     function stageClass(stage: InstallmentStage): string {
         return `installment-stage-${stage}`;
     }
+
+    // Used in the table's sticky first cell. The cell needs an opaque bg for
+    // the sticky overlap, so we skip the full .installment-stage-* gradient
+    // and only apply the left-border color.
+    function stageBorderColorStyle(stage: InstallmentStage): string {
+        switch (stage) {
+            case 'done':
+            case 'near':
+                return 'border-left-color: var(--amount-positive);';
+            case 'mid':
+                return 'border-left-color: var(--accent-strong);';
+            default:
+                return 'border-left-color: transparent;';
+        }
+    }
 </script>
 
 <svelte:head>
@@ -897,7 +912,7 @@
         <table class="w-full text-sm min-w-[780px] border-collapse {muted ? '' : ''}">
             <thead class="bg-muted/40 border-b">
                 <tr class="text-xs text-muted-foreground uppercase tracking-wide">
-                    <th class="text-left font-medium px-3 py-2">Name</th>
+                    <th class="text-left font-medium px-3 py-2 sticky left-0 z-20 bg-muted/40 border-r w-[200px] min-w-[200px]">Name</th>
                     <th class="text-left font-medium px-3 py-2">Schedule</th>
                     <th class="text-right font-medium px-3 py-2">Amount</th>
                     <th class="text-left font-medium px-3 py-2 min-w-[160px]">Progress</th>
@@ -932,9 +947,12 @@
                                 goto(`/vaults/${vaultId}/recurring/${rule.id}/edit`);
                             }
                         }}
-                        class="cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                        class="group cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                     >
-                        <td class="px-3 py-2 border-l-4 {stageClass(stage)} max-w-[220px]">
+                        <td
+                            class="px-3 py-2 border-l-4 border-r sticky left-0 z-10 bg-card group-hover:bg-muted/30 w-[200px] min-w-[200px] max-w-[200px]"
+                            style={stageBorderColorStyle(stage)}
+                        >
                             <div class="flex items-center gap-2 min-w-0">
                                 <span class="shrink-0" aria-hidden="true">{rule.template.icon ?? '🔁'}</span>
                                 <span class="font-medium truncate" title={displayName(rule)}>{displayName(rule)}</span>
@@ -992,7 +1010,7 @@
         <table class="w-full text-sm min-w-[580px] border-collapse">
             <thead class="bg-muted/40 border-b">
                 <tr class="text-xs text-muted-foreground uppercase tracking-wide">
-                    <th class="text-left font-medium px-3 py-2">Name</th>
+                    <th class="text-left font-medium px-3 py-2 sticky left-0 z-20 bg-muted/40 border-r w-[200px] min-w-[200px]">Name</th>
                     <th class="text-left font-medium px-3 py-2">Schedule</th>
                     <th class="text-right font-medium px-3 py-2">Amount</th>
                     <th class="text-left font-medium px-3 py-2">Next</th>
@@ -1016,9 +1034,9 @@
                                 goto(`/vaults/${vaultId}/recurring/${rule.id}/edit`);
                             }
                         }}
-                        class="cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                        class="group cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                     >
-                        <td class="px-3 py-2 max-w-[240px]">
+                        <td class="px-3 py-2 sticky left-0 z-10 bg-card group-hover:bg-muted/30 border-r w-[200px] min-w-[200px] max-w-[200px]">
                             <div class="flex items-center gap-2 min-w-0">
                                 <span class="shrink-0" aria-hidden="true">{rule.template.icon ?? '🔁'}</span>
                                 <span class="font-medium truncate" title={displayName(rule)}>{displayName(rule)}</span>
