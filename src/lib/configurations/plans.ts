@@ -12,7 +12,10 @@ export type Entitlement =
     | 'attachment:scan'
     | 'attachment:multiple'
     | 'expense:export'
-    | 'expense:import';
+    | 'expense:import'
+    | 'stats:advanced_breakdowns'
+    | 'stats:custom_range'
+    | 'stats:export';
 
 export interface Plan {
     id: string;
@@ -50,6 +53,9 @@ export const PLANS: Plan[] = [
             'attachment:multiple',
             'expense:export',
             'expense:import',
+            'stats:advanced_breakdowns',
+            'stats:custom_range',
+            'stats:export',
         ],
     },
 ];
@@ -123,5 +129,17 @@ export const ENTITLEMENT_LABELS: Record<Entitlement, { name: string; description
     'expense:import': {
         name: 'Import expenses from CSV',
         description: 'Bulk-import expenses from a spreadsheet — migrate from another app or backfill history.',
+    },
+    'stats:advanced_breakdowns': {
+        name: 'Advanced breakdowns',
+        description: 'Year-over-year comparison, tag-level analytics, and the day/hour spending heatmap.',
+    },
+    'stats:custom_range': {
+        name: 'Unlimited stats history',
+        description: 'See trends beyond the last 12 months — compare years, not just months.',
+    },
+    'stats:export': {
+        name: 'Export charts and reports',
+        description: 'Download any chart as PNG or any aggregated breakdown as CSV.',
     },
 };

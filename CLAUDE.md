@@ -140,6 +140,14 @@ The API follows RPC (Remote Procedure Call) style with CQRS (Command Query Respo
 - `POST /api/confirmImportExpenses` - JSON `{ vaultId, importToken, skipInvalid, rows }` echoed from preview; persists rows in 50-row batches stamped with `importBatchId`
 - `POST /api/undoImportExpenses` - JSON `{ vaultId, importBatchId }`; soft-deletes every expense from a previous import
 
+*Statistics API:*
+- `GET /api/getSpendTrend?vaultId=xxx&start&end&compare=prev` - Bucketed spend trend (granularity auto-picked by range), optional previous-period overlay; clamped to 12 months on free
+- `GET /api/getCategoryTrend?vaultId=xxx&start&end&topN` - Stacked top-N categories over time; remainder rolled into `Other`
+- `GET /api/getCategoryBreakdown?vaultId=xxx&start&end` - Total per category for the range
+- `GET /api/getMemberBreakdown?vaultId=xxx&start&end&includeNetPosition=true` - Total per member; net-position math (`paid − expectedShare`) Pro-only
+- `GET /api/getPaymentTypeBreakdown?vaultId=xxx&start&end` - Total per payment type
+- `GET /api/getFundSpendTrend?vaultId=xxx&start&end` - Per-fund spend trend (sparkline data)
+
 *Expense Templates API:*
 - `GET /api/getExpenseTemplates?vaultId=xxx` - Get all expense templates for a vault
 - `GET /api/getExpenseTemplate?vaultId=xxx&id=xxx` - Get single expense template
@@ -437,6 +445,9 @@ The app has a **two-tier plan system** that gates fund features per vault. This 
 - `attachment:multiple` — Up to 20 attachments per expense (pro)
 - `expense:export` — Download expenses as CSV (free + pro; data-out is a baseline trust feature)
 - `expense:import` — Bulk-import expenses from CSV (pro)
+- `stats:advanced_breakdowns` — Year-over-year, tag-level analytics, day/hour heatmap, member net-position math (pro)
+- `stats:custom_range` — Stats history beyond 12 months (pro; free clamps trend `start` to `now − 12 months`)
+- `stats:export` — PNG export of charts and CSV export of any aggregated breakdown (pro)
 
 **Storage:** Each vault has a `planId` column (default `'plan_free'`). No FK constraint — plan definitions live in code (`PLANS` array).
 
@@ -491,6 +502,25 @@ The expenses module supports CSV export and import. Endpoints live in `src/lib/s
 
 **Storage:** `expenses.importBatchId` (text, nullable) — null on regular expenses, set on imported ones. Indexed by `(vaultId, importBatchId)` for fast undo.
 
+### Statistics
+
+The statistics module is a **dashboard, not a filter UI** — every chart renders simultaneously so users can scan spending at a glance. Charts live in `src/lib/components/ui/charts/` (TrendChart, StackedAreaChart, CategoryDonut, Sparkline) and are thin wrappers over `layerchart` via shadcn-svelte's Chart container at `src/lib/components/ui/chart/`. **Charting library is locked: layerchart via shadcn-svelte's Chart component.** Don't introduce a second chart library.
+
+**Aggregation pattern.** All statistics handlers live in `src/lib/server/api/statistics/`. Every endpoint runs server-side `GROUP BY` queries and returns pre-shaped data — never send raw expense lists to the client for client-side aggregation. Bucket granularity is auto-picked from the date range:
+- ≤45 days → `day` (`strftime('%Y-%m-%d', date)`)
+- ≤180 days → `week` (`strftime('%Y-W%W', date)`)
+- > 180 days → `month` (`strftime('%Y-%m', date)`)
+
+Helpers in `src/lib/server/api/statistics/helpers.ts`: `pickGranularity`, `bucketDateExpr`, `clampHistoryForFree`, `previousPeriod`, `defaultRange`. Reuse these — don't reimplement bucket SQL.
+
+**History clamp for free vaults.** The `clampHistoryForFree` helper checks the `stats:custom_range` entitlement; if absent, it caps `start` to `now − 12 months` and returns `truncated: true` so the client can render an upsell. Apply this at the *query* level, not by hiding the page.
+
+**Hot path indexes** (in `src/lib/server/db/schema.ts`):
+- `idx_expenses_vault_date` on `(vaultId, date)` — every trend / breakdown query.
+- `idx_expenses_vault_paid_by` on `(vaultId, paidBy)` — member breakdown.
+
+**Member net-position math** is gated on `stats:advanced_breakdowns` and assumes an even split across active vault members. This is intentional v1 simplification; per-expense split rules are a future enhancement. The basic "total paid per member" is free.
+
 ### Plan Design Philosophy for New Features
 
 **Core principle: Pro enhances, Free is fully usable.**
@@ -543,6 +573,7 @@ Both hooks work together to ensure authenticated access and proper service initi
 - **Styling**: Tailwind CSS 4 with plugins (@tailwindcss/forms, @tailwindcss/typography)
 - **UI Components**: Located in `src/lib/components/ui/` (uses tailwind-variants, clsx, tailwind-merge)
 - **Forms**: sveltekit-superforms with valibot validation
+- **Charts**: layerchart (via shadcn-svelte's Chart component at `src/lib/components/ui/chart/`)
 - **Utilities**: `src/lib/utils.ts` for common utilities (includes `cn()` for class merging)
 - **Analytics**: PostHog integration
 

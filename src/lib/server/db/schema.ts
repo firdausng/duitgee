@@ -119,6 +119,10 @@ export const expenses = sqliteTable('expenses', {
     fundIdIdx: index('idx_expenses_fund').on(table.fundId),
     recurringExpenseIdIdx: index('idx_expenses_recurring').on(table.recurringExpenseId),
     importBatchIdx: index('idx_expenses_import_batch').on(table.vaultId, table.importBatchId),
+    // Hot path for statistics aggregations (trend bucketing, date-range filters)
+    vaultDateIdx: index('idx_expenses_vault_date').on(table.vaultId, table.date),
+    // Member breakdown queries
+    vaultPaidByIdx: index('idx_expenses_vault_paid_by').on(table.vaultId, table.paidBy),
 }));
 
 // RecurringExpenses - rules that generate expenses on a schedule

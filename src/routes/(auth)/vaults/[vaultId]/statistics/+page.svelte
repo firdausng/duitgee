@@ -1,667 +1,557 @@
 <script lang="ts">
-    import {goto} from "$app/navigation";
-    import {page} from "$app/state";
-    import {useSearchParams} from "runed/kit";
-    import {ofetch} from "ofetch";
-    import {resource} from "runed";
+    import { page } from '$app/state';
+    import { useSearchParams } from 'runed/kit';
+    import { resource } from 'runed';
+    import { ofetch } from 'ofetch';
     import * as v from 'valibot';
-    import type {VaultWithMember} from "$lib/schemas/read/vaultWithMember";
-    import {Button} from "$lib/components/ui/button";
-    import {Card, CardContent} from "$lib/components/ui/card";
-    import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
-    import {FloatingActionButton} from "$lib/components/ui/floating-action-button";
-    import type {Expense, VaultStatistics} from "../types";
-    import FilterChipsDrawer from "./FilterChipsDrawer.svelte";
-    import DateFilterTabs from "./DateFilterTabs.svelte";
-    import FilterTypeTabs from "./FilterTypeTabs.svelte";
-    import CurrentFilterChip from "./CurrentFilterChip.svelte";
-    import CalendarSection from "./CalendarSection.svelte";
-    import { BreakdownBars, type BreakdownRow } from "$lib/components/ui/breakdown-bars";
+    import { goto } from '$app/navigation';
+    import { Button } from '$lib/components/ui/button';
+    import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+    import { DateRangeFilter } from '$lib/components/ui/date-range-filter';
+    import { TrendChart, StackedAreaChart, CategoryDonut, Sparkline } from '$lib/components/ui/charts';
+    import { Amount } from '$lib/components/ui/amount';
     import {
-        groupExpensesByDate,
-        formatDate,
-        getDateFilterLabel
-    } from "./utils";
-    import { createVaultFormatters } from "$lib/vaultFormatting";
-    import {type DateFilter, getDateRangeFromCalendar} from "$lib/utils";
-    import {now, getLocalTimeZone, CalendarDate} from "@internationalized/date";
-    import type {DateRange} from "bits-ui";
+        getDateRange,
+        localDatetimeToUtcIso,
+        type DateFilter,
+    } from '$lib/utils';
+    import { createVaultFormatters } from '$lib/vaultFormatting';
+    import { getPaymentTypeLabel } from '$lib/configurations/paymentTypes';
+    import type { VaultWithMember } from '$lib/schemas/read/vaultWithMember';
+    import type {
+        SpendTrendResponse,
+        CategoryTrendResponse,
+        CategoryBreakdownItem,
+        MemberBreakdownItem,
+        PaymentTypeBreakdownItem,
+        FundSpendTrendResponse,
+        TemplateBreakdownItem,
+    } from '$lib/schemas/statistics';
+    import TrendingUp from '@lucide/svelte/icons/trending-up';
+    import TrendingDown from '@lucide/svelte/icons/trending-down';
+    import ArrowRight from '@lucide/svelte/icons/arrow-right';
+    import Sparkles from '@lucide/svelte/icons/sparkles';
 
-    let {vaultId} = page.params
+    const { vaultId } = page.params;
 
-    // Schema for statistics page query params
-    const statisticsParamsSchema = v.object({
-        filterType: v.optional(v.picklist(['template', 'category', 'member', 'tag']), 'template'),
-        filter: v.optional(v.picklist(['today', 'yesterday', 'week', 'month', 'year']), 'month'),
-        filterName: v.optional(v.fallback(v.string(), ""), ""),
-        startDate: v.optional(v.fallback(v.string(), ""), ""),
-        endDate: v.optional(v.fallback(v.string(), ""), ""),
+    const paramsSchema = v.object({
+        filter: v.optional(
+            v.picklist(['today', 'yesterday', 'week', 'month', 'year', 'last7', 'last30', 'last90', 'custom']),
+            'month',
+        ),
+        startDate: v.optional(v.fallback(v.string(), ''), ''),
+        endDate: v.optional(v.fallback(v.string(), ''), ''),
+        compare: v.optional(v.fallback(v.string(), 'true'), 'true'),
     });
 
-    const params = useSearchParams(statisticsParamsSchema);
+    const params = useSearchParams(paramsSchema);
+    const filterType = $derived((params.filter ?? 'month') as DateFilter);
+    const showCompare = $derived(params.compare !== 'false');
 
-    // Refetch keys
-    let refetchKey = $state(0);
-    let vaultRefetchKey = $state(0);
-
-    // Drawer state for filter selection
-    let filterDrawerOpen = $state(false);
-
-    // Calendar value - initialize to current month
-    const today = now(getLocalTimeZone());
-    let calendarValue = $state<DateRange | undefined>({
-        start: today,
-        end: today,
-    });
-
-    // Calendar placeholder - tracks the currently displayed month in the calendar
-    // Start as undefined to prevent double-fetch on mount
-    let calendarPlaceholder = $state<CalendarDate | undefined>(undefined);
-
-    // Derived filter values
-    let filterType = $derived(params.filterType || 'template');
-    let filter = $state<DateFilter>(params.filter || 'all');
-    let filterName = $derived(params.filterName);
-
-    // Update dateFilter when params change
-    $effect(() => {
-        filter = (params.filter as DateFilter) || 'all';
-    });
-
-    // Label used in the header — honors a manual calendar range over the pill.
-    const activeRangeLabel = $derived.by(() => {
-        const hasCustomRange = params.startDate && params.endDate;
-        if (hasCustomRange) {
-            try {
-                const fmt = (s: string) =>
-                    new Date(s).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-                return `${fmt(params.startDate)} – ${fmt(params.endDate)}`;
-            } catch {
-                return getDateFilterLabel(filter);
-            }
+    function dateRangeFromFilter(): { start: string; end: string } {
+        if (filterType === 'custom' && params.startDate && params.endDate) {
+            return {
+                start: localDatetimeToUtcIso(params.startDate),
+                end: localDatetimeToUtcIso(params.endDate),
+            };
         }
-        return getDateFilterLabel(filter);
-    });
-
-    // Initialize calendar from URL params or preset filter on mount
-    let isInitialized = $state(false);
-
-    $effect(() => {
-        if (isInitialized) return;
-
-        const now = new Date();
-
-        // If we have URL params for dates, use them
-        if (params.startDate && params.endDate) {
-            try {
-                const start = new Date(params.startDate);
-                const end = new Date(params.endDate);
-
-                calendarValue = {
-                    start: new CalendarDate(start.getFullYear(), start.getMonth() + 1, start.getDate()),
-                    end: new CalendarDate(end.getFullYear(), end.getMonth() + 1, end.getDate())
-                };
-                // Set placeholder to the start date's month
-                calendarPlaceholder = new CalendarDate(start.getFullYear(), start.getMonth() + 1, 1);
-            } catch (e) {
-                console.error('Failed to parse dates from params', e);
-            }
-        } else {
-            // Otherwise use preset filter
-            switch (filter) {
-                case 'today': {
-                    const todayDate = new CalendarDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
-                    calendarValue = { start: todayDate, end: todayDate };
-                    calendarPlaceholder = new CalendarDate(now.getFullYear(), now.getMonth() + 1, 1);
-                    break;
-                }
-                case 'week': {
-                    const dayOfWeek = now.getDay();
-                    const start = new Date(now);
-                    start.setDate(now.getDate() - dayOfWeek);
-                    const end = new Date(start);
-                    end.setDate(start.getDate() + 6);
-                    calendarValue = {
-                        start: new CalendarDate(start.getFullYear(), start.getMonth() + 1, start.getDate()),
-                        end: new CalendarDate(end.getFullYear(), end.getMonth() + 1, end.getDate())
-                    };
-                    calendarPlaceholder = new CalendarDate(now.getFullYear(), now.getMonth() + 1, 1);
-                    break;
-                }
-                case 'month': {
-                    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-                    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                    calendarValue = {
-                        start: new CalendarDate(firstDay.getFullYear(), firstDay.getMonth() + 1, firstDay.getDate()),
-                        end: new CalendarDate(lastDay.getFullYear(), lastDay.getMonth() + 1, lastDay.getDate())
-                    };
-                    calendarPlaceholder = new CalendarDate(now.getFullYear(), now.getMonth() + 1, 1);
-                    break;
-                }
-                case 'year': {
-                    calendarValue = {
-                        start: new CalendarDate(now.getFullYear(), 1, 1),
-                        end: new CalendarDate(now.getFullYear(), 12, 31)
-                    };
-                    calendarPlaceholder = new CalendarDate(now.getFullYear(), now.getMonth() + 1, 1);
-                    break;
-                }
-                default: {
-                    const todayDate = new CalendarDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
-                    calendarValue = { start: todayDate, end: todayDate };
-                    calendarPlaceholder = new CalendarDate(now.getFullYear(), now.getMonth() + 1, 1);
-                }
-            }
+        const r = getDateRange(filterType);
+        // Sensible default if something went sideways.
+        if (!r.startDate || !r.endDate) {
+            const end = new Date();
+            const start = new Date();
+            start.setDate(start.getDate() - 30);
+            return { start: start.toISOString(), end: end.toISOString() };
         }
+        return { start: r.startDate, end: r.endDate };
+    }
 
-        isInitialized = true;
-    });
+    const range = $derived(dateRangeFromFilter());
 
-    // When date filter button is clicked, update calendar
-    let lastDateFilter = $state(filter);
-    $effect(() => {
-        if (!isInitialized) return;
-        if (filter === lastDateFilter) return;
-
-        lastDateFilter = filter;
-        const now = new Date();
-
-        switch (filter) {
-            case 'today': {
-                const todayDate = new CalendarDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
-                calendarValue = { start: todayDate, end: todayDate };
-                break;
-            }
-            case 'week': {
-                const dayOfWeek = now.getDay();
-                const start = new Date(now);
-                start.setDate(now.getDate() - dayOfWeek);
-                const end = new Date(start);
-                end.setDate(start.getDate() + 6);
-                calendarValue = {
-                    start: new CalendarDate(start.getFullYear(), start.getMonth() + 1, start.getDate()),
-                    end: new CalendarDate(end.getFullYear(), end.getMonth() + 1, end.getDate())
-                };
-                break;
-            }
-            case 'month': {
-                const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-                const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                calendarValue = {
-                    start: new CalendarDate(firstDay.getFullYear(), firstDay.getMonth() + 1, firstDay.getDate()),
-                    end: new CalendarDate(lastDay.getFullYear(), lastDay.getMonth() + 1, lastDay.getDate())
-                };
-                break;
-            }
-            case 'year': {
-                calendarValue = {
-                    start: new CalendarDate(now.getFullYear(), 1, 1),
-                    end: new CalendarDate(now.getFullYear(), 12, 31)
-                };
-                break;
-            }
-            case 'all': {
-                const todayDate = new CalendarDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
-                calendarValue = { start: todayDate, end: todayDate };
-                break;
-            }
-        }
-    });
-
-    // Update URL params when calendar value changes (but not during initialization)
-    let lastCalendarValue: string | undefined = $state();
-    $effect(() => {
-        if (!isInitialized || !calendarValue?.start || !calendarValue?.end) return;
-
-        const currentValue = `${calendarValue.start.year}-${calendarValue.start.month}-${calendarValue.start.day}_${calendarValue.end.year}-${calendarValue.end.month}-${calendarValue.end.day}`;
-
-        if (currentValue === lastCalendarValue) return;
-        lastCalendarValue = currentValue;
-
-        const start = new Date(calendarValue.start.year, calendarValue.start.month - 1, calendarValue.start.day);
-        const end = new Date(calendarValue.end.year, calendarValue.end.month - 1, calendarValue.end.day);
-
-        params.update({
-            startDate: start.toISOString().split('T')[0],
-            endDate: end.toISOString().split('T')[0],
-            filterName: filterName || "",
-            filterType: filterType || "template"
-        })
-    });
-
-    // Resource for vault data
     const vaultResource = resource(
-        () => [vaultId, vaultRefetchKey] as const,
+        () => [vaultId] as const,
         async ([id]) => {
-            const response = await ofetch<{ success: boolean, data: VaultWithMember }>(`/api/getVault?vaultId=${id}`);
-            return response.data;
-        }
-    );
-
-    // Track last fetched month to prevent duplicate calls
-    let lastFetchedMonth = $state<string | null>(null);
-
-    // Resource for ALL expenses (for calendar daily totals - independent of filter)
-    const allExpensesResource = resource(
-        () => {
-            if (!calendarPlaceholder?.year || !calendarPlaceholder?.month) return null;
-            return [vaultId, calendarPlaceholder.year, calendarPlaceholder.month, refetchKey] as const;
+            const r = await ofetch<{ success: boolean; data: VaultWithMember }>(`/api/getVault?vaultId=${id}`);
+            return r.data;
         },
-        async (deps) => {
-            // Skip fetch if calendar placeholder is not initialized yet
-            if (!deps) return [];
-
-            const [id, year, month] = deps;
-
-            // Check if we've already fetched this month to prevent duplicates
-            const monthKey = `${year}-${month}`;
-            if (monthKey === lastFetchedMonth && refetchKey === 0) {
-                return allExpensesResource.current || [];
-            }
-            lastFetchedMonth = monthKey;
-
-            // Calculate 1 month before the currently displayed calendar month
-            const prevMonthDate = new Date(year, month - 2, 1); // month - 2 because months are 0-based and we want previous month
-            const prev = {
-                year: prevMonthDate.getFullYear(),
-                month: prevMonthDate.getMonth() + 1, // +1 because months are 0-based
-                day: 1
-            };
-
-            // Calculate 1 month after the currently displayed calendar month (last day of that month)
-            const nextMonthDate = new Date(year, month, 1); // month is already 1-based, so this gives us next month
-            const lastDayNextMonth = new Date(nextMonthDate.getFullYear(), nextMonthDate.getMonth() + 1, 0);
-            const next = {
-                year: lastDayNextMonth.getFullYear(),
-                month: lastDayNextMonth.getMonth() + 1,
-                day: lastDayNextMonth.getDate()
-            };
-
-            const dateRange = getDateRangeFromCalendar({
-                start: prev,
-                end: next,
-            });
-            const urlParams = new URLSearchParams({
-                vaultId: id,
-                page: '1',
-                limit: '1000', // Get all expenses,
-                startDate: dateRange.startDate!,
-                endDate: dateRange.endDate!
-            });
-
-            const response = await ofetch<{ expenses: Expense[], pagination: any }>(`/api/getExpenses?${urlParams.toString()}`);
-            return response.expenses || [];
-        }
     );
-
-    // Resource for filtered expenses - reactive to calendar selection
-    const expensesResource = resource(
-        () => [vaultId, calendarValue?.start, calendarValue?.end, filter, refetchKey] as const,
-        async ([id, calStart, calEnd, dateF]) => {
-            if(!calEnd || !calStart) return [];
-            const urlParams = new URLSearchParams({
-                vaultId: id,
-                page: '1',
-                limit: '1000'
-            });
-
-            // Use calendar value for date filtering (synced with date filter buttons)
-            if (dateF !== 'all') {
-                const dateRange = getDateRangeFromCalendar(calendarValue);
-                if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
-                if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
-            }
-
-            urlParams.append('filterName', params.filterName || '');
-            urlParams.append('filterType', params.filterType || 'template');
-
-            const response = await ofetch<{ expenses: Expense[], pagination: any }>(`/api/getExpenses?${urlParams.toString()}`);
-            return response.expenses || [];
-        }
-    );
-
-    // Resource for overall statistics - reactive to calendar selection
-    const statisticsResource = resource(
-        () => [vaultId, calendarValue?.start, calendarValue?.end, filter, refetchKey] as const,
-        async ([id, calStart, calEnd, dateF]) => {
-            if(calEnd === undefined) return null;
-            const urlParams = new URLSearchParams({vaultId: id});
-
-            // Use calendar value for date filtering (synced with date filter buttons)
-            if (dateF !== 'all') {
-                const dateRange = getDateRangeFromCalendar(calendarValue);
-                if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
-                if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
-            }
-
-            const response = await ofetch<{ success: boolean, data: VaultStatistics }>(`/api/getVaultStatistics?${urlParams.toString()}`);
-            return response.data;
-        }
-    );
-
-    // Derive data from resources
-    const currentVault = $derived(vaultResource.current);
-    const allExpenses = $derived(allExpensesResource.current || []); // For calendar daily totals
-    const filteredExpensesList = $derived(expensesResource.current || []); // For the filtered list
-    const statistics = $derived(statisticsResource.current || null);
-    const isLoadingVault = $derived(vaultResource.loading);
-    const isLoadingExpenses = $derived(expensesResource.loading);
-    const isLoadingStats = $derived(statisticsResource.loading);
-
-    const vaultFormatters = $derived(
+    const vault = $derived(vaultResource.current?.vaults);
+    const fmt = $derived(
         createVaultFormatters({
-            locale: currentVault?.vaults.locale || 'en-US',
-            currency: currentVault?.vaults.currency || 'USD',
+            locale: vault?.locale || 'en-US',
+            currency: vault?.currency || 'USD',
         }),
     );
-    const formatCurrency = $derived(vaultFormatters.currency);
 
-    // Derive filterId from filterName and statistics data
-    const filterId = $derived.by(() => {
-        if (!filterName || !statistics) return undefined;
+    type Resp<T> = { success: boolean; data: T };
 
-        switch (filterType) {
-            case 'template': {
-                const template = statistics.byTemplate.find(t => t.templateName === filterName);
-                return template?.templateId;
-            }
-            case 'member': {
-                const member = statistics.byMember.find(m => m.displayName === filterName);
-                return member?.userId;
-            }
-            case 'tag': {
-                const tag = statistics.byTag.find(t => t.tagName === filterName);
-                return tag?.tagId;
-            }
-            case 'category':
-                // Categories use name directly, no ID needed
-                return undefined;
-            default:
-                return undefined;
-        }
+    type DashboardPayload = {
+        spendTrend: SpendTrendResponse;
+        categoryTrend: CategoryTrendResponse;
+        categoryBreakdown: CategoryBreakdownItem[];
+        memberBreakdown: MemberBreakdownItem[];
+        paymentTypeBreakdown: PaymentTypeBreakdownItem[];
+        fundSpendTrend: FundSpendTrendResponse;
+        templateBreakdown: TemplateBreakdownItem[];
+    };
+
+    // One round-trip — composite handler runs all sections in parallel server-side.
+    const dashboardResource = resource(
+        () => [vaultId, range.start, range.end, showCompare] as const,
+        async () => {
+            const qs = new URLSearchParams({
+                vaultId: vaultId ?? '',
+                start: range.start,
+                end: range.end,
+                compare: showCompare ? 'prev' : 'none',
+                includeNetPosition: 'true',
+                topN: '5',
+            });
+            const r = await ofetch<Resp<DashboardPayload>>(
+                `/api/getStatisticsDashboard?${qs.toString()}`,
+            );
+            return r.data;
+        },
+    );
+
+    // Individual aliases — keep the rest of the template unchanged.
+    const trendResource = $derived({
+        loading: dashboardResource.loading,
+        current: dashboardResource.current?.spendTrend,
+    });
+    const categoryTrendResource = $derived({
+        loading: dashboardResource.loading,
+        current: dashboardResource.current?.categoryTrend,
+    });
+    const categoryBreakdownResource = $derived({
+        loading: dashboardResource.loading,
+        current: dashboardResource.current?.categoryBreakdown,
+    });
+    const memberBreakdownResource = $derived({
+        loading: dashboardResource.loading,
+        current: dashboardResource.current?.memberBreakdown,
+    });
+    const paymentTypeResource = $derived({
+        loading: dashboardResource.loading,
+        current: dashboardResource.current?.paymentTypeBreakdown,
+    });
+    const fundSpendResource = $derived({
+        loading: dashboardResource.loading,
+        current: dashboardResource.current?.fundSpendTrend,
+    });
+    const templateBreakdownResource = $derived({
+        loading: dashboardResource.loading,
+        current: dashboardResource.current?.templateBreakdown,
     });
 
-    // Get all available filter options for chips
-    const filterOptions = $derived.by(() => {
-        if (!statistics) return [];
+    const templateDonutData = $derived(
+        (templateBreakdownResource.current ?? []).map((t) => ({
+            label: t.templateName,
+            value: t.totalAmount,
+            color: null,
+        })),
+    );
 
-        switch (filterType) {
-            case 'template':
-                return statistics.byTemplate.map(item => ({
-                    id: String(item.templateId || 'no-template'),
-                    name: item.name || item.templateName,
-                    icon: item.templateIcon || '📝',
-                    count: item.count
-                }));
-            case 'category':
-                return statistics.byCategory.map(item => ({
-                    id: item.categoryName,
-                    name: item.categoryName,
-                    icon: '🏷️',
-                    count: item.count
-                }));
-            case 'member':
-                return statistics.byMember.map(item => ({
-                    id: item.userId,
-                    name: item.displayName,
-                    icon: '👤',
-                    count: item.count
-                }));
-            case 'tag':
-                return statistics.byTag.map(item => ({
-                    id: item.tagId,
-                    name: item.tagName,
-                    icon: '🏷️',
-                    count: item.count
-                }));
-            default:
-                return [];
-        }
+    // Hero numbers
+    const currentTotal = $derived(
+        trendResource.current?.current.reduce((s, b) => s + b.total, 0) ?? 0,
+    );
+    const previousTotal = $derived(
+        trendResource.current?.previous?.reduce((s, b) => s + b.total, 0) ?? null,
+    );
+    const deltaPct = $derived.by(() => {
+        if (previousTotal === null || previousTotal === 0) return null;
+        return ((currentTotal - previousTotal) / previousTotal) * 100;
     });
 
-    // Helper function to filter expenses by category/template/member
-    function filterByType(expenses: Expense[]) {
-        const currentFilterType = filterType;
-        const currentFilterName = filterName;
-        const currentFilterId = filterId;
-
-        if (!currentFilterName) return expenses;
-
-        switch (currentFilterType) {
-            case 'category':
-                return expenses.filter(expense => expense.category?.name === currentFilterName);
-            case 'template':
-                if (currentFilterId) {
-                    return expenses.filter(expense =>
-                        String(expense.templateId) === String(currentFilterId)
-                    );
-                }
-                return expenses;
-            case 'member':
-                if (currentFilterId) {
-                    return expenses.filter(expense => expense.paidBy === currentFilterId);
-                }
-                return expenses;
-            case 'tag':
-                if (currentFilterId) {
-                    return expenses.filter((expense) =>
-                        Array.isArray(expense.tags) && expense.tags.some((t) => t.id === currentFilterId)
-                    );
-                }
-                return expenses;
-            default:
-                return expenses;
+    function formatBucketLabel(bucket: string): Date {
+        // bucket: "YYYY-MM-DD" | "YYYY-Www" | "YYYY-MM"
+        if (/^\d{4}-\d{2}-\d{2}$/.test(bucket)) return new Date(bucket + 'T00:00:00Z');
+        if (/^\d{4}-W\d{2}$/.test(bucket)) {
+            const [y, w] = bucket.split('-W');
+            const d = new Date(Date.UTC(Number(y), 0, 1));
+            d.setUTCDate(d.getUTCDate() + Number(w) * 7);
+            return d;
         }
+        if (/^\d{4}-\d{2}$/.test(bucket)) return new Date(bucket + '-01T00:00:00Z');
+        return new Date(bucket);
     }
 
-    // Filter all expenses by category/template/member (for calendar totals)
-    const allExpensesFiltered = $derived.by(() => filterByType(allExpenses));
-
-    // Filter date-filtered expenses by category/template/member (for expense list)
-    const filteredExpenses = $derived.by(() => filterByType(filteredExpensesList));
-
-    const allExpensesByDate = $derived(groupExpensesByDate(filteredExpenses));
-
-    // Calculate total based on filtered expenses
-    const filteredTotal = $derived.by(() => {
-        const total = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-        const count = filteredExpenses.length;
-        return {amount: total, count};
+    // Trend chart input
+    const trendData = $derived.by(() => {
+        const cur = trendResource.current?.current ?? [];
+        const prev = trendResource.current?.previous ?? null;
+        return cur.map((b, i) => ({
+            date: formatBucketLabel(b.bucket),
+            current: b.total,
+            previous: prev?.[i]?.total ?? null,
+        }));
     });
 
-    function handleDeleteExpense(expenseId: string) {
-        if (!confirm('Are you sure you want to delete this expense?')) return;
+    // Stacked area chart input — one row per bucket, columns per series
+    const stackedData = $derived.by(() => {
+        const series = categoryTrendResource.current?.series ?? [];
+        const other = categoryTrendResource.current?.other ?? [];
+        const allBuckets = new Set<string>();
+        for (const s of series) for (const b of s.buckets) allBuckets.add(b.bucket);
+        for (const b of other) allBuckets.add(b.bucket);
 
-        ofetch('/api/deleteExpense', {
-            method: 'POST',
-            body: JSON.stringify({id: expenseId, vaultId}),
-            headers: {'Content-Type': 'application/json'}
-        }).then(() => {
-            refetchKey++;
-        }).catch((error) => {
-            console.error('Failed to delete expense:', error);
-            alert('Failed to delete expense. Please try again.');
+        const sortedBuckets = Array.from(allBuckets).sort();
+        return sortedBuckets.map((bucket) => {
+            const row: Record<string, number | Date> & { date: Date } = {
+                date: formatBucketLabel(bucket),
+            };
+            for (const s of series) {
+                row[s.categoryName] = s.buckets.find((b) => b.bucket === bucket)?.total ?? 0;
+            }
+            if (other.length > 0) {
+                row.Other = other.find((b) => b.bucket === bucket)?.total ?? 0;
+            }
+            return row;
         });
-    }
-
-    function handleEditExpense(expenseId: string) {
-        goto(`/vaults/${vaultId}/expenses/${expenseId}/edit`);
-    }
-
-    function handleBack() {
-        goto(`/vaults/${vaultId}`);
-    }
-
-    // Rows for the BreakdownBars component, switching data set by filter type.
-    const breakdownRows = $derived.by<BreakdownRow[]>(() => {
-        if (!statistics) return [];
-        switch (filterType) {
-            case 'category':
-                return statistics.byCategory.map((c) => ({
-                    id: c.categoryName,
-                    label: c.categoryName || 'Uncategorized',
-                    icon: c.categoryIcon ?? null,
-                    iconType: c.categoryIconType ?? null,
-                    color: null,
-                    value: c.totalAmount,
-                    count: c.count,
-                }));
-            case 'template':
-                return statistics.byTemplate.map((t) => ({
-                    id: t.templateId,
-                    label: t.templateName || 'No template',
-                    icon: t.templateIcon ?? null,
-                    color: null,
-                    value: t.totalAmount,
-                    count: t.count,
-                }));
-            case 'member':
-                return statistics.byMember.map((m) => ({
-                    id: m.userId,
-                    label: m.displayName || 'Vault-level expense',
-                    icon: null,
-                    color: null,
-                    value: m.totalAmount,
-                    count: m.count,
-                }));
-            case 'tag':
-                return statistics.byTag.map((t) => ({
-                    id: t.tagId,
-                    label: t.tagName,
-                    icon: null,
-                    color: t.tagColor ?? null,
-                    value: t.totalAmount,
-                    count: t.count,
-                }));
-            default:
-                return [];
-        }
     });
 
-    // Clicking a bar → drill down to the expense list, pre-filtered by search.
-    function navigateToExpenses(label: string) {
-        const qs = new URLSearchParams();
-        qs.set('filter', filter);
-        if (filter === 'custom' && params.startDate && params.endDate) {
-            qs.set('startDate', params.startDate);
-            qs.set('endDate', params.endDate);
+    const seriesKeys = $derived.by(() => {
+        const keys = (categoryTrendResource.current?.series ?? []).map((s) => s.categoryName);
+        if ((categoryTrendResource.current?.other.length ?? 0) > 0) keys.push('Other');
+        return keys;
+    });
+
+    const seriesLabels = $derived.by(() => {
+        const labels: Record<string, string> = {};
+        for (const s of categoryTrendResource.current?.series ?? []) labels[s.categoryName] = s.categoryName;
+        labels.Other = 'Other';
+        return labels;
+    });
+
+    const seriesColors = $derived.by(() => {
+        const colors: Record<string, string> = {};
+        for (const s of categoryTrendResource.current?.series ?? []) {
+            if (s.categoryColor) colors[s.categoryName] = s.categoryColor;
         }
+        return colors;
+    });
+
+    // Donut input
+    const categoryDonutData = $derived(
+        (categoryBreakdownResource.current ?? []).map((c) => ({
+            label: c.categoryName,
+            value: c.totalAmount,
+            color: c.categoryColor,
+        })),
+    );
+
+    const paymentTypeDonutData = $derived(
+        (paymentTypeResource.current ?? []).map((p) => ({
+            label: getPaymentTypeLabel(p.paymentType),
+            value: p.totalAmount,
+            color: null,
+        })),
+    );
+
+    const fundSparklines = $derived(
+        (fundSpendResource.current?.funds ?? []).map((f) => ({
+            ...f,
+            sparkData: f.buckets.map((b) => ({
+                date: formatBucketLabel(b.bucket),
+                value: b.total,
+            })),
+        })),
+    );
+
+    function handleDateRangeChange(next: { filter: DateFilter; startDate?: string; endDate?: string }) {
+        // The schema picklist excludes 'all' on this page (statistics needs a window).
+        // Fall back to 'month' if upstream emits 'all'.
+        const safe = next.filter === 'all' ? 'month' : next.filter;
+        params.filter = safe;
+        params.startDate = next.startDate ?? '';
+        params.endDate = next.endDate ?? '';
+    }
+
+    function toggleCompare() {
+        params.compare = showCompare ? 'false' : 'true';
+    }
+
+    const trendTruncated = $derived(trendResource.current?.truncated ?? false);
+
+    function gotoExpensesFor(filter: { categoryName?: string; paidBy?: string | null }) {
+        const qs = new URLSearchParams();
+        const r = getDateRange(filterType);
+        if (r.startDate) qs.set('startDate', r.startDate);
+        if (r.endDate) qs.set('endDate', r.endDate);
+        if (filter.categoryName) qs.set('category', filter.categoryName);
         goto(`/vaults/${vaultId}/expenses?${qs.toString()}`);
     }
 </script>
 
 <svelte:head>
-    <title>Statistics - {currentVault?.vaults.name || 'Vault'} - DuitGee</title>
+    <title>Statistics - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-4 px-4">
-    {#if isLoadingVault}
-        <!-- Loading State -->
-        <div class="flex flex-col items-center justify-center py-16">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            <p class="mt-4 text-muted-foreground">Loading vault...</p>
+<div class="container mx-auto py-4 md:py-8 px-4 space-y-6">
+    <!-- Header strip -->
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+        <div>
+            <p class="text-xs text-muted-foreground uppercase tracking-wide">{vault?.name ?? ''}</p>
+            <h1 class="text-2xl md:text-3xl font-bold">Statistics</h1>
         </div>
-    {:else if !currentVault}
-        <!-- Error State -->
-        <Card class="border-destructive">
-            <CardContent class="flex flex-col items-center justify-center py-16 px-4">
-                <h2 class="text-2xl font-semibold mb-2">Vault not found</h2>
-                <p class="text-muted-foreground text-center max-w-md mb-6">
-                    The vault you're looking for doesn't exist or you don't have access to it.
+        <div class="flex flex-wrap items-center gap-2">
+            <DateRangeFilter
+                value={filterType}
+                startDate={params.startDate}
+                endDate={params.endDate}
+                onChange={handleDateRangeChange}
+            />
+            <Button
+                type="button"
+                variant={showCompare ? 'default' : 'outline'}
+                size="sm"
+                onclick={toggleCompare}
+                aria-pressed={showCompare}
+            >
+                Compare
+            </Button>
+        </div>
+    </div>
+
+    <!-- Spend Hero -->
+    <Card>
+        <CardContent class="pt-6">
+            <div class="flex flex-col gap-1">
+                <p class="text-xs text-muted-foreground uppercase tracking-wide">Total spend</p>
+                <div class="flex items-baseline gap-3">
+                    <Amount
+                        value={currentTotal}
+                        sign="neutral"
+                        size="hero"
+                        locale={vault?.locale || 'en-US'}
+                        currency={vault?.currency || 'USD'}
+                    />
+                    {#if deltaPct !== null}
+                        <span
+                            class="inline-flex items-center gap-1 text-sm font-mono {deltaPct > 0 ? 'text-destructive' : 'text-emerald-600'}"
+                        >
+                            {#if deltaPct > 0}
+                                <TrendingUp class="size-3.5" />
+                            {:else}
+                                <TrendingDown class="size-3.5" />
+                            {/if}
+                            {Math.abs(deltaPct).toFixed(1)}%
+                            <span class="text-muted-foreground font-normal">vs prev</span>
+                        </span>
+                    {/if}
+                </div>
+                {#if previousTotal !== null}
+                    <p class="text-xs text-muted-foreground">
+                        Previous period: <span class="font-mono">{fmt.currency(previousTotal)}</span>
+                    </p>
+                {/if}
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- Trend Over Time -->
+    <Card>
+        <CardHeader>
+            <CardTitle class="text-base">Trend</CardTitle>
+        </CardHeader>
+        <CardContent>
+            {#if trendResource.loading}
+                <div class="aspect-[16/7] flex items-center justify-center">
+                    <div class="animate-spin rounded-full size-6 border-b-2 border-primary"></div>
+                </div>
+            {:else if trendData.length === 0}
+                <p class="text-sm text-muted-foreground py-12 text-center">No expenses in this range.</p>
+            {:else}
+                <TrendChart data={trendData} showPrevious={showCompare && previousTotal !== null} />
+            {/if}
+            {#if trendTruncated}
+                <p class="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                    <Sparkles class="size-3" />
+                    Showing the last 12 months. <a href="/settings/plan" class="underline">Upgrade for unlimited history.</a>
                 </p>
-                <Button onclick={handleBack}>
-                    Back to Vaults
-                </Button>
+            {/if}
+        </CardContent>
+    </Card>
+
+    <!-- Two-column: Category Trend + Category Breakdown -->
+    <div class="grid md:grid-cols-2 gap-4">
+        <Card>
+            <CardHeader>
+                <CardTitle class="text-base">Category trend</CardTitle>
+            </CardHeader>
+            <CardContent>
+                {#if categoryTrendResource.loading}
+                    <div class="aspect-[16/7] flex items-center justify-center">
+                        <div class="animate-spin rounded-full size-6 border-b-2 border-primary"></div>
+                    </div>
+                {:else if seriesKeys.length === 0}
+                    <p class="text-sm text-muted-foreground py-12 text-center">No category data.</p>
+                {:else}
+                    <StackedAreaChart
+                        data={stackedData}
+                        seriesKeys={seriesKeys}
+                        labels={seriesLabels}
+                        colors={seriesColors}
+                    />
+                {/if}
             </CardContent>
         </Card>
-    {:else}
-        <LoadingOverlay show={isLoadingStats || isLoadingExpenses} />
 
-        <!-- Header -->
-        <div class="mb-4">
-            <p class="text-xs text-muted-foreground mt-1">Expense breakdown for {activeRangeLabel}</p>
-        </div>
-
-        <!-- Date Filter Tabs + inline Filter trigger -->
-        <div class="flex items-center justify-between gap-2 flex-wrap">
-            <DateFilterTabs
-                currentFilter={filter}
-                onFilterChange={(filter) => params.filter = filter}
-            />
-            {#if statistics && filterOptions.length > 1}
-                <Button variant="outline" size="sm" onclick={() => filterDrawerOpen = true}>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
-                    </svg>
-                    Filter
-                    {#if filterName}
-                        <span class="ml-1 text-xs font-normal opacity-70">· {filterName}</span>
-                    {/if}
-                </Button>
-            {/if}
-        </div>
-
-        <!-- Calendar Section -->
-        <CalendarSection
-            bind:value={calendarValue}
-            bind:placeholder={calendarPlaceholder}
-            allExpenses={allExpensesFiltered}
-            onValueChange={(value) => calendarValue = value}
-        />
-
-        <!-- Total Card -->
-        {#if statistics}
-            <Card class="mb-2 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-                <CardContent class="py-3">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-baseline gap-3">
-                            <h2 class="text-md font-bold">{formatCurrency(filteredTotal.amount)}</h2>
-                            <p class="text-xs text-muted-foreground">({filteredTotal.count} transaction{filteredTotal.count !== 1 ? 's' : ''})</p>
-                        </div>
+        <Card>
+            <CardHeader>
+                <CardTitle class="text-base">Categories</CardTitle>
+            </CardHeader>
+            <CardContent class="space-y-4">
+                {#if categoryBreakdownResource.loading}
+                    <div class="aspect-square flex items-center justify-center">
+                        <div class="animate-spin rounded-full size-6 border-b-2 border-primary"></div>
                     </div>
+                {:else if categoryDonutData.length === 0}
+                    <p class="text-sm text-muted-foreground py-12 text-center">No categories yet.</p>
+                {:else}
+                    <CategoryDonut data={categoryDonutData} topN={6} showLegend={false} />
+                    <ul class="space-y-1.5">
+                        {#each categoryDonutData.slice(0, 6) as cat (cat.label)}
+                            <li>
+                                <button
+                                    type="button"
+                                    onclick={() => gotoExpensesFor({ categoryName: cat.label })}
+                                    class="w-full flex items-center justify-between text-sm hover:bg-accent rounded px-2 py-1 -mx-2"
+                                >
+                                    <span class="flex items-center gap-2">
+                                        <span
+                                            class="inline-block size-2.5 rounded-sm"
+                                            style="background-color: {cat.color ?? 'var(--muted-foreground)'};"
+                                        ></span>
+                                        <span>{cat.label}</span>
+                                    </span>
+                                    <span class="font-mono">{fmt.currency(cat.value)}</span>
+                                </button>
+                            </li>
+                        {/each}
+                    </ul>
+                {/if}
+            </CardContent>
+        </Card>
+    </div>
+
+    <!-- Member breakdown -->
+    <Card>
+        <CardHeader>
+            <CardTitle class="text-base">Members</CardTitle>
+        </CardHeader>
+        <CardContent>
+            {#if memberBreakdownResource.loading}
+                <div class="py-8 flex items-center justify-center">
+                    <div class="animate-spin rounded-full size-6 border-b-2 border-primary"></div>
+                </div>
+            {:else if (memberBreakdownResource.current ?? []).length === 0}
+                <p class="text-sm text-muted-foreground py-8 text-center">No expenses in this range.</p>
+            {:else}
+                <ul class="divide-y">
+                    {#each memberBreakdownResource.current ?? [] as m (m.userId ?? '__vault__')}
+                        <li class="py-2.5 flex items-center justify-between gap-3">
+                            <div class="flex flex-col">
+                                <span class="text-sm font-medium">{m.displayName}</span>
+                                <span class="text-xs text-muted-foreground">{m.count} {m.count === 1 ? 'expense' : 'expenses'}</span>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-mono text-sm">{fmt.currency(m.totalAmount)}</div>
+                                {#if m.net !== undefined && m.userId}
+                                    <div class="text-xs font-mono {m.net > 0 ? 'text-emerald-600' : 'text-destructive'}">
+                                        {m.net > 0 ? '+' : ''}{fmt.currency(m.net)} net
+                                    </div>
+                                {/if}
+                            </div>
+                        </li>
+                    {/each}
+                </ul>
+            {/if}
+        </CardContent>
+    </Card>
+
+    <!-- Templates breakdown -->
+    <Card>
+        <CardHeader>
+            <CardTitle class="text-base">Templates</CardTitle>
+        </CardHeader>
+        <CardContent>
+            {#if templateBreakdownResource.loading}
+                <div class="py-8 flex items-center justify-center">
+                    <div class="animate-spin rounded-full size-6 border-b-2 border-primary"></div>
+                </div>
+            {:else if (templateBreakdownResource.current ?? []).length === 0}
+                <p class="text-sm text-muted-foreground py-8 text-center">No template usage in this range.</p>
+            {:else}
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <CategoryDonut data={templateDonutData} topN={6} showLegend={false} />
+                    </div>
+                    <ul class="space-y-1.5">
+                        {#each templateBreakdownResource.current ?? [] as t (t.templateId ?? '__none__')}
+                            <li class="flex items-center justify-between text-sm py-1">
+                                <span class="flex items-center gap-2 min-w-0">
+                                    <span class="text-base shrink-0" aria-hidden="true">
+                                        {t.templateIcon ?? '📝'}
+                                    </span>
+                                    <span class="truncate">{t.templateName}</span>
+                                    <span class="text-xs text-muted-foreground shrink-0">· {t.count}</span>
+                                </span>
+                                <span class="font-mono">{fmt.currency(t.totalAmount)}</span>
+                            </li>
+                        {/each}
+                    </ul>
+                </div>
+            {/if}
+        </CardContent>
+    </Card>
+
+    <!-- Fund spend small multiples + Payment type donut -->
+    <div class="grid md:grid-cols-2 gap-4">
+        {#if fundSparklines.length > 0}
+            <Card>
+                <CardHeader>
+                    <CardTitle class="text-base">Fund spend</CardTitle>
+                </CardHeader>
+                <CardContent class="space-y-3">
+                    {#each fundSparklines as f (f.fundId)}
+                        <div class="flex items-center gap-3">
+                            <div class="flex flex-col w-32 shrink-0">
+                                <span class="text-sm font-medium truncate">{f.fundName}</span>
+                                <span class="text-xs font-mono text-muted-foreground">{fmt.currency(f.totalAmount)}</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <Sparkline data={f.sparkData} color={f.fundColor ?? 'var(--chart-1)'} />
+                            </div>
+                            <button
+                                class="text-muted-foreground hover:text-foreground"
+                                onclick={() => goto(`/vaults/${vaultId}/funds/${f.fundId}`)}
+                                aria-label="Open fund"
+                            >
+                                <ArrowRight class="size-4" />
+                            </button>
+                        </div>
+                    {/each}
                 </CardContent>
             </Card>
-
-            <!-- Current Filter Display -->
-            <CurrentFilterChip
-                filterType={filterType}
-                filterName={filterName || ''}
-                filterOptions={filterOptions}
-                onClear={() => params.filterName = ""}
-            />
-
-            <!-- Filter Type Tabs -->
-            <FilterTypeTabs
-                currentType={filterType}
-                onTypeChange={(type) => {
-                    params.filterType = type;
-                    params.filterName = "";
-                }}
-            />
-
-            <!-- Breakdown bars for the current view type -->
-            <BreakdownBars
-                rows={breakdownRows}
-                limit={5}
-                formatCurrency={formatCurrency}
-                emptyTitle={`No ${filterType} data for this range.`}
-                onSelect={(row) => navigateToExpenses(row.label)}
-            />
         {/if}
-    {/if}
-</div>
 
-<!-- Filter Selection FAB -->
-{#if statistics && filterOptions.length > 1}
-    <!-- Filter Selection Drawer -->
-    <FilterChipsDrawer
-        bind:open={filterDrawerOpen}
-        filterOptions={filterOptions}
-        selectedName={filterName}
-        allExpensesCount={filteredExpensesList.length}
-        filterType={filterType}
-        onOpenChange={(open) => filterDrawerOpen = open}
-        onSelectAll={() => { params.filterName = ""; filterDrawerOpen = false; }}
-        onSelectOption={(name) => { params.filterName = name; filterDrawerOpen = false; }}
-    />
-{/if}
+        <Card>
+            <CardHeader>
+                <CardTitle class="text-base">Payment types</CardTitle>
+            </CardHeader>
+            <CardContent>
+                {#if paymentTypeResource.loading}
+                    <div class="aspect-square flex items-center justify-center">
+                        <div class="animate-spin rounded-full size-6 border-b-2 border-primary"></div>
+                    </div>
+                {:else if paymentTypeDonutData.length === 0}
+                    <p class="text-sm text-muted-foreground py-12 text-center">No payment data.</p>
+                {:else}
+                    <CategoryDonut data={paymentTypeDonutData} topN={5} />
+                {/if}
+            </CardContent>
+        </Card>
+    </div>
+</div>

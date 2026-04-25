@@ -16,6 +16,8 @@
         ordinal,
         scheduleLabel as buildScheduleLabel,
         installmentSummary as computeInstallmentSummary,
+        subscriptionSummary as computeSubscriptionSummary,
+        topInstallmentsAlmostFinished,
         remainingAmount,
     } from '$lib/recurring-helpers';
     import type { VaultWithMember } from '$lib/schemas/read/vaultWithMember';
@@ -164,6 +166,12 @@
     const allRules = $derived(rulesResource.current ?? []);
     const allPending = $derived(pendingResource.current ?? []);
     const allUpcoming = $derived(upcomingResource.current ?? []);
+
+    // ── Top-of-page commitment summary (computed over ALL rules, not search-filtered) ──
+    const subSummary = $derived(computeSubscriptionSummary(allRules));
+    const instSummary = $derived(computeInstallmentSummary(allRules));
+    const totalMonthlyCommit = $derived(subSummary.monthlyCommit + instSummary.monthlyCommit);
+    const endingSoon = $derived(topInstallmentsAlmostFinished(allRules, 3));
 
     // Plan-gate: free vaults can have up to RECURRING_MAX_PER_VAULT_FREE active rules.
     const planId = $derived(vaultResource.current?.vaults.planId ?? 'plan_free');
@@ -567,6 +575,72 @@
             {/if}
         </div>
     </div>
+
+    <!-- Commitment summary -->
+    {#if allRules.length > 0}
+        <Card>
+            <CardContent class="pt-6 space-y-4">
+                <div class="grid gap-4 md:grid-cols-3">
+                    <div>
+                        <p class="text-xs text-muted-foreground uppercase tracking-wide">Monthly committed</p>
+                        <Amount
+                            value={totalMonthlyCommit}
+                            sign="neutral"
+                            size="hero"
+                            locale={vaultResource.current?.vaults.locale || 'en-US'}
+                            currency={vaultResource.current?.vaults.currency || 'USD'}
+                        />
+                        <p class="text-xs text-muted-foreground mt-0.5">
+                            Across {subSummary.active + instSummary.active} active rule{(subSummary.active + instSummary.active) === 1 ? '' : 's'}
+                        </p>
+                    </div>
+
+                    <div class="border-l md:pl-4 md:border-l border-border/60">
+                        <p class="text-xs text-muted-foreground uppercase tracking-wide">Subscriptions</p>
+                        <p class="text-lg font-semibold font-mono">
+                            {fmt.currency(subSummary.monthlyCommit)}<span class="text-xs text-muted-foreground font-normal">/mo</span>
+                        </p>
+                        <p class="text-xs text-muted-foreground mt-0.5">
+                            {subSummary.active} active
+                        </p>
+                    </div>
+
+                    <div class="border-l md:pl-4 md:border-l border-border/60">
+                        <p class="text-xs text-muted-foreground uppercase tracking-wide">Installments</p>
+                        <p class="text-lg font-semibold font-mono">
+                            {fmt.currency(instSummary.monthlyCommit)}<span class="text-xs text-muted-foreground font-normal">/mo</span>
+                        </p>
+                        <p class="text-xs text-muted-foreground mt-0.5">
+                            {instSummary.active} active{#if instSummary.totalAmount > 0} · {instSummary.pct}% paid{/if}
+                        </p>
+                    </div>
+                </div>
+
+                {#if endingSoon.length > 0}
+                    <div class="border-t pt-3">
+                        <p class="text-xs text-muted-foreground uppercase tracking-wide mb-2">Ending soon</p>
+                        <ul class="space-y-1">
+                            {#each endingSoon as rule (rule.id)}
+                                {@const remaining = (rule.endAfterCount ?? 0) - rule.progress.paidCount}
+                                <li class="flex items-center justify-between gap-2 text-sm">
+                                    <span class="flex items-center gap-2 min-w-0">
+                                        <span class="text-base shrink-0" aria-hidden="true">{rule.template.icon ?? '🔁'}</span>
+                                        <span class="truncate">{rule.name || rule.template.name || 'Rule'}</span>
+                                    </span>
+                                    <span class="text-xs text-muted-foreground shrink-0">
+                                        {remaining} payment{remaining === 1 ? '' : 's'} left
+                                        {#if rule.progress.finalOccurrenceAt}
+                                            · ends {fmt.date(rule.progress.finalOccurrenceAt)}
+                                        {/if}
+                                    </span>
+                                </li>
+                            {/each}
+                        </ul>
+                    </div>
+                {/if}
+            </CardContent>
+        </Card>
+    {/if}
 
     <!-- Search -->
     {#if allRules.length > 0 || allPending.length > 0 || searchActive}
