@@ -9,6 +9,8 @@
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
     import { DateRangeFilter } from '$lib/components/ui/date-range-filter';
     import { TrendChart, StackedAreaChart, CategoryDonut, Sparkline } from '$lib/components/ui/charts';
+    import PeriodInsights from '$lib/components/statistics/period-insights.svelte';
+    import { hasEntitlement } from '$lib/configurations/plans';
     import { Amount } from '$lib/components/ui/amount';
     import {
         getDateRange,
@@ -144,13 +146,30 @@
         current: dashboardResource.current?.templateBreakdown,
     });
 
-    const templateDonutData = $derived(
-        (templateBreakdownResource.current ?? []).map((t) => ({
+    const TEMPLATE_TOP_N = 10;
+    let templateOtherExpanded = $state(false);
+
+    const templateRanked = $derived(templateBreakdownResource.current ?? []);
+
+    const templateOverflowCount = $derived(Math.max(0, templateRanked.length - TEMPLATE_TOP_N));
+    const templateOverflowTotal = $derived(
+        templateRanked.slice(TEMPLATE_TOP_N).reduce((s, r) => s + r.totalAmount, 0),
+    );
+    const templateOverflowItems = $derived(templateRanked.slice(TEMPLATE_TOP_N));
+
+    /** Donut data — keeps "Other" rolled up regardless of list expansion. */
+    const templateDonutData = $derived.by(() => {
+        const top = templateRanked.slice(0, TEMPLATE_TOP_N).map((t) => ({
             label: t.templateName,
             value: t.totalAmount,
-            color: null,
-        })),
-    );
+            color: null as string | null,
+        }));
+        if (templateOverflowCount === 0) return top;
+        return [
+            ...top,
+            { label: `Other (${templateOverflowCount})`, value: templateOverflowTotal, color: null },
+        ];
+    });
 
     // Hero numbers
     const currentTotal = $derived(
@@ -274,6 +293,10 @@
 
     const trendTruncated = $derived(trendResource.current?.truncated ?? false);
 
+    const canUseAiInsights = $derived(
+        hasEntitlement(vault?.planId ?? 'plan_free', 'stats:ai_insights'),
+    );
+
     function gotoExpensesFor(filter: { categoryName?: string; paidBy?: string | null }) {
         const qs = new URLSearchParams();
         const r = getDateRange(filterType);
@@ -313,6 +336,14 @@
             </Button>
         </div>
     </div>
+
+    <!-- Period Insights (AI) -->
+    <PeriodInsights
+        vaultId={vaultId ?? ''}
+        start={range.start}
+        end={range.end}
+        canUseAi={canUseAiInsights}
+    />
 
     <!-- Spend Hero -->
     <Card>
@@ -486,10 +517,14 @@
             {:else}
                 <div class="grid md:grid-cols-2 gap-6">
                     <div>
-                        <CategoryDonut data={templateDonutData} topN={6} showLegend={false} />
+                        <CategoryDonut
+                            data={templateDonutData}
+                            topN={TEMPLATE_TOP_N + 1}
+                            showLegend={false}
+                        />
                     </div>
                     <ul class="space-y-1.5">
-                        {#each templateBreakdownResource.current ?? [] as t (t.templateId ?? '__none__')}
+                        {#each templateRanked.slice(0, TEMPLATE_TOP_N) as t (t.templateId ?? '__none__')}
                             <li class="flex items-center justify-between text-sm py-1">
                                 <span class="flex items-center gap-2 min-w-0">
                                     <span class="text-base shrink-0" aria-hidden="true">
@@ -501,6 +536,40 @@
                                 <span class="font-mono">{fmt.currency(t.totalAmount)}</span>
                             </li>
                         {/each}
+
+                        {#if templateOverflowCount > 0}
+                            <li>
+                                <button
+                                    type="button"
+                                    onclick={() => (templateOtherExpanded = !templateOtherExpanded)}
+                                    aria-expanded={templateOtherExpanded}
+                                    class="w-full flex items-center justify-between text-sm py-1 px-2 -mx-2 rounded hover:bg-accent"
+                                >
+                                    <span class="flex items-center gap-2 min-w-0">
+                                        <span class="text-base shrink-0" aria-hidden="true">📦</span>
+                                        <span class="truncate font-medium">
+                                            {templateOtherExpanded ? 'Hide' : 'Show'} other ({templateOverflowCount})
+                                        </span>
+                                    </span>
+                                    <span class="font-mono">{fmt.currency(templateOverflowTotal)}</span>
+                                </button>
+                            </li>
+
+                            {#if templateOtherExpanded}
+                                {#each templateOverflowItems as t (t.templateId ?? '__none__')}
+                                    <li class="flex items-center justify-between text-sm py-1 pl-6">
+                                        <span class="flex items-center gap-2 min-w-0">
+                                            <span class="text-base shrink-0" aria-hidden="true">
+                                                {t.templateIcon ?? '📝'}
+                                            </span>
+                                            <span class="truncate text-muted-foreground">{t.templateName}</span>
+                                            <span class="text-xs text-muted-foreground shrink-0">· {t.count}</span>
+                                        </span>
+                                        <span class="font-mono text-muted-foreground">{fmt.currency(t.totalAmount)}</span>
+                                    </li>
+                                {/each}
+                            {/if}
+                        {/if}
                     </ul>
                 </div>
             {/if}

@@ -353,6 +353,24 @@ export const attachments = sqliteTable('attachments', {
     vaultIdIdx: index('idx_attachments_vault').on(table.vaultId),
 }));
 
+// StatisticsInsights - cached LLM-generated period insights (Pro feature)
+export const statisticsInsights = sqliteTable('statistics_insights', {
+    id: text('id').primaryKey().$defaultFn(() => createId()),
+    vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
+    periodStart: text('period_start').notNull(), // ISO date (day-precision)
+    periodEnd: text('period_end').notNull(),
+    cacheKey: text('cache_key').notNull(), // sha256(vaultId|start|end)
+    payload: text('payload').notNull(), // JSON: { headline, bullets }
+    inputTokenCount: integer('input_token_count'),
+    outputTokenCount: integer('output_token_count'),
+    model: text('model').notNull(), // for invalidation when we swap models
+    generatedAt: text('generated_at').notNull().$defaultFn(() => formatISO(new UTCDate())),
+    generatedBy: text('generated_by').notNull(),
+}, (table) => ({
+    vaultRangeIdx: index('idx_insights_vault_range').on(table.vaultId, table.periodStart, table.periodEnd),
+    cacheKeyIdx: uniqueIndex('idx_insights_cache_key').on(table.cacheKey),
+}));
+
 // ExpenseAttachments - many-to-many join between expenses and attachments
 export const expenseAttachments = sqliteTable('expense_attachments', {
     expenseId: text('expense_id').notNull().references(() => expenses.id, { onDelete: 'cascade' }),

@@ -44,4 +44,5 @@ worker_default.scheduled = async (event, env, ctx) => {
 
     await runJob('/_cron/funds', 'funds job');
     await runJob('/_cron/recurring-expenses', 'recurring-expenses job');
+    await runJob('/_cron/insights-cleanup', 'insights cleanup job');
 };

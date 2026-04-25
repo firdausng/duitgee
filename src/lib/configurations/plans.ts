@@ -15,7 +15,8 @@ export type Entitlement =
     | 'expense:import'
     | 'stats:advanced_breakdowns'
     | 'stats:custom_range'
-    | 'stats:export';
+    | 'stats:export'
+    | 'stats:ai_insights';
 
 export interface Plan {
     id: string;
@@ -56,6 +57,7 @@ export const PLANS: Plan[] = [
             'stats:advanced_breakdowns',
             'stats:custom_range',
             'stats:export',
+            'stats:ai_insights',
         ],
     },
 ];
@@ -141,5 +143,9 @@ export const ENTITLEMENT_LABELS: Record<Entitlement, { name: string; description
     'stats:export': {
         name: 'Export charts and reports',
         description: 'Download any chart as PNG or any aggregated breakdown as CSV.',
+    },
+    'stats:ai_insights': {
+        name: 'AI insights on statistics',
+        description: 'Plain-English reading of what changed this period — drivers, movers, and outliers.',
     },
 };

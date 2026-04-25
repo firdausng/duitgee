@@ -141,12 +141,15 @@ The API follows RPC (Remote Procedure Call) style with CQRS (Command Query Respo
 - `POST /api/undoImportExpenses` - JSON `{ vaultId, importBatchId }`; soft-deletes every expense from a previous import
 
 *Statistics API:*
+- `GET /api/getStatisticsDashboard?vaultId=xxx&start&end&compare&includeNetPosition&topN` - Composite endpoint; runs all section handlers in `Promise.all` and returns the dashboard payload as one object. **The statistics page calls only this endpoint.**
 - `GET /api/getSpendTrend?vaultId=xxx&start&end&compare=prev` - Bucketed spend trend (granularity auto-picked by range), optional previous-period overlay; clamped to 12 months on free
 - `GET /api/getCategoryTrend?vaultId=xxx&start&end&topN` - Stacked top-N categories over time; remainder rolled into `Other`
 - `GET /api/getCategoryBreakdown?vaultId=xxx&start&end` - Total per category for the range
 - `GET /api/getMemberBreakdown?vaultId=xxx&start&end&includeNetPosition=true` - Total per member; net-position math (`paid − expectedShare`) Pro-only
 - `GET /api/getPaymentTypeBreakdown?vaultId=xxx&start&end` - Total per payment type
 - `GET /api/getFundSpendTrend?vaultId=xxx&start&end` - Per-fund spend trend (sparkline data)
+- `GET /api/getTemplateBreakdown?vaultId=xxx&start&end` - Total per expense template; templates without an expenseTemplateId roll up as "No template"
+- `GET /api/getStatisticsInsights?vaultId=xxx&start&end&refresh=false` - AI-generated period insights (Pro). Cached server-side per `(vaultId, periodStart, periodEnd)`; rate-limited 30/vault/month. Returns `{ headline, bullets[{ title, detail, tone }], generatedAt, cached }`
 
 *Expense Templates API:*
 - `GET /api/getExpenseTemplates?vaultId=xxx` - Get all expense templates for a vault
@@ -448,6 +451,7 @@ The app has a **two-tier plan system** that gates fund features per vault. This 
 - `stats:advanced_breakdowns` — Year-over-year, tag-level analytics, day/hour heatmap, member net-position math (pro)
 - `stats:custom_range` — Stats history beyond 12 months (pro; free clamps trend `start` to `now − 12 months`)
 - `stats:export` — PNG export of charts and CSV export of any aggregated breakdown (pro)
+- `stats:ai_insights` — AI-generated period insights ("why" behind the numbers) (pro)
 
 **Storage:** Each vault has a `planId` column (default `'plan_free'`). No FK constraint — plan definitions live in code (`PLANS` array).
 
@@ -520,6 +524,16 @@ Helpers in `src/lib/server/api/statistics/helpers.ts`: `pickGranularity`, `bucke
 - `idx_expenses_vault_paid_by` on `(vaultId, paidBy)` — member breakdown.
 
 **Member net-position math** is gated on `stats:advanced_breakdowns` and assumes an even split across active vault members. This is intentional v1 simplification; per-expense split rules are a future enhancement. The basic "total paid per member" is free.
+
+**Period Insights (AI).** A Pro-only "AI reading" of the period is shown above the Spend Hero card on the statistics page. Rendered by `src/lib/components/statistics/period-insights.svelte`; backed by `getStatisticsInsightsHandler.ts` which:
+1. Looks up `statistics_insights` cache row keyed on sha256(`vaultId|periodStart|periodEnd`). TTL = 6h for ranges including today, 30d for fully-past ranges. `?refresh=true` bypasses.
+2. Enforces a 30-generation/vault/month cap via KV counter `insights-count:{vaultId}:{YYYYMM}` — mirror of the `attachment:scan` daily-cap pattern.
+3. Pulls `getStatisticsDashboard`, a 6-month `getMonthlyHistory()` rollup (overall + per-top-category), and a `detectAnomalies()` pass that flags individual transactions as outliers via z-score against a 90-day per-category baseline (≥2σ AND ≥1.5× category mean AND ≥5 baseline expenses for the category — top 5 by significance). Compresses everything to a token-budgeted summary via `summarizeDashboardForLlm()` — only pre-aggregated figures plus the small list of flagged outliers, never the full expense list — and calls Workers AI (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`, falls back to 8b on binding errors). The 6-month history lets the model spot sustained trends ("3 months running") that a single-period comparison can't see; the anomaly list lets it call out individual large transactions ("RM 540 on Dining, 4.2x typical"). Insight narratives are **not** fed back as input — only data, never narrative, to avoid hallucination compounding.
+4. Validates output with `aiInsightOutputSchema` and runs `filterUngroundedBullets()` — any bullet citing a number not present (within 1% tolerance) in the source summary is dropped. Hallucination guardrail.
+
+Failure modes are silent UI-side (a tiny "Insights unavailable right now." line). Kill switch: remove `'stats:ai_insights'` from `plan_pro.entitlements` in `plans.ts`.
+
+Cleanup: nightly cron route `/_cron/insights-cleanup` deletes rows older than 60 days. Wired into `cron/job.js`.
 
 ### Plan Design Philosophy for New Features
 

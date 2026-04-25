@@ -17,6 +17,8 @@ import { getPaymentTypeBreakdown } from './getPaymentTypeBreakdownHandler';
 import { getFundSpendTrend } from './getFundSpendTrendHandler';
 import { getTemplateBreakdown } from './getTemplateBreakdownHandler';
 import { getStatisticsDashboard } from './getStatisticsDashboardHandler';
+import { getStatisticsInsights } from './getStatisticsInsightsHandler';
+import { getStatisticsInsightsQuerySchema } from '$lib/schemas/statisticsInsights';
 
 const STATS_TAG = ['Statistics'];
 const commonConfig = { tags: STATS_TAG };
@@ -36,6 +38,41 @@ const handle = async <T>(c: { json: (body: unknown, status?: number) => Response
 };
 
 export const statisticsApi = new Hono<App.Api>()
+    .get(
+        '/getStatisticsInsights',
+        describeRoute({
+            ...commonConfig,
+            description: 'AI-generated period insights (Pro). Cached server-side; rate-limited per vault per month.',
+            responses: {
+                200: { description: 'Insights payload', content: { 'application/json': { schema: resolver(v.any()) } } },
+            },
+        }),
+        vValidator('query', getStatisticsInsightsQuerySchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const query = c.req.valid('query');
+            try {
+                const data = await getStatisticsInsights(query.vaultId, session, c.env, {
+                    start: query.start,
+                    end: query.end,
+                    refresh: query.refresh,
+                });
+                return c.json({ success: true, data });
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Failed';
+                console.error({ message: 'Statistics insights handler error', error });
+                // Distinguish error classes so the UI can render the right state.
+                let kind: 'plan' | 'rate' | 'access' | 'generic' = 'generic';
+                const lower = message.toLowerCase();
+                if (lower.includes('entitlement')) kind = 'plan';
+                else if (lower.includes('limit reached')) kind = 'rate';
+                else if (lower.includes('access')) kind = 'access';
+                const status: 400 | 403 | 429 =
+                    kind === 'plan' || kind === 'access' ? 403 : kind === 'rate' ? 429 : 400;
+                return c.json({ success: false, error: message, kind }, status);
+            }
+        },
+    )
     .get(
         '/getStatisticsDashboard',
         describeRoute({
