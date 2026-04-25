@@ -69,7 +69,8 @@
         tabindex="0"
         onclick={(e) => handleRowClick(e, expense)}
         onkeydown={(e) => handleRowKey(e, expense)}
-        class="flex items-start gap-2 px-3 py-2 cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset transition-colors"
+        data-dense-row
+        class="recent-expenses-row flex items-start gap-2 px-3 py-2 cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset transition-colors"
     >
         <div class="flex-1 min-w-0">
             <p class="font-medium break-words">

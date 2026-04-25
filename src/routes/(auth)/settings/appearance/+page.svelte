@@ -2,6 +2,8 @@
     import { mode, setMode } from 'mode-watcher';
     import { cn } from '$lib/utils';
     import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+    import { CheckboxRow } from '$lib/components/ui/checkbox-row';
+    import { densityState } from '$lib/components/app-shell';
     import Sun from '@lucide/svelte/icons/sun';
     import Moon from '@lucide/svelte/icons/moon';
     import Monitor from '@lucide/svelte/icons/monitor';
@@ -53,12 +55,22 @@
     <Card>
         <CardHeader>
             <CardTitle>Density</CardTitle>
-            <CardDescription>Compact mode reduces padding and type scale across lists. Coming soon.</CardDescription>
+            <CardDescription>Compact mode reduces padding across lists so you can see more at a glance.</CardDescription>
         </CardHeader>
         <CardContent>
-            <p class="text-sm text-muted-foreground">
-                Density toggle ships in a follow-up update — track progress in <code>nav-redesign.md</code>.
-            </p>
+            <CheckboxRow
+                checked={densityState.compact}
+                onCheckedChange={(c) => (densityState.compact = c)}
+            >
+                {#snippet label()}
+                    <span class="text-sm font-medium">Compact mode</span>
+                {/snippet}
+                {#snippet description()}
+                    <span class="text-xs text-muted-foreground">
+                        More rows visible at once. Best on desktop.
+                    </span>
+                {/snippet}
+            </CheckboxRow>
         </CardContent>
     </Card>
 </div>

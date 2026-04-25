@@ -517,3 +517,37 @@
         transparent 95%
     );
 }
+
+/**
+ * Density: compact mode.
+ *
+ * Activated by toggling `html.density-compact` (see settings/appearance and
+ * `app-shell/density-state.svelte.ts`). Tightens the high-leverage list rows
+ * across the app so power users can see more on a 1280×800 viewport without
+ * touching every component. Keep the rules narrow — broad type/padding shifts
+ * regress mobile.
+ */
+html.density-compact main .container,
+html.density-compact main > .container {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+/* Recent-expenses + expense-list rows (currently px-3 py-2). */
+html.density-compact a.recent-expenses-row,
+html.density-compact button.recent-expenses-row {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+}
+
+/* Generic two-line list rows that opt in via `data-dense-row`. */
+html.density-compact [data-dense-row] {
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+}
+
+/* Card content spacing — tighten Card body padding for dense pages. */
+html.density-compact [data-slot="card-content"] {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+}

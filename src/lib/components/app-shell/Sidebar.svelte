@@ -18,6 +18,7 @@
 </script>
 
 <script lang="ts">
+    import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
     import { cn } from '$lib/utils';
@@ -52,6 +53,30 @@
             : `/vaults/${vaultId}`;
         goto(path + searchParams);
     }
+
+    // cmd/ctrl+B toggles the sidebar collapse. Skip when the user is typing.
+    function isTypingTarget(target: EventTarget | null): boolean {
+        if (!(target instanceof HTMLElement)) return false;
+        const tag = target.tagName;
+        return (
+            tag === 'INPUT' ||
+            tag === 'TEXTAREA' ||
+            tag === 'SELECT' ||
+            target.isContentEditable
+        );
+    }
+    function onKeydown(event: KeyboardEvent) {
+        if (event.key !== 'b' && event.key !== 'B') return;
+        if (!(event.metaKey || event.ctrlKey)) return;
+        if (event.altKey || event.shiftKey) return;
+        if (isTypingTarget(event.target)) return;
+        event.preventDefault();
+        sidebarState.toggle();
+    }
+    onMount(() => {
+        window.addEventListener('keydown', onKeydown);
+        return () => window.removeEventListener('keydown', onKeydown);
+    });
 </script>
 
 <aside
@@ -79,7 +104,7 @@
             type="button"
             onclick={() => sidebarState.toggle()}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (Ctrl+B)`}
             class="inline-flex items-center justify-center size-8 rounded-md hover:bg-accent transition-colors text-muted-foreground"
         >
             {#if collapsed}

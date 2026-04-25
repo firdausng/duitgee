@@ -8,6 +8,7 @@ export { default as VaultSwitcherList } from './VaultSwitcherList.svelte';
 export { default as UserMenu } from './UserMenu.svelte';
 
 export { sidebarState } from './sidebar-state.svelte';
+export { densityState } from './density-state.svelte';
 export { mapPathToVault } from './preserve-section';
 export {
     VAULT_NAV,
