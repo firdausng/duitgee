@@ -46,6 +46,11 @@ export const load = async ({ params, url, fetch, locals }) => {
 		}
 	}
 
+	// getExpenseTemplate already parses defaultTagIds into string[] for clients.
+	const templateTagIds: string[] = Array.isArray(template?.defaultTagIds)
+		? template.defaultTagIds
+		: [];
+
 	// Initialize superForm for shared defaults, pre-populated from template if available
 	const form = await superValidate(
 		valibot(sharedExpenseDefaultsSchema, {
@@ -55,6 +60,7 @@ export const load = async ({ params, url, fetch, locals }) => {
 				paidBy: template?.defaultPaidBy ?? null,
 				fundId: template?.defaultFundId ?? null,
 				fundPaymentMode: template?.defaultFundPaymentMode ?? null,
+				tagIds: templateTagIds,
 			}
 		})
 	);
@@ -89,6 +95,18 @@ export const load = async ({ params, url, fetch, locals }) => {
 		// non-critical — fund selector will be empty
 	}
 
+	// Fetch tags for the picker
+	let tags: Array<{ id: string; name: string; color: string | null }> = [];
+	try {
+		const response = await fetch(`/api/getTags?vaultId=${vaultId}`);
+		if (response.ok) {
+			const result: any = await response.json();
+			if (result.success) tags = result.data ?? [];
+		}
+	} catch {
+		// non-critical — picker will start empty
+	}
+
 	return {
 		form,
 		vaultId,
@@ -96,6 +114,7 @@ export const load = async ({ params, url, fetch, locals }) => {
 		templateId,
 		members,
 		funds,
+		tags,
 		currentUserId,
 		returnTo,
 	};

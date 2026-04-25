@@ -56,6 +56,23 @@ export const load = async ({ params, fetch }) => {
 		// non-critical
 	}
 
+	// Fetch tags for the picker
+	let tags: Array<{ id: string; name: string; color: string | null }> = [];
+	try {
+		const response = await fetch(`/api/getTags?vaultId=${vaultId}`);
+		if (response.ok) {
+			const result: any = await response.json();
+			if (result.success) tags = result.data ?? [];
+		}
+	} catch {
+		// non-critical
+	}
+
+	// getExpenseTemplate returns defaultTagIds parsed into string[]
+	const templateTagIds: string[] = Array.isArray(templateData.defaultTagIds)
+		? templateData.defaultTagIds
+		: [];
+
 	// Initialize form with template data
 	const form = await superValidate(
 		{
@@ -71,6 +88,7 @@ export const load = async ({ params, fetch }) => {
 			defaultPaidBy: templateData.defaultPaidBy,
 			defaultFundId: templateData.defaultFundId ?? null,
 			defaultFundPaymentMode: templateData.defaultFundPaymentMode ?? null,
+			defaultTagIds: templateTagIds,
 		},
 		valibot(updateExpenseTemplateSchema)
 	);
@@ -82,5 +100,6 @@ export const load = async ({ params, fetch }) => {
 		template: templateData,
 		members,
 		funds,
+		tags,
 	};
 };

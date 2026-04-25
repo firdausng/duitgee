@@ -1,7 +1,7 @@
 import {drizzle} from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
-import {expenses, vaultMembers, vaults, funds} from "$lib/server/db/schema";
-import {and, desc, asc, eq, isNull, sql} from "drizzle-orm";
+import {expenses, vaultMembers, vaults, funds, expenseTags, expenseTagAssignments} from "$lib/server/db/schema";
+import {and, desc, asc, eq, inArray, isNull, sql} from "drizzle-orm";
 import {categoryData} from "$lib/configurations/categories";
 import {createSelectSchema} from "drizzle-valibot";
 import {parse} from "valibot";
@@ -66,6 +66,32 @@ export const getExpenses = async (
         .from(expenses)
         .where(whereClause);
 
+    const expenseIds = expensesList.map(e => e.id);
+
+    // Fetch tag assignments for the page in one query, then group by expense
+    const tagsByExpense = new Map<string, Array<{ id: string; name: string; color: string | null }>>();
+    if (expenseIds.length > 0) {
+        const tagRows = await client
+            .select({
+                expenseId: expenseTagAssignments.expenseId,
+                id: expenseTags.id,
+                name: expenseTags.name,
+                color: expenseTags.color,
+            })
+            .from(expenseTagAssignments)
+            .innerJoin(expenseTags, eq(expenseTagAssignments.tagId, expenseTags.id))
+            .where(and(
+                inArray(expenseTagAssignments.expenseId, expenseIds),
+                isNull(expenseTags.deletedAt),
+            ));
+
+        for (const row of tagRows) {
+            const list = tagsByExpense.get(row.expenseId) ?? [];
+            list.push({ id: row.id, name: row.name, color: row.color });
+            tagsByExpense.set(row.expenseId, list);
+        }
+    }
+
     const transformedExpenses = expensesList.map(row => {
         const parsedExpense = parse(createSelectSchema(expenses), row);
         return {
@@ -84,6 +110,7 @@ export const getExpenses = async (
             recurringExpenseId: parsedExpense.recurringExpenseId || null,
             vaultId: parsedExpense.vaultId || undefined,
             category: categoryData.categories.find(c => c.name === parsedExpense.categoryName) || null,
+            tags: tagsByExpense.get(parsedExpense.id) ?? [],
         }
     });
 

@@ -4,8 +4,8 @@ import type { CreateExpensesRequest } from '$lib/schemas/expenses';
 import { createId } from '@paralleldrive/cuid2';
 import { categoryData } from '$lib/configurations/categories';
 import { initialAuditFields, updateAuditFields } from '$lib/server/utils/audit';
-import { expenses, expenseTemplates, funds, fundCycles, fundTransactions } from '$lib/server/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { expenses, expenseTags, expenseTagAssignments, expenseTemplates, funds, fundCycles, fundTransactions } from '$lib/server/db/schema';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { formatISO } from 'date-fns';
 import { UTCDate } from '@date-fns/utc';
 import { requireVaultPermission } from '$lib/server/utils/vaultPermissions';
@@ -189,6 +189,36 @@ export const createExpenses = async (
                 })
                 .where(eq(expenseTemplates.id, data.templateId)),
         );
+    }
+
+    // 4e. Shared tag assignments — every expense gets every shared tag.
+    const sharedTagIds = Array.from(new Set(data.shared.tagIds ?? []));
+    if (sharedTagIds.length > 0) {
+        // Validate vault scoping in one query before queueing inserts
+        const validTags = await client
+            .select({ id: expenseTags.id })
+            .from(expenseTags)
+            .where(and(
+                inArray(expenseTags.id, sharedTagIds),
+                eq(expenseTags.vaultId, data.vaultId),
+                isNull(expenseTags.deletedAt),
+            ));
+
+        if (validTags.length !== sharedTagIds.length) {
+            throw new Error('One or more tags do not belong to this vault');
+        }
+
+        for (const item of resolvedItems) {
+            for (const tagId of sharedTagIds) {
+                batchOps.push(
+                    client.insert(expenseTagAssignments).values({
+                        expenseId: item.expenseId,
+                        tagId,
+                        createdBy: userId,
+                    }),
+                );
+            }
+        }
     }
 
     // 5. Execute batch — atomic on D1

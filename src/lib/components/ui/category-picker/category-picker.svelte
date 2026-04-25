@@ -7,18 +7,20 @@
         DrawerHeader,
         DrawerTitle,
     } from '$lib/components/ui/drawer';
+    import { IconRenderer } from '$lib/components/ui/icon-renderer';
     import { cn } from '$lib/utils';
 
     type Category = {
         name: string;
         group: string;
-        icon?: string;
-        iconType?: string;
+        icon?: string | null;
+        iconType?: string | null;
     };
 
     type CategoryGroup = {
         name: string;
-        icon?: string;
+        icon?: string | null;
+        iconType?: string | null;
         color?: string;
     };
 
@@ -112,7 +114,13 @@
     >
         {#if selectedCategory}
             {#if selectedCategory.icon}
-                <span class="text-lg shrink-0">{selectedCategory.icon}</span>
+                <IconRenderer
+                    icon={selectedCategory.icon}
+                    iconType={selectedCategory.iconType}
+                    size={18}
+                    emojiClass="text-lg"
+                    class="shrink-0"
+                />
             {/if}
             <span class="flex-1 truncate">{selectedCategory.name}</span>
             <button
@@ -158,7 +166,14 @@
             {#each groupedCategories() as { group, categories: cats }}
                 <div class="mb-4">
                     <div class="flex items-center gap-1.5 px-1 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide sm:justify-center">
-                        {#if group.icon}<span>{group.icon}</span>{/if}
+                        {#if group.icon}
+                            <IconRenderer
+                                icon={group.icon}
+                                iconType={group.iconType}
+                                size={14}
+                                emojiClass="text-sm"
+                            />
+                        {/if}
                         {group.name}
                     </div>
                     <div class="grid grid-cols-4 gap-1 sm:flex sm:flex-wrap sm:justify-center">
@@ -174,7 +189,12 @@
                                 )}
                             >
                                 {#if cat.icon}
-                                    <span class="text-xl">{cat.icon}</span>
+                                    <IconRenderer
+                                        icon={cat.icon}
+                                        iconType={cat.iconType}
+                                        size={22}
+                                        emojiClass="text-xl"
+                                    />
                                 {/if}
                                 <span class="leading-tight line-clamp-2">{cat.name}</span>
                             </button>

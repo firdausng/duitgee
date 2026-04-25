@@ -1,237 +1,191 @@
-import type {Category, CategoryGroup} from "$lib/schemas/categories";
+import type { Category, CategoryGroup } from "$lib/schemas/categories";
 
 export const categoryData: CategoryData = {
     categoryGroups: [
         {
-            name: "Housing & Utilities",
-            description: "Home-related expenses including rent, utilities, and maintenance",
+            name: "Housing",
+            description: "Rent, utilities, maintenance, and home essentials",
             color: "#3B82F6",
-            icon: "🏠",
-            iconType: "emoji",
+            icon: "house",
+            iconType: "lucide",
             isPublic: true
         },
         {
-            name: "Transportation",
+            name: "Transport",
             description: "Vehicle and travel-related expenses",
             color: "#F59E0B",
-            icon: "🚗",
-            iconType: "emoji",
+            icon: "car",
+            iconType: "lucide",
             isPublic: true
         },
         {
-            name: "Food & Groceries",
-            description: "Food, dining, and grocery expenses",
+            name: "Food",
+            description: "Groceries, dining, and beverages",
             color: "#10B981",
-            icon: "🍔",
-            iconType: "emoji",
+            icon: "utensils",
+            iconType: "lucide",
             isPublic: true
         },
         {
-            name: "Health & Wellness",
-            description: "Healthcare, fitness, and wellness expenses",
+            name: "Health",
+            description: "Medical, fitness, and wellness expenses",
             color: "#EF4444",
-            icon: "❤️",
-            iconType: "emoji",
+            icon: "heart",
+            iconType: "lucide",
             isPublic: true
         },
         {
-            name: "Education & Personal Development",
-            description: "Learning, courses, and educational expenses",
-            color: "#8B5CF6",
-            icon: "📚",
-            iconType: "emoji",
-            isPublic: true
-        },
-        {
-            name: "Bills & Subscriptions",
-            description: "Recurring bills and subscription services",
-            color: "#EC4899",
-            icon: "⚡",
-            iconType: "emoji",
-            isPublic: true
-        },
-        {
-            name: "Family & Children",
-            description: "Family and child-related expenses",
+            name: "Family",
+            description: "Childcare, school, and family activities",
             color: "#06B6D4",
-            icon: "👶",
-            iconType: "emoji",
+            icon: "users",
+            iconType: "lucide",
             isPublic: true
         },
         {
-            name: "Debt & Savings",
-            description: "Loan payments, savings, and investments",
+            name: "Education",
+            description: "Tuition, courses, and learning materials",
+            color: "#8B5CF6",
+            icon: "graduation-cap",
+            iconType: "lucide",
+            isPublic: true
+        },
+        {
+            name: "Subscriptions",
+            description: "Streaming, software, and recurring memberships",
+            color: "#EC4899",
+            icon: "tv",
+            iconType: "lucide",
+            isPublic: true
+        },
+        {
+            name: "Electronics & Gadgets",
+            description: "Phones, computers, audio, and smart devices",
+            color: "#6366F1",
+            icon: "laptop",
+            iconType: "lucide",
+            isPublic: true
+        },
+        {
+            name: "Money",
+            description: "Debt, savings, insurance, taxes, and bank fees",
             color: "#84CC16",
-            icon: "💰",
-            iconType: "emoji",
+            icon: "wallet",
+            iconType: "lucide",
             isPublic: true
         },
         {
-            name: "Insurance",
-            description: "Insurance premiums and coverage",
-            color: "#6B7280",
-            icon: "🛡️",
-            iconType: "emoji",
-            isPublic: true
-        },
-        {
-            name: "Leisure & Entertainment",
-            description: "Entertainment, hobbies, and leisure activities",
+            name: "Lifestyle",
+            description: "Travel, entertainment, hobbies, sports, and personal care",
             color: "#F97316",
-            icon: "🎮",
-            iconType: "emoji",
+            icon: "palette",
+            iconType: "lucide",
             isPublic: true
         },
         {
-            name: "Shopping & Personal Care",
-            description: "Personal shopping and care items",
+            name: "Giving",
+            description: "Charity, religious giving, gifts, and tips",
             color: "#DB2777",
-            icon: "🛒",
-            iconType: "emoji",
+            icon: "heart-handshake",
+            iconType: "lucide",
             isPublic: true
         },
         {
-            name: "General",
-            description: "Miscellaneous and uncategorized expenses",
+            name: "Other",
+            description: "Pets, legal, and miscellaneous expenses",
             color: "#9CA3AF",
-            icon: "📋",
-            iconType: "emoji",
+            icon: "more-horizontal",
+            iconType: "lucide",
             isPublic: true
         }
     ],
     categories: [
-        // Housing & Utilities
-        { name: "Rent / Mortgage", description: "", icon: "🏠", iconType: "emoji", color: "#3B82F6", isPublic: true, group: "Housing & Utilities" },
-        { name: "Electricity", description: "", icon: "⚡", iconType: "emoji", color: "#F59E0B", isPublic: true, group: "Housing & Utilities" },
-        { name: "Water", description: "", icon: "💧", iconType: "emoji", color: "#06B6D4", isPublic: true, group: "Housing & Utilities" },
-        { name: "Gas", description: "", icon: "🔥", iconType: "emoji", color: "#F97316", isPublic: true, group: "Housing & Utilities" },
-        { name: "Internet & Phone", description: "", icon: "📡", iconType: "emoji", color: "#8B5CF6", isPublic: true, group: "Housing & Utilities" },
-        { name: "Maintenance / Repairs", description: "", icon: "🔧", iconType: "emoji", color: "#6B7280", isPublic: true, group: "Housing & Utilities" },
-        { name: "Property tax", description: "", icon: "🏘️", iconType: "emoji", color: "#EF4444", isPublic: true, group: "Housing & Utilities" },
-        { name: "Home insurance", description: "", icon: "🏡", iconType: "emoji", color: "#10B981", isPublic: true, group: "Housing & Utilities" },
-        { name: "Furniture / Appliances", description: "", icon: "🛋️", iconType: "emoji", color: "#8B5CF6", isPublic: true, group: "Housing & Utilities" },
-        { name: "Home decor", description: "", icon: "🪴", iconType: "emoji", color: "#22C55E", isPublic: true, group: "Housing & Utilities" },
-        { name: "Cleaning services", description: "", icon: "🧹", iconType: "emoji", color: "#06B6D4", isPublic: true, group: "Housing & Utilities" },
-        { name: "Security system", description: "", icon: "🔒", iconType: "emoji", color: "#6B7280", isPublic: true, group: "Housing & Utilities" },
+        // Housing
+        { name: "Rent / Mortgage", description: "", icon: "house", iconType: "lucide", color: "#3B82F6", isPublic: true, group: "Housing" },
+        { name: "Utilities", description: "Electricity, water, gas", icon: "plug", iconType: "lucide", color: "#F59E0B", isPublic: true, group: "Housing" },
+        { name: "Internet", description: "Home internet and phone line", icon: "wifi", iconType: "lucide", color: "#8B5CF6", isPublic: true, group: "Housing" },
+        { name: "Maintenance", description: "Repairs, cleaning, security", icon: "wrench", iconType: "lucide", color: "#6B7280", isPublic: true, group: "Housing" },
+        { name: "Furniture", description: "Furniture, appliances, decor", icon: "sofa", iconType: "lucide", color: "#8B5CF6", isPublic: true, group: "Housing" },
+        { name: "Household Supplies", description: "Cleaning supplies and consumables", icon: "sparkles", iconType: "lucide", color: "#06B6D4", isPublic: true, group: "Housing" },
 
-        // Transportation
-        { name: "Fuel", description: "", icon: "⛽", iconType: "emoji", color: "#F59E0B", isPublic: true, group: "Transportation" },
-        { name: "Public transport", description: "", icon: "🚌", iconType: "emoji", color: "#10B981", isPublic: true, group: "Transportation" },
-        { name: "Car loan / Lease", description: "", icon: "💵", iconType: "emoji", color: "#EF4444", isPublic: true, group: "Transportation" },
-        { name: "Insurance", description: "", icon: "🛡️", iconType: "emoji", color: "#6B7280", isPublic: true, group: "Transportation" },
-        { name: "Maintenance & Repairs", description: "", icon: "⚙️", iconType: "emoji", color: "#8B5CF6", isPublic: true, group: "Transportation" },
-        { name: "Parking / Tolls", description: "", icon: "🅿️", iconType: "emoji", color: "#EC4899", isPublic: true, group: "Transportation" },
-        { name: "Rideshare (Uber, Lyft)", description: "", icon: "🚕", iconType: "emoji", color: "#EC4899", isPublic: true, group: "Transportation" },
-        { name: "Bike / Scooter rental", description: "", icon: "🚲", iconType: "emoji", color: "#10B981", isPublic: true, group: "Transportation" },
-        { name: "Train / Metro", description: "", icon: "🚇", iconType: "emoji", color: "#3B82F6", isPublic: true, group: "Transportation" },
-        { name: "Taxi", description: "", icon: "🚖", iconType: "emoji", color: "#F59E0B", isPublic: true, group: "Transportation" },
+        // Transport
+        { name: "Fuel", description: "", icon: "fuel", iconType: "lucide", color: "#F59E0B", isPublic: true, group: "Transport" },
+        { name: "Public Transit", description: "Bus, train, metro", icon: "bus", iconType: "lucide", color: "#10B981", isPublic: true, group: "Transport" },
+        { name: "Rideshare / Taxi", description: "Uber, Grab, Lyft, taxi", icon: "car-front", iconType: "lucide", color: "#EC4899", isPublic: true, group: "Transport" },
+        { name: "Vehicle Loan", description: "Car loan or lease", icon: "banknote", iconType: "lucide", color: "#EF4444", isPublic: true, group: "Transport" },
+        { name: "Vehicle Service", description: "Maintenance, repairs, inspection", icon: "wrench", iconType: "lucide", color: "#8B5CF6", isPublic: true, group: "Transport" },
+        { name: "Parking & Tolls", description: "", icon: "parking-circle", iconType: "lucide", color: "#EC4899", isPublic: true, group: "Transport" },
 
-        // Food & Groceries
-        { name: "Groceries", description: "", icon: "🛒", iconType: "emoji", color: "#10B981", isPublic: true, group: "Food & Groceries" },
-        { name: "Dining out / Takeaway", description: "", icon: "🍽️", iconType: "emoji", color: "#F59E0B", isPublic: true, group: "Food & Groceries" },
-        { name: "Coffee / Snacks", description: "", icon: "☕", iconType: "emoji", color: "#8B5CF6", isPublic: true, group: "Food & Groceries" },
-        { name: "Alcohol / Beverages", description: "", icon: "🍷", iconType: "emoji", color: "#EF4444", isPublic: true, group: "Food & Groceries" },
-        { name: "Meal delivery services", description: "", icon: "📦", iconType: "emoji", color: "#06B6D4", isPublic: true, group: "Food & Groceries" },
-        { name: "Catering / Events", description: "", icon: "🍲", iconType: "emoji", color: "#F97316", isPublic: true, group: "Food & Groceries" },
+        // Food
+        { name: "Groceries", description: "", icon: "shopping-cart", iconType: "lucide", color: "#10B981", isPublic: true, group: "Food" },
+        { name: "Dining Out", description: "Restaurants, takeaway", icon: "utensils", iconType: "lucide", color: "#F59E0B", isPublic: true, group: "Food" },
+        { name: "Coffee & Snacks", description: "", icon: "coffee", iconType: "lucide", color: "#8B5CF6", isPublic: true, group: "Food" },
+        { name: "Delivery", description: "Food delivery services", icon: "pizza", iconType: "lucide", color: "#06B6D4", isPublic: true, group: "Food" },
+        { name: "Drinks", description: "Alcohol and beverages", icon: "wine", iconType: "lucide", color: "#EF4444", isPublic: true, group: "Food" },
 
-        // Health & Wellness
-        { name: "Health insurance", description: "", icon: "🏥", iconType: "emoji", color: "#EF4444", isPublic: true, group: "Health & Wellness" },
-        { name: "Medical bills (doctor, dentist, etc.)", description: "", icon: "🩺", iconType: "emoji", color: "#F59E0B", isPublic: true, group: "Health & Wellness" },
-        { name: "Pharmacy / Medicine", description: "", icon: "💊", iconType: "emoji", color: "#10B981", isPublic: true, group: "Health & Wellness" },
-        { name: "Gym / Sports / Fitness", description: "", icon: "🏋️", iconType: "emoji", color: "#8B5CF6", isPublic: true, group: "Health & Wellness" },
-        { name: "Therapy / Counseling", description: "", icon: "🧠", iconType: "emoji", color: "#A855F7", isPublic: true, group: "Health & Wellness" },
-        { name: "Spa / Massage", description: "", icon: "💆", iconType: "emoji", color: "#EC4899", isPublic: true, group: "Health & Wellness" },
-        { name: "Vitamins / Supplements", description: "", icon: "💉", iconType: "emoji", color: "#14B8A6", isPublic: true, group: "Health & Wellness" },
-        { name: "Alternative medicine", description: "", icon: "🌿", iconType: "emoji", color: "#22C55E", isPublic: true, group: "Health & Wellness" },
-        { name: "Vision care (glasses, contacts)", description: "", icon: "👓", iconType: "emoji", color: "#3B82F6", isPublic: true, group: "Health & Wellness" },
-        { name: "Lab tests / Diagnostics", description: "", icon: "🧪", iconType: "emoji", color: "#F59E0B", isPublic: true, group: "Health & Wellness" },
-        { name: "Dental care", description: "", icon: "🦷", iconType: "emoji", color: "#06B6D4", isPublic: true, group: "Health & Wellness" },
-        { name: "Chiropractor / Physical therapy", description: "", icon: "🤸", iconType: "emoji", color: "#8B5CF6", isPublic: true, group: "Health & Wellness" },
+        // Health
+        { name: "Medical", description: "Doctor, dental, vision, lab tests", icon: "stethoscope", iconType: "lucide", color: "#EF4444", isPublic: true, group: "Health" },
+        { name: "Pharmacy", description: "Medicine, supplements", icon: "pill", iconType: "lucide", color: "#10B981", isPublic: true, group: "Health" },
+        { name: "Fitness", description: "Gym, sports, fitness equipment", icon: "dumbbell", iconType: "lucide", color: "#8B5CF6", isPublic: true, group: "Health" },
+        { name: "Wellness", description: "Therapy, spa, massage, alternative medicine", icon: "leaf", iconType: "lucide", color: "#22C55E", isPublic: true, group: "Health" },
+
+        // Family
+        { name: "Childcare", description: "Babysitting, daycare", icon: "baby", iconType: "lucide", color: "#06B6D4", isPublic: true, group: "Family" },
+        { name: "School Fees", description: "Tuition for kids' school", icon: "school", iconType: "lucide", color: "#10B981", isPublic: true, group: "Family" },
+        { name: "Kids Supplies", description: "Toys, baby supplies, clothing for kids", icon: "package", iconType: "lucide", color: "#F59E0B", isPublic: true, group: "Family" },
+        { name: "Kids Activities", description: "Classes, sports, hobbies for kids", icon: "party-popper", iconType: "lucide", color: "#F97316", isPublic: true, group: "Family" },
+        { name: "Family Outings", description: "Family meals out, trips, recreation", icon: "users", iconType: "lucide", color: "#8B5CF6", isPublic: true, group: "Family" },
 
         // Education
-        { name: "Tuition fees", description: "", icon: "🎓", iconType: "emoji", color: "#8B5CF6", isPublic: true, group: "Education & Personal Development" },
-        { name: "Books & Materials", description: "", icon: "📚", iconType: "emoji", color: "#10B981", isPublic: true, group: "Education & Personal Development" },
-        { name: "Online courses / Subscriptions", description: "", icon: "💻", iconType: "emoji", color: "#F59E0B", isPublic: true, group: "Education & Personal Development" },
-        { name: "Training / Certifications", description: "", icon: "📜", iconType: "emoji", color: "#EF4444", isPublic: true, group: "Education & Personal Development" },
-        { name: "Workshops / Seminars", description: "", icon: "🎪", iconType: "emoji", color: "#06B6D4", isPublic: true, group: "Education & Personal Development" },
-        { name: "Language learning", description: "", icon: "🗣️", iconType: "emoji", color: "#A855F7", isPublic: true, group: "Education & Personal Development" },
-        { name: "Coaching / Mentoring", description: "", icon: "👥", iconType: "emoji", color: "#10B981", isPublic: true, group: "Education & Personal Development" },
+        { name: "Tuition", description: "Personal tuition fees", icon: "graduation-cap", iconType: "lucide", color: "#8B5CF6", isPublic: true, group: "Education" },
+        { name: "Courses", description: "Online courses, workshops, certifications", icon: "presentation", iconType: "lucide", color: "#F59E0B", isPublic: true, group: "Education" },
+        { name: "Books & Materials", description: "Books, learning materials, language apps", icon: "book-open", iconType: "lucide", color: "#10B981", isPublic: true, group: "Education" },
 
-        // Bills & Subscriptions
-        { name: "Streaming (Netflix, Spotify, etc.)", description: "", icon: "📺", iconType: "emoji", color: "#EC4899", isPublic: true, group: "Bills & Subscriptions" },
-        { name: "Cloud services", description: "", icon: "☁️", iconType: "emoji", color: "#06B6D4", isPublic: true, group: "Bills & Subscriptions" },
-        { name: "Magazine / Membership fees", description: "", icon: "📰", iconType: "emoji", color: "#8B5CF6", isPublic: true, group: "Bills & Subscriptions" },
-        { name: "Software subscriptions", description: "", icon: "💿", iconType: "emoji", color: "#3B82F6", isPublic: true, group: "Bills & Subscriptions" },
-        { name: "Gym membership", description: "", icon: "🏃", iconType: "emoji", color: "#10B981", isPublic: true, group: "Bills & Subscriptions" },
-        { name: "Mobile apps / Games", description: "", icon: "📱", iconType: "emoji", color: "#F59E0B", isPublic: true, group: "Bills & Subscriptions" },
-        { name: "VPN / Security", description: "", icon: "🔐", iconType: "emoji", color: "#6B7280", isPublic: true, group: "Bills & Subscriptions" },
+        // Subscriptions
+        { name: "Streaming", description: "Netflix, Spotify, etc.", icon: "tv", iconType: "lucide", color: "#EC4899", isPublic: true, group: "Subscriptions" },
+        { name: "Software", description: "Software and cloud services", icon: "cloud", iconType: "lucide", color: "#3B82F6", isPublic: true, group: "Subscriptions" },
+        { name: "Mobile Plan", description: "Cellular plan and data", icon: "smartphone", iconType: "lucide", color: "#F59E0B", isPublic: true, group: "Subscriptions" },
+        { name: "Memberships", description: "Magazines, clubs, recurring memberships", icon: "newspaper", iconType: "lucide", color: "#8B5CF6", isPublic: true, group: "Subscriptions" },
 
-        // Family & Children
-        { name: "Childcare / Babysitting", description: "", icon: "👶", iconType: "emoji", color: "#06B6D4", isPublic: true, group: "Family & Children" },
-        { name: "School fees", description: "", icon: "🏫", iconType: "emoji", color: "#10B981", isPublic: true, group: "Family & Children" },
-        { name: "Toys & Supplies", description: "", icon: "🧸", iconType: "emoji", color: "#F59E0B", isPublic: true, group: "Family & Children" },
-        { name: "Family outings", description: "", icon: "👨‍👩‍👧‍👦", iconType: "emoji", color: "#8B5CF6", isPublic: true, group: "Family & Children" },
-        { name: "Kids activities / Classes", description: "", icon: "⚽", iconType: "emoji", color: "#F97316", isPublic: true, group: "Family & Children" },
-        { name: "Birthday parties / Celebrations", description: "", icon: "🎈", iconType: "emoji", color: "#EC4899", isPublic: true, group: "Family & Children" },
-        { name: "Allowances", description: "", icon: "💸", iconType: "emoji", color: "#10B981", isPublic: true, group: "Family & Children" },
-        { name: "Baby supplies (diapers, formula)", description: "", icon: "🍼", iconType: "emoji", color: "#06B6D4", isPublic: true, group: "Family & Children" },
-        { name: "Family sports / Recreation", description: "", icon: "🏀", iconType: "emoji", color: "#EF4444", isPublic: true, group: "Family & Children" },
+        // Electronics & Gadgets
+        { name: "Phone & Tablet", description: "Phone or tablet purchases", icon: "smartphone", iconType: "lucide", color: "#3B82F6", isPublic: true, group: "Electronics & Gadgets" },
+        { name: "Computer", description: "Laptop or desktop purchases", icon: "laptop", iconType: "lucide", color: "#6366F1", isPublic: true, group: "Electronics & Gadgets" },
+        { name: "Audio & Headphones", description: "Headphones, speakers, audio gear", icon: "headphones", iconType: "lucide", color: "#8B5CF6", isPublic: true, group: "Electronics & Gadgets" },
+        { name: "Accessories", description: "Cables, chargers, mice, keyboards", icon: "plug", iconType: "lucide", color: "#6B7280", isPublic: true, group: "Electronics & Gadgets" },
+        { name: "Smart Home", description: "Smart bulbs, hubs, IoT devices", icon: "lightbulb", iconType: "lucide", color: "#F59E0B", isPublic: true, group: "Electronics & Gadgets" },
 
-        // Debt & Savings
-        { name: "Loan repayments", description: "", icon: "🏦", iconType: "emoji", color: "#84CC16", isPublic: true, group: "Debt & Savings" },
-        { name: "Credit card payments", description: "", icon: "💳", iconType: "emoji", color: "#EF4444", isPublic: true, group: "Debt & Savings" },
-        { name: "Emergency fund", description: "", icon: "🐷", iconType: "emoji", color: "#10B981", isPublic: true, group: "Debt & Savings" },
-        { name: "Investments", description: "", icon: "📈", iconType: "emoji", color: "#8B5CF6", isPublic: true, group: "Debt & Savings" },
+        // Money
+        { name: "Loan Repayment", description: "Personal and home loan payments", icon: "landmark", iconType: "lucide", color: "#84CC16", isPublic: true, group: "Money" },
+        { name: "Credit Card", description: "Credit card payments", icon: "credit-card", iconType: "lucide", color: "#EF4444", isPublic: true, group: "Money" },
+        { name: "Savings", description: "Emergency fund and savings deposits", icon: "piggy-bank", iconType: "lucide", color: "#10B981", isPublic: true, group: "Money" },
+        { name: "Investment", description: "Stocks, funds, investments", icon: "trending-up", iconType: "lucide", color: "#8B5CF6", isPublic: true, group: "Money" },
+        { name: "Insurance", description: "Life, health, property, vehicle insurance", icon: "shield", iconType: "lucide", color: "#6B7280", isPublic: true, group: "Money" },
+        { name: "Taxes", description: "Income tax, property tax", icon: "receipt", iconType: "lucide", color: "#EF4444", isPublic: true, group: "Money" },
+        { name: "Bank Fees", description: "Transaction fees, ATM fees", icon: "coins", iconType: "lucide", color: "#F59E0B", isPublic: true, group: "Money" },
 
-        // Insurance
-        { name: "Life insurance", description: "", icon: "🛡️", iconType: "emoji", color: "#6B7280", isPublic: true, group: "Insurance" },
-        { name: "Health insurance (if not under Health group)", description: "", icon: "⚕️", iconType: "emoji", color: "#EF4444", isPublic: true, group: "Insurance" },
-        { name: "Property / Car insurance", description: "", icon: "🏠", iconType: "emoji", color: "#F59E0B", isPublic: true, group: "Insurance" },
+        // Lifestyle
+        { name: "Travel", description: "Flights, hotels, vacations", icon: "plane", iconType: "lucide", color: "#F97316", isPublic: true, group: "Lifestyle" },
+        { name: "Entertainment", description: "Movies, concerts, theater, events", icon: "ticket", iconType: "lucide", color: "#EC4899", isPublic: true, group: "Lifestyle" },
+        { name: "Hobbies & Crafts", description: "Art, music, photography, collecting", icon: "palette", iconType: "lucide", color: "#8B5CF6", isPublic: true, group: "Lifestyle" },
+        { name: "Sports & Recreation", description: "Sports gear, outdoor recreation", icon: "activity", iconType: "lucide", color: "#10B981", isPublic: true, group: "Lifestyle" },
+        { name: "Clothing", description: "Apparel, shoes, accessories", icon: "shirt", iconType: "lucide", color: "#DB2777", isPublic: true, group: "Lifestyle" },
+        { name: "Personal Care", description: "Salon, beauty, grooming, skincare", icon: "scissors", iconType: "lucide", color: "#EC4899", isPublic: true, group: "Lifestyle" },
 
-        // Leisure & Entertainment
-        { name: "Travel / Holidays", description: "", icon: "✈️", iconType: "emoji", color: "#F97316", isPublic: true, group: "Leisure & Entertainment" },
-        { name: "Flight tickets", description: "", icon: "🛫", iconType: "emoji", color: "#3B82F6", isPublic: true, group: "Leisure & Entertainment" },
-        { name: "Hotel / Accommodation", description: "", icon: "🏨", iconType: "emoji", color: "#8B5CF6", isPublic: true, group: "Leisure & Entertainment" },
-        { name: "Vacation activities", description: "", icon: "⛰️", iconType: "emoji", color: "#10B981", isPublic: true, group: "Leisure & Entertainment" },
-        { name: "Souvenirs / Travel shopping", description: "", icon: "🎁", iconType: "emoji", color: "#EC4899", isPublic: true, group: "Leisure & Entertainment" },
-        { name: "Travel insurance", description: "", icon: "🧳", iconType: "emoji", color: "#6B7280", isPublic: true, group: "Leisure & Entertainment" },
-        { name: "Car rental / Transportation", description: "", icon: "🚙", iconType: "emoji", color: "#F59E0B", isPublic: true, group: "Leisure & Entertainment" },
-        { name: "Movies / Concerts", description: "", icon: "🎟️", iconType: "emoji", color: "#EC4899", isPublic: true, group: "Leisure & Entertainment" },
-        { name: "Theater / Shows", description: "", icon: "🎭", iconType: "emoji", color: "#A855F7", isPublic: true, group: "Leisure & Entertainment" },
-        { name: "Sports events", description: "", icon: "🏆", iconType: "emoji", color: "#F97316", isPublic: true, group: "Leisure & Entertainment" },
-        { name: "Hobbies", description: "", icon: "🎨", iconType: "emoji", color: "#8B5CF6", isPublic: true, group: "Leisure & Entertainment" },
-        { name: "Games", description: "", icon: "🎮", iconType: "emoji", color: "#10B981", isPublic: true, group: "Leisure & Entertainment" },
-        { name: "Books / Reading", description: "", icon: "📖", iconType: "emoji", color: "#6366F1", isPublic: true, group: "Leisure & Entertainment" },
-        { name: "Photography", description: "", icon: "📷", iconType: "emoji", color: "#14B8A6", isPublic: true, group: "Leisure & Entertainment" },
-        { name: "Music / Instruments", description: "", icon: "🎵", iconType: "emoji", color: "#EC4899", isPublic: true, group: "Leisure & Entertainment" },
+        // Giving
+        { name: "Charity & NGOs", description: "WWF, Red Cross, secular charities", icon: "heart-handshake", iconType: "lucide", color: "#EF4444", isPublic: true, group: "Giving" },
+        { name: "Religious Giving", description: "Zakat, tithe, sedekah, offerings", icon: "heart", iconType: "lucide", color: "#A855F7", isPublic: true, group: "Giving" },
+        { name: "Tips & Small Giving", description: "Buskers, beggars, service tips, spontaneous giving", icon: "hand-heart", iconType: "lucide", color: "#F59E0B", isPublic: true, group: "Giving" },
+        { name: "Gifts", description: "Birthday, wedding, holiday gifts", icon: "gift", iconType: "lucide", color: "#EC4899", isPublic: true, group: "Giving" },
+        { name: "Condolences", description: "Funeral money, sympathy contributions", icon: "mail", iconType: "lucide", color: "#6B7280", isPublic: true, group: "Giving" },
 
-        // Shopping & Personal Care
-        { name: "Clothing & Accessories", description: "", icon: "👕", iconType: "emoji", color: "#DB2777", isPublic: true, group: "Shopping & Personal Care" },
-        { name: "Shoes / Footwear", description: "", icon: "👟", iconType: "emoji", color: "#F97316", isPublic: true, group: "Shopping & Personal Care" },
-        { name: "Jewelry / Watches", description: "", icon: "⌚", iconType: "emoji", color: "#8B5CF6", isPublic: true, group: "Shopping & Personal Care" },
-        { name: "Haircuts / Salon", description: "", icon: "✂️", iconType: "emoji", color: "#EC4899", isPublic: true, group: "Shopping & Personal Care" },
-        { name: "Beauty treatments", description: "", icon: "✨", iconType: "emoji", color: "#A855F7", isPublic: true, group: "Shopping & Personal Care" },
-        { name: "Skincare products", description: "", icon: "🧴", iconType: "emoji", color: "#14B8A6", isPublic: true, group: "Shopping & Personal Care" },
-        { name: "Cosmetics / Makeup", description: "", icon: "💄", iconType: "emoji", color: "#EC4899", isPublic: true, group: "Shopping & Personal Care" },
-        { name: "Grooming supplies", description: "", icon: "🚿", iconType: "emoji", color: "#06B6D4", isPublic: true, group: "Shopping & Personal Care" },
-        { name: "Fragrances / Perfumes", description: "", icon: "🧪", iconType: "emoji", color: "#8B5CF6", isPublic: true, group: "Shopping & Personal Care" },
-        { name: "Nail care / Manicure", description: "", icon: "💅", iconType: "emoji", color: "#EC4899", isPublic: true, group: "Shopping & Personal Care" },
-
-        // General
-        { name: "Pets / Pet care", description: "", icon: "🐶", iconType: "emoji", color: "#F59E0B", isPublic: true, group: "General" },
-        { name: "Veterinary care", description: "", icon: "🐾", iconType: "emoji", color: "#10B981", isPublic: true, group: "General" },
-        { name: "Pet supplies / Food", description: "", icon: "🦴", iconType: "emoji", color: "#8B5CF6", isPublic: true, group: "General" },
-        { name: "Donations / Charity", description: "", icon: "💝", iconType: "emoji", color: "#EF4444", isPublic: true, group: "General" },
-        { name: "Gifts", description: "", icon: "🎁", iconType: "emoji", color: "#EC4899", isPublic: true, group: "General" },
-        { name: "Postage / Shipping", description: "", icon: "✉️", iconType: "emoji", color: "#06B6D4", isPublic: true, group: "General" },
-        { name: "Legal fees", description: "", icon: "⚖️", iconType: "emoji", color: "#6B7280", isPublic: true, group: "General" },
-        { name: "Taxes", description: "", icon: "🧾", iconType: "emoji", color: "#EF4444", isPublic: true, group: "General" },
-        { name: "Bank fees", description: "", icon: "🏧", iconType: "emoji", color: "#F59E0B", isPublic: true, group: "General" },
-        { name: "Others", description: "Miscellaneous expenses that don't fit into other categories", icon: "📋", iconType: "emoji", color: "#9CA3AF", isPublic: true, group: "General" }
+        // Other
+        { name: "Pets", description: "Pet food, vet care, supplies", icon: "paw-print", iconType: "lucide", color: "#F59E0B", isPublic: true, group: "Other" },
+        { name: "Legal", description: "Legal fees, professional services", icon: "scale", iconType: "lucide", color: "#6B7280", isPublic: true, group: "Other" },
+        { name: "Misc", description: "Miscellaneous and uncategorized expenses", icon: "more-horizontal", iconType: "lucide", color: "#9CA3AF", isPublic: true, group: "Other" }
     ]
 };
 
 export interface CategoryData {
-    categoryGroups: CategoryGroup[]
-    categories: Category[]
+    categoryGroups: CategoryGroup[];
+    categories: Category[];
 }

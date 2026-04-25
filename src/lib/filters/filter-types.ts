@@ -20,7 +20,8 @@ export type FilterField =
     | 'fund'
     | 'paidBy'
     | 'paymentType'
-    | 'amount';
+    | 'amount'
+    | 'tag';
 
 /** Operators. Not every op is valid for every field — see FIELD_CONFIG below. */
 export type FilterOp = 'is' | 'gt' | 'lt' | 'between';
@@ -55,6 +56,7 @@ export const FIELD_CONFIG: Record<
     paidBy:      { label: 'Paid by',      kind: 'enum',   ops: ['is'], specialValues: { __vault__: 'Vault-level' } },
     paymentType: { label: 'Payment type', kind: 'enum',   ops: ['is'] },
     amount:      { label: 'Amount',       kind: 'number', ops: ['gt', 'lt', 'between'] },
+    tag:         { label: 'Tag',          kind: 'enum',   ops: ['is'], specialValues: { __none__: 'No tag' } },
 };
 
 /** Pretty operator label for display. */

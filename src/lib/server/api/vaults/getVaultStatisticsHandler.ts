@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
-import { expenses, expenseTemplates, vaultMembers } from "$lib/server/db/schema";
+import { expenses, expenseTemplates, expenseTags, expenseTagAssignments, vaultMembers } from "$lib/server/db/schema";
 import { eq, and, sql, isNull } from "drizzle-orm";
 import { getUserVaultRole } from "$lib/server/utils/vaultPermissions";
 import { categoryData } from "$lib/configurations/categories";
@@ -90,6 +90,26 @@ export const getVaultStatistics = async (
         .where(baseWhereClause)
         .groupBy(expenses.paidBy, vaultMembers.displayName);
 
+    // Get expenses by tag (an expense with N tags counts toward each — sums will exceed total).
+    // We restrict to non-deleted tags in this vault to avoid leaking soft-deleted labels.
+    const expensesByTag = await client
+        .select({
+            tagId: expenseTags.id,
+            tagName: expenseTags.name,
+            tagColor: expenseTags.color,
+            totalAmount: sql<number>`COALESCE(SUM(${expenses.amount}), 0)`,
+            count: sql<number>`COUNT(*)`,
+        })
+        .from(expenses)
+        .innerJoin(expenseTagAssignments, eq(expenses.id, expenseTagAssignments.expenseId))
+        .innerJoin(expenseTags, and(
+            eq(expenseTagAssignments.tagId, expenseTags.id),
+            eq(expenseTags.vaultId, vaultId),
+            isNull(expenseTags.deletedAt),
+        ))
+        .where(baseWhereClause)
+        .groupBy(expenseTags.id, expenseTags.name, expenseTags.color);
+
     // Create a map of category names to category data for quick lookup
     const categoryMap = new Map(
         categoryData.categories.map(cat => [cat.name, cat])
@@ -120,6 +140,13 @@ export const getVaultStatistics = async (
         byMember: expensesByMember.map(item => ({
             userId: item.userId,
             displayName: item.displayName || 'Vault-level expense',
+            totalAmount: item.totalAmount,
+            count: item.count,
+        })),
+        byTag: expensesByTag.map(item => ({
+            tagId: item.tagId,
+            tagName: item.tagName,
+            tagColor: item.tagColor,
             totalAmount: item.totalAmount,
             count: item.count,
         })),

@@ -12,7 +12,13 @@ export const updateExpenseTemplate = async (
 	env: Cloudflare.Env
 ) => {
 	const client = drizzle(env.DB, { schema });
-	const { id, vaultId, ...updateData } = data;
+	const { id, vaultId, defaultTagIds, ...updateData } = data;
+	// JSON-encode the tag list when provided. undefined leaves the column untouched.
+	const tagIdsValue = defaultTagIds === undefined
+		? undefined
+		: defaultTagIds.length > 0
+			? JSON.stringify(Array.from(new Set(defaultTagIds)))
+			: null;
 
 	// Check if user has permission to edit templates in this vault
 	await requireVaultPermission(session, vaultId, 'canEditExpenses', env);
@@ -39,6 +45,7 @@ export const updateExpenseTemplate = async (
 		.update(expenseTemplates)
 		.set({
 			...updateData,
+			...(tagIdsValue !== undefined ? { defaultTagIds: tagIdsValue } : {}),
 			...updateAuditFields({ userId: session.user.id })
 		})
 		.where(eq(expenseTemplates.id, id))

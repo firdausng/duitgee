@@ -6,6 +6,7 @@
 	import { CategoryPicker } from '$lib/components/ui/category-picker';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { CalculatorInput } from '$lib/components/ui/calculator-input';
+	import { formatDatetimeLocal } from '$lib/utils';
 	import type { PaymentType } from '$lib/configurations/paymentTypes';
 
 	type Category = {
@@ -78,6 +79,9 @@
 	}: ExpenseRowProps = $props();
 
 	function toggleExpanded() {
+		// DateTimePicker has a string-default $bindable, so its value can never be undefined.
+		// Backfill rows constructed without a date with the current local time.
+		if (row.date === undefined) row.date = formatDatetimeLocal(new Date());
 		row.expanded = !row.expanded;
 	}
 </script>

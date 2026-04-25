@@ -8,6 +8,7 @@
             fund: Array<{ id: string; name: string; icon?: string | null }>;
             paidBy: Array<{ id: string; name: string }>;
             paymentType: Array<{ value: string; label: string; icon?: string | null }>;
+            tag: Array<{ id: string; name: string }>;
         };
         /** If set, popover opens in "edit" mode pre-filled with this pill. */
         editing?: FilterPill | null;
@@ -291,6 +292,22 @@
                                             <Checkbox checked={active} onCheckedChange={() => toggleValue(pt.value)} />
                                             <span>{pt.icon ?? ''}</span>
                                             <span class="truncate">{pt.label}</span>
+                                        </label>
+                                    {/each}
+                                {/if}
+                            {:else if field === 'tag'}
+                                <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
+                                    <Checkbox checked={selectedValues.includes('__none__')} onCheckedChange={() => toggleValue('__none__')} />
+                                    <span class="text-muted-foreground">No tag</span>
+                                </label>
+                                {#if options.tag.length === 0}
+                                    <p class="px-2 py-3 text-xs text-muted-foreground text-center">No tags in this vault yet.</p>
+                                {:else}
+                                    {#each options.tag as t (t.id)}
+                                        {@const active = selectedValues.includes(t.id)}
+                                        <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
+                                            <Checkbox checked={active} onCheckedChange={() => toggleValue(t.id)} />
+                                            <span class="truncate">{t.name}</span>
                                         </label>
                                     {/each}
                                 {/if}

@@ -31,7 +31,7 @@
 
     // Schema for statistics page query params
     const statisticsParamsSchema = v.object({
-        filterType: v.optional(v.picklist(['template', 'category', 'member']), 'template'),
+        filterType: v.optional(v.picklist(['template', 'category', 'member', 'tag']), 'template'),
         filter: v.optional(v.picklist(['today', 'yesterday', 'week', 'month', 'year']), 'month'),
         filterName: v.optional(v.fallback(v.string(), ""), ""),
         startDate: v.optional(v.fallback(v.string(), ""), ""),
@@ -369,6 +369,10 @@
                 const member = statistics.byMember.find(m => m.displayName === filterName);
                 return member?.userId;
             }
+            case 'tag': {
+                const tag = statistics.byTag.find(t => t.tagName === filterName);
+                return tag?.tagId;
+            }
             case 'category':
                 // Categories use name directly, no ID needed
                 return undefined;
@@ -403,6 +407,13 @@
                     icon: '👤',
                     count: item.count
                 }));
+            case 'tag':
+                return statistics.byTag.map(item => ({
+                    id: item.tagId,
+                    name: item.tagName,
+                    icon: '🏷️',
+                    count: item.count
+                }));
             default:
                 return [];
         }
@@ -429,6 +440,13 @@
             case 'member':
                 if (currentFilterId) {
                     return expenses.filter(expense => expense.paidBy === currentFilterId);
+                }
+                return expenses;
+            case 'tag':
+                if (currentFilterId) {
+                    return expenses.filter((expense) =>
+                        Array.isArray(expense.tags) && expense.tags.some((t) => t.id === currentFilterId)
+                    );
                 }
                 return expenses;
             default:
@@ -483,6 +501,7 @@
                     id: c.categoryName,
                     label: c.categoryName || 'Uncategorized',
                     icon: c.categoryIcon ?? null,
+                    iconType: c.categoryIconType ?? null,
                     color: null,
                     value: c.totalAmount,
                     count: c.count,
@@ -504,6 +523,15 @@
                     color: null,
                     value: m.totalAmount,
                     count: m.count,
+                }));
+            case 'tag':
+                return statistics.byTag.map((t) => ({
+                    id: t.tagId,
+                    label: t.tagName,
+                    icon: null,
+                    color: t.tagColor ?? null,
+                    value: t.totalAmount,
+                    count: t.count,
                 }));
             default:
                 return [];

@@ -1,7 +1,7 @@
 <script lang="ts">
     import {cn} from "$lib/utils";
 
-    type FilterType = 'template' | 'category' | 'member';
+    type FilterType = 'template' | 'category' | 'member' | 'tag';
 
     type Props = {
         currentType: FilterType;
@@ -25,6 +25,12 @@
             value: 'member' as FilterType,
             label: 'Member',
             icon: 'M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z'
+        },
+        {
+            value: 'tag' as FilterType,
+            label: 'Tag',
+            // Lucide-tag-ish path for visual consistency
+            icon: 'M9.243 3a1 1 0 00-.707.293l-5.243 5.243a1 1 0 000 1.414l6.757 6.757a1 1 0 001.414 0l5.243-5.243a1 1 0 00.293-.707V4a1 1 0 00-1-1H9.243zM12.5 8a1.5 1.5 0 110-3 1.5 1.5 0 010 3z'
         }
     ];
 </script>

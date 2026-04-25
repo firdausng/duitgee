@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Card } from "$lib/components/ui/card";
+    import { IconRenderer } from "$lib/components/ui/icon-renderer";
     import type { VaultStatistics } from "./types";
     import { scale } from "svelte/transition";
     import AnimatedCurrency from "$lib/components/ui/animated-currency/AnimatedCurrency.svelte";
@@ -18,7 +19,8 @@
             total: {amount: 0, count: 0},
             byTemplate: [],
             byCategory: [],
-            byMember: []
+            byMember: [],
+            byTag: []
         }),
         isLoading,
         formatCurrency,
@@ -104,7 +106,12 @@
                             <div class="space-y-2">
                                 <div class="flex flex-col items-center text-center gap-1">
                                     {#if category.categoryIcon}
-                                        <div class="text-2xl">{category.categoryIcon}</div>
+                                        <IconRenderer
+                                            icon={category.categoryIcon}
+                                            iconType={category.categoryIconType}
+                                            size={28}
+                                            emojiClass="text-2xl"
+                                        />
                                     {/if}
                                     <div class="text-xs font-medium break-words w-full">{category.categoryName}</div>
                                 </div>

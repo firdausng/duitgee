@@ -47,10 +47,23 @@ export const load = async ({ params, fetch }) => {
 		// non-critical
 	}
 
+	// Fetch tags for the picker
+	let tags: Array<{ id: string; name: string; color: string | null }> = [];
+	try {
+		const response = await fetch(`/api/getTags?vaultId=${vaultId}`);
+		if (response.ok) {
+			const result: any = await response.json();
+			if (result.success) tags = result.data ?? [];
+		}
+	} catch {
+		// non-critical
+	}
+
 	return {
 		form,
 		vaultId,
 		members,
 		funds,
+		tags,
 	};
 };

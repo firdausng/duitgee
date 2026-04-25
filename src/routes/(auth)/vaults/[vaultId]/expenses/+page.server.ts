@@ -52,10 +52,25 @@ export const load: PageServerLoad = async ({ locals, platform, params, fetch }) 
 		console.error('Failed to fetch funds:', err);
 	}
 
+	// Vault tags (for the Tag filter options).
+	let tags: Array<{ id: string; name: string; color: string | null }> = [];
+	try {
+		const response = await fetch(`/api/getTags?vaultId=${vaultId}`);
+		if (response.ok) {
+			const result = (await response.json()) as { success: boolean; data: any[] };
+			if (result.success && Array.isArray(result.data)) {
+				tags = result.data.map((t: any) => ({ id: t.id, name: t.name, color: t.color ?? null }));
+			}
+		}
+	} catch (err) {
+		console.error('Failed to fetch tags:', err);
+	}
+
 	return {
 		vaultId,
 		vault,
 		members,
 		funds,
+		tags,
 	};
 };

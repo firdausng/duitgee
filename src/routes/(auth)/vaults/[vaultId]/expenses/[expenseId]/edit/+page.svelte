@@ -9,6 +9,7 @@
 	import { DateTimePicker } from '$lib/components/ui/date-time-picker';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
 	import { CategoryPicker } from '$lib/components/ui/category-picker';
+	import { TagPicker, type TagOption } from '$lib/components/ui/tag-picker';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { CalculatorInput } from '$lib/components/ui/calculator-input';
 	import { categoryData } from '$lib/configurations/categories';
@@ -82,6 +83,34 @@
 
 	function handleBack() {
 		goto(`/vaults/${data.vaultId}`);
+	}
+
+	// Local mirror of vault tags so newly created tags appear immediately in the picker
+	let availableTags = $state<TagOption[]>(data.tags ?? []);
+
+	// Local selected tag IDs; synced into $form.tagIds before submit
+	let selectedTagIds = $state<string[]>(($form.tagIds as string[] | undefined) ?? []);
+
+	$effect(() => {
+		$form.tagIds = selectedTagIds;
+	});
+
+	async function handleCreateTag(name: string): Promise<TagOption> {
+		const response = await ofetch('/api/createTag', {
+			method: 'POST',
+			body: { vaultId: data.vaultId, name },
+			headers: { 'Content-Type': 'application/json' },
+		});
+		if (!response.success) {
+			throw new Error(response.error || 'Could not create tag');
+		}
+		const created: TagOption = {
+			id: response.data.id,
+			name: response.data.name,
+			color: response.data.color,
+		};
+		availableTags = [...availableTags, created];
+		return created;
 	}
 
 	async function handleDelete() {
@@ -206,6 +235,15 @@
 						disabled={$delayed}
 						error={$errors.categoryName}
 						required={true}
+					/>
+
+					<!-- Tags -->
+					<TagPicker
+						label="Tags"
+						tags={availableTags}
+						bind:value={selectedTagIds}
+						onCreate={handleCreateTag}
+						disabled={$delayed}
 					/>
 
 					<!-- Payment Type -->

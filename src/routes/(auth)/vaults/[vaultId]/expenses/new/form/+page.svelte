@@ -9,6 +9,7 @@
 	import { DateTimePicker } from '$lib/components/ui/date-time-picker';
 	import { ExpenseRow } from '$lib/components/ui/expense-row';
 	import type { ExpenseRowData } from '$lib/components/ui/expense-row/expense-row.svelte';
+	import { TagPicker, type TagOption } from '$lib/components/ui/tag-picker';
 	import { paymentTypes } from '$lib/configurations/paymentTypes';
 	import { categoryData } from '$lib/configurations/categories';
 	import { Toaster } from '$lib/components/ui/sonner';
@@ -34,6 +35,30 @@
 		$form.date = formatDatetimeLocal(new Date());
 	}
 
+	// --- Shared tags ---
+	let availableTags = $state<TagOption[]>(data.tags ?? []);
+	let sharedTagIds = $state<string[]>(($form.tagIds as string[] | undefined) ?? []);
+
+	$effect(() => {
+		$form.tagIds = sharedTagIds;
+	});
+
+	async function handleCreateTag(name: string): Promise<TagOption> {
+		const response: any = await ofetch('/api/createTag', {
+			method: 'POST',
+			body: { vaultId: data.vaultId, name },
+			headers: { 'Content-Type': 'application/json' },
+		});
+		if (!response.success) throw new Error(response.error || 'Could not create tag');
+		const created: TagOption = {
+			id: response.data.id,
+			name: response.data.name,
+			color: response.data.color,
+		};
+		availableTags = [...availableTags, created];
+		return created;
+	}
+
 	// --- Expense rows managed by $state ---
 	const MAX_ROWS = 20;
 
@@ -44,6 +69,8 @@
 			categoryName: data.template?.defaultCategoryName || '',
 			note: data.template?.defaultNote || '',
 			expanded: false,
+			// Default to current local time so the date input is pre-filled when the row is expanded.
+			date: formatDatetimeLocal(new Date()),
 			errors: {},
 		};
 	}
@@ -160,6 +187,7 @@
 					paidBy: $form.paidBy,
 					fundId: $form.fundId,
 					fundPaymentMode: $form.fundId ? $form.fundPaymentMode : null,
+					tagIds: sharedTagIds,
 				},
 				items: rows.map((row) => ({
 					amount: row.amount!,
@@ -459,6 +487,15 @@
 						</div>
 					{/if}
 				{/if}
+
+				<!-- Shared tags — applied to every expense in this batch -->
+				<TagPicker
+					label="Tags (applied to all items)"
+					tags={availableTags}
+					bind:value={sharedTagIds}
+					onCreate={handleCreateTag}
+					disabled={isLoading}
+				/>
 			</div>
 		</details>
 	</div>

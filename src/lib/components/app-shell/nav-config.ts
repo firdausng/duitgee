@@ -9,6 +9,7 @@ import Users from '@lucide/svelte/icons/users';
 import HandCoins from '@lucide/svelte/icons/hand-coins';
 import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
 import Calendar from '@lucide/svelte/icons/calendar';
+import Tag from '@lucide/svelte/icons/tag';
 
 export type BadgeKey = 'pendingRecurring';
 
@@ -51,6 +52,7 @@ export const VAULT_NAV: NavSection[] = [
                 badgeKey: 'pendingRecurring',
             },
             { id: 'templates', label: 'Templates', icon: FileText, path: 'templates' },
+            { id: 'tags', label: 'Tags', icon: Tag, path: 'tags' },
             { id: 'members', label: 'Members', icon: Users, path: 'members' },
             {
                 id: 'reimbursements',

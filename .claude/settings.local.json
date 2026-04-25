@@ -53,7 +53,12 @@
       "Bash(curl -s \"http://localhost:5206/api/getRecurringExpenses?vaultId=kk9qa95zn1g1dhfrvdt5uu52\" -o /dev/null -w \"%{http_code}\")",
       "Bash(curl -s \"http://localhost:5206/api/getRecurringExpenses?vaultId=kk9qa95zn1g1dhfrvdt5uu52\" -o /tmp/r.json -w \"%{http_code}\")",
       "Bash(curl -s \"http://localhost:5206/api/getVault?vaultId=kk9qa95zn1g1dhfrvdt5uu52\" -o /dev/null -w \"%{http_code}\")",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(grep -E \"expenses\\\\\\\\\\\\\\\\\\\\[expenseId\\\\]\\\\\\\\\\\\\\\\edit|src.lib.server.api.tags|src.lib.components.ui.tag-picker\")",
+      "Bash(grep -n \"DateTimePicker\\\\|fundId\\\\|Item \\\\\\\\\\\\$\" \"D:/projects/duitgee-app/src/routes/\\(auth\\)/vaults/[vaultId]/expenses/new/form/+page.svelte\")",
+      "Bash(grep -n \"CategoryPicker$\\\\|categories={categoryData\" \"D:/projects/duitgee-app/src/routes/\\(auth\\)/vaults/[vaultId]/templates/[templateId]/edit/+page.svelte\")",
+      "Bash(grep -l \"platform.env\\\\|locals.currentSession\\\\|platform\\\\\\\\.env\" \"D:/projects/duitgee-app/src/routes/\\(auth\\)/vaults/[vaultId]/\" -r)",
+      "Bash(grep -n \"function handleBack\\\\|}\\);\\\\\\\\s*$\" \"D:/projects/duitgee-app/src/routes/\\(auth\\)/vaults/[vaultId]/expenses/[expenseId]/edit/+page.svelte\")"
     ]
   }
 }

@@ -56,6 +56,22 @@ export const load = async ({ params, fetch }) => {
 		// non-critical — fund selector will be empty
 	}
 
+	// Fetch all tags in this vault for the picker
+	let tags: Array<{ id: string; name: string; color: string | null }> = [];
+	try {
+		const response = await fetch(`/api/getTags?vaultId=${vaultId}`);
+		if (response.ok) {
+			const result = (await response.json()) as { success: boolean; data: any[] };
+			if (result.success) {
+				tags = result.data ?? [];
+			}
+		}
+	} catch {
+		// non-critical — tag picker will start empty
+	}
+
+	const expenseTagIds: string[] = (expenseData.tags ?? []).map((t: { id: string }) => t.id);
+
 	// Initialize form with expense data
 	// Note: date conversion to local time must happen on the client side
 	const form = await superValidate(
@@ -70,6 +86,7 @@ export const load = async ({ params, fetch }) => {
 			date: '', // Will be set on client side from expenseDateUtc
 			fundId: expenseData.fundId ?? null,
 			fundPaymentMode: expenseData.fundPaymentMode ?? null,
+			tagIds: expenseTagIds,
 		},
 		valibot(updateExpenseRequestSchema)
 	);
@@ -82,5 +99,6 @@ export const load = async ({ params, fetch }) => {
 		expenseDateUtc: expenseData.date, // Pass raw UTC date to client
 		members,
 		funds,
+		tags,
 	};
 };

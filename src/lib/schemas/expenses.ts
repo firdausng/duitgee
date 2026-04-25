@@ -46,6 +46,8 @@ export const createExpenseSchema = v.object({
     // Fund integration
     fundId: v.optional(v.nullable(v.string())),
     fundPaymentMode: v.optional(v.nullable(v.picklist(['paid_by_fund', 'pending_reimbursement']))),
+    // Tag IDs (vault-scoped) - optional list of expense_tags.id to assign on create
+    tagIds: v.optional(v.array(v.string())),
 })
 
 export type CreateExpense = v.InferOutput<typeof createExpenseSchema>;
@@ -64,6 +66,8 @@ export const sharedExpenseDefaultsSchema = v.object({
     paidBy: v.optional(v.nullable(v.string())),
     fundId: v.optional(v.nullable(v.string())),
     fundPaymentMode: v.optional(v.nullable(v.picklist(['paid_by_fund', 'pending_reimbursement']))),
+    // Shared tag IDs applied to every expense in the batch
+    tagIds: v.optional(v.array(v.string())),
 });
 
 export type SharedExpenseDefaults = v.InferOutput<typeof sharedExpenseDefaultsSchema>;
@@ -169,6 +173,8 @@ export const updateExpenseRequestSchema = v.object({
     // Fund integration — undefined = no change, null = remove fund tag
     fundId: v.optional(v.nullable(v.string())),
     fundPaymentMode: v.optional(v.nullable(v.picklist(['paid_by_fund', 'pending_reimbursement']))),
+    // Tag IDs — undefined = no change, [] = clear, [...] = replace full set
+    tagIds: v.optional(v.array(v.string())),
 });
 export type UpdateExpenseRequest = v.InferOutput<typeof updateExpenseRequestSchema>;
 

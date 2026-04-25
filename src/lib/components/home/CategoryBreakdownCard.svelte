@@ -2,6 +2,7 @@
     export type CategoryBreakdownCardCategory = {
         categoryName: string;
         categoryIcon?: string;
+        categoryIconType?: string;
         totalAmount: number;
         count: number;
     };
@@ -35,6 +36,7 @@
             id: c.categoryName,
             label: c.categoryName,
             icon: c.categoryIcon ?? null,
+            iconType: c.categoryIconType ?? null,
             value: c.totalAmount,
             count: c.count,
         })),

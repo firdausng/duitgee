@@ -19,10 +19,14 @@ export const createExpenseTemplate = async (
             await requireVaultPermission(session, data.vaultId, 'canCreateExpenses', env);
         }
 
+        const { defaultTagIds, ...rest } = data;
         const [template] = await client
             .insert(expenseTemplates)
             .values({
-                ...data,
+                ...rest,
+                defaultTagIds: defaultTagIds && defaultTagIds.length > 0
+                    ? JSON.stringify(Array.from(new Set(defaultTagIds)))
+                    : null,
                 userId: session.user.id,
                 ...createAuditFields({ userId: session.user.id })
             })

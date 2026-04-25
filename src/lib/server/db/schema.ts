@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, real, index  } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, real, index, primaryKey, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { createId } from '@paralleldrive/cuid2';
 import { UTCDate } from "@date-fns/utc";
 import { formatISO } from "date-fns";
@@ -68,6 +68,7 @@ export const expenseTemplates = sqliteTable('expense_templates', {
     defaultPaidBy: text('default_user_id'), // Who the expense should be assigned to: "__creator__", null (vault), or specific user ID
     defaultFundId: text('default_fund_id'), // Optional default fund to tag the expense to
     defaultFundPaymentMode: text('default_fund_payment_mode'), // 'paid_by_fund' | 'pending_reimbursement'
+    defaultTagIds: text('default_tag_ids'), // JSON array of expenseTags.id; tags pre-applied when creating from this template
     // Usage tracking
     usageCount: integer('usage_count').notNull().default(0),
     lastUsedAt: text('last_used_at'),
@@ -288,4 +289,36 @@ export const fundTransactions = sqliteTable('fund_transactions', {
     cycleIdIdx: index('idx_fund_transactions_cycle').on(table.cycleId),
     typeIdx: index('idx_fund_transactions_type').on(table.fundId, table.type),
     expenseIdIdx: index('idx_fund_transactions_expense').on(table.expenseId),
+}));
+
+// ExpenseTags - vault-scoped labels for cross-cutting expense classification (WHO/WHY dimension)
+export const expenseTags = sqliteTable('expense_tags', {
+    id: text('id').primaryKey().$defaultFn(() => createId()),
+    vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    color: text('color'),
+    isSystem: integer('is_system', { mode: 'boolean' }).notNull().default(false),
+    // Audit fields
+    createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
+    createdBy: text('created_by').notNull(),
+    updatedAt: text('updated_at').$defaultFn(() => formatISO(new UTCDate())),
+    updatedBy: text('updated_by'),
+    deletedAt: text('deleted_at'),
+    deletedBy: text('deleted_by'),
+}, (table) => ({
+    vaultIdIdx: index('idx_expense_tags_vault').on(table.vaultId),
+    uniqueNamePerVault: uniqueIndex('idx_expense_tags_unique_name')
+        .on(table.vaultId, table.name)
+        .where(sql`${table.deletedAt} IS NULL`),
+}));
+
+// ExpenseTagAssignments - many-to-many join between expenses and tags
+export const expenseTagAssignments = sqliteTable('expense_tag_assignments', {
+    expenseId: text('expense_id').notNull().references(() => expenses.id, { onDelete: 'cascade' }),
+    tagId: text('tag_id').notNull().references(() => expenseTags.id, { onDelete: 'cascade' }),
+    createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
+    createdBy: text('created_by').notNull(),
+}, (table) => ({
+    pk: primaryKey({ columns: [table.expenseId, table.tagId] }),
+    tagIdIdx: index('idx_expense_tag_assignments_tag').on(table.tagId),
 }));

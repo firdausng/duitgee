@@ -17,6 +17,7 @@ export interface EvaluableExpense {
     fundId?: string | null;
     fundName?: string | null;
     category?: { name?: string | null } | null;
+    tags?: Array<{ id: string; name: string }> | null;
 }
 
 /** Apply the `pill` to a single expense. Returns true if kept. */
@@ -62,6 +63,17 @@ function matchPill(e: EvaluableExpense, pill: FilterPill): boolean {
             } else if (pill.op === 'between') {
                 const [min, max] = [Number(pill.values[0] ?? 0), Number(pill.values[1] ?? 0)];
                 hit = amt >= min && amt <= max;
+            }
+            break;
+        }
+        case 'tag': {
+            // __none__ matches expenses with no tags. Other values match by tag id OR name.
+            const tags = e.tags ?? [];
+            const hasNone = pill.values.includes('__none__');
+            const realValues = pill.values.filter((v) => v !== '__none__');
+            if (hasNone && tags.length === 0) hit = true;
+            if (!hit && tags.length > 0 && realValues.length > 0) {
+                hit = tags.some((t) => realValues.includes(t.id) || realValues.includes(t.name));
             }
             break;
         }

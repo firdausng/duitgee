@@ -13,6 +13,7 @@ import {userApi} from "$lib/server/api/user/user-api";
 import {fundsApi} from "$lib/server/api/funds/funds-api";
 import {recurringExpensesApi} from "$lib/server/api/recurring-expenses/recurring-expenses-api";
 import {adminApi} from "$lib/server/api/admin/admin-api";
+import {tagsApi} from "$lib/server/api/tags/tags-api";
 
 const router = new Hono<App.Api>()
     .use('*', trimTrailingSlash())
@@ -40,6 +41,7 @@ const router = new Hono<App.Api>()
     .route('/', fundsApi)
     .route('/', recurringExpensesApi)
     .route('/', adminApi)
+    .route('/', tagsApi)
     // .route('/user-team', teamVaultsApi)
     // .route('/', categoriesApi)
     // .route('/', categoryGroupsApi)

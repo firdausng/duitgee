@@ -20,6 +20,8 @@
 <script lang="ts">
     import { cn } from '$lib/utils';
     import { Amount } from '$lib/components/ui/amount';
+    import { IconRenderer } from '$lib/components/ui/icon-renderer';
+    import { TagChips } from '$lib/components/ui/tag-chips';
     import { groupExpensesByDay } from '$lib/utils/groupExpensesByDay';
     import { isToday, isYesterday } from 'date-fns';
     import Receipt from '@lucide/svelte/icons/receipt';
@@ -74,7 +76,15 @@
     >
         <div class="flex-1 min-w-0">
             <p class="font-medium break-words">
-                <span class="mr-1.5" aria-hidden="true">{expense.category?.icon ?? '📝'}</span>
+                <span class="mr-1.5 inline-flex align-middle" aria-hidden="true">
+                    <IconRenderer
+                        icon={expense.category?.icon}
+                        iconType={expense.category?.iconType}
+                        size={14}
+                        emojiClass="text-sm"
+                        fallback="📝"
+                    />
+                </span>
                 {expense.note || expense.category?.name || 'Expense'}
                 {#if expense.recurringExpenseId}
                     <RefreshCw
@@ -108,6 +118,9 @@
                 <span class="opacity-50">·</span>
                 <span class="whitespace-nowrap">{formatDate(expense.date)}</span>
             </div>
+            {#if expense.tags && expense.tags.length > 0}
+                <TagChips tags={expense.tags} class="mt-1" />
+            {/if}
         </div>
 
         <DropdownMenu.Root>

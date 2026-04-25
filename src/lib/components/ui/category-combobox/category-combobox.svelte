@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { Label } from '$lib/components/ui/label';
 	import { Input } from '$lib/components/ui/input';
+	import { IconRenderer } from '$lib/components/ui/icon-renderer';
 	import { cn } from '$lib/utils';
 
 	type Category = {
 		name: string;
 		group: string;
-		icon?: string;
-		iconType?: string;
+		icon?: string | null;
+		iconType?: string | null;
 	};
 
 	type Props = {
@@ -110,8 +111,13 @@
 		<!-- Display/Search Input -->
 		<div class="relative">
 			{#if selectedCategory?.icon && !searchQuery}
-				<span class="absolute left-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none">
-					{selectedCategory.icon}
+				<span class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+					<IconRenderer
+						icon={selectedCategory.icon}
+						iconType={selectedCategory.iconType}
+						size={18}
+						emojiClass="text-lg"
+					/>
 				</span>
 			{/if}
 			<Input
@@ -167,7 +173,12 @@
 									}}
 								>
 									{#if category.icon}
-										<span class="text-lg">{category.icon}</span>
+										<IconRenderer
+											icon={category.icon}
+											iconType={category.iconType}
+											size={18}
+											emojiClass="text-lg"
+										/>
 									{/if}
 									<span>{category.name}</span>
 								</button>

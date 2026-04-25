@@ -10,6 +10,7 @@
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
 	import { CategoryPicker } from '$lib/components/ui/category-picker';
 	import { IconCombobox } from '$lib/components/ui/icon-combobox';
+	import { TagPicker, type TagOption } from '$lib/components/ui/tag-picker';
 	import { categoryData } from '$lib/configurations/categories';
 	import { paymentTypes } from '$lib/configurations/paymentTypes';
 	import { iconData } from '$lib/configurations/icons';
@@ -59,6 +60,30 @@
 
 	function handleBack() {
 		goto(`/vaults/${data.vaultId}/expenses/new`);
+	}
+
+	// --- Default tags for this template ---
+	let availableTags = $state<TagOption[]>(data.tags ?? []);
+	let selectedTagIds = $state<string[]>(($form.defaultTagIds as string[] | undefined) ?? []);
+
+	$effect(() => {
+		$form.defaultTagIds = selectedTagIds;
+	});
+
+	async function handleCreateTag(name: string): Promise<TagOption> {
+		const response: any = await ofetch('/api/createTag', {
+			method: 'POST',
+			body: { vaultId: data.vaultId, name },
+			headers: { 'Content-Type': 'application/json' },
+		});
+		if (!response.success) throw new Error(response.error || 'Could not create tag');
+		const created: TagOption = {
+			id: response.data.id,
+			name: response.data.name,
+			color: response.data.color,
+		};
+		availableTags = [...availableTags, created];
+		return created;
 	}
 </script>
 
@@ -181,6 +206,15 @@
 								disabled={$delayed}
 								error={$errors.defaultCategoryName}
 								required={true}
+							/>
+
+							<!-- Default Tags -->
+							<TagPicker
+								label="Default Tags"
+								tags={availableTags}
+								bind:value={selectedTagIds}
+								onCreate={handleCreateTag}
+								disabled={$delayed}
 							/>
 
 							<!-- Default Payment Type -->

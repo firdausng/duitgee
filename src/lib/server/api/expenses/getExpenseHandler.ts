@@ -1,7 +1,7 @@
 import {drizzle} from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
-import {expenses} from "$lib/server/db/schema";
-import {and, eq} from "drizzle-orm";
+import {expenses, expenseTags, expenseTagAssignments} from "$lib/server/db/schema";
+import {and, eq, isNull} from "drizzle-orm";
 import {paymentData} from "$lib/configurations/payments";
 import {categoryData} from "$lib/configurations/categories";
 
@@ -27,6 +27,19 @@ export const getExpense = async (
         return undefined;
     }
 
+    const tagRows = await client
+        .select({
+            id: expenseTags.id,
+            name: expenseTags.name,
+            color: expenseTags.color,
+        })
+        .from(expenseTagAssignments)
+        .innerJoin(expenseTags, eq(expenseTagAssignments.tagId, expenseTags.id))
+        .where(and(
+            eq(expenseTagAssignments.expenseId, expenseId),
+            isNull(expenseTags.deletedAt),
+        ));
+
     // Transform to match our Expense type with additional fields
     return {
         id: expenseResult.id,
@@ -41,5 +54,6 @@ export const getExpense = async (
         category: categoryData.categories.find(c => c.name === expenseResult.categoryName) || null,
         fundId: expenseResult.fundId ?? null,
         fundPaymentMode: expenseResult.fundPaymentMode ?? null,
+        tags: tagRows,
     };
 };

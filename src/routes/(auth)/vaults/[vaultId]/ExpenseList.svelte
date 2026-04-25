@@ -1,6 +1,8 @@
 <script lang="ts">
     import { Button } from "$lib/components/ui/button";
     import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
+    import { IconRenderer } from "$lib/components/ui/icon-renderer";
+    import { TagChips } from "$lib/components/ui/tag-chips";
     import { getPaymentTypeIcon, getPaymentTypeLabel } from "$lib/configurations/paymentTypes";
     import type { Expense } from "./types";
     import { scale } from "svelte/transition";
@@ -88,7 +90,12 @@
                                     {#if expense.category?.name}
                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
                                             {#if expense.category.icon}
-                                                <span class="text-sm">{expense.category.icon}</span>
+                                                <IconRenderer
+                                                    icon={expense.category.icon}
+                                                    iconType={expense.category.iconType}
+                                                    size={14}
+                                                    emojiClass="text-sm"
+                                                />
                                             {/if}
                                             <span>{expense.category.name}</span>
                                         </span>
@@ -112,6 +119,10 @@
                                         </span>
                                     {/if}
                                 </div>
+
+                                {#if expense.tags && expense.tags.length > 0}
+                                    <TagChips tags={expense.tags} class="mt-1.5" />
+                                {/if}
                             </div>
 
                             <!-- Right section: Actions -->

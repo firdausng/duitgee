@@ -46,6 +46,8 @@ export const createExpenseTemplateSchema = v.object({
     defaultPaidBy: v.optional(v.nullable(v.string())),
     defaultFundId: v.optional(v.nullable(v.string())),
     defaultFundPaymentMode: v.optional(v.nullable(v.string())),
+    // Tags pre-applied to expenses created from this template
+    defaultTagIds: v.optional(v.array(v.string())),
 });
 
 export type CreateExpenseTemplate = v.InferOutput<typeof createExpenseTemplateSchema>;
@@ -71,6 +73,8 @@ export const updateExpenseTemplateSchema = v.object({
     defaultPaidBy: v.optional(v.nullable(v.string())),
     defaultFundId: v.optional(v.nullable(v.string())),
     defaultFundPaymentMode: v.optional(v.nullable(v.string())),
+    // Tags pre-applied to expenses created from this template (replaces full set)
+    defaultTagIds: v.optional(v.array(v.string())),
 });
 
 export type UpdateExpenseTemplate = v.InferOutput<typeof updateExpenseTemplateSchema>;

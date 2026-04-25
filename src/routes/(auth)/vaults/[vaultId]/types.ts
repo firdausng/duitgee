@@ -27,6 +27,7 @@ export type Expense = {
     updatedBy: string | null;
     deletedAt: string | null;
     deletedBy: string | null;
+    tags?: Array<{ id: string; name: string; color: string | null }>;
 };
 
 export type VaultStatistics = {
@@ -51,6 +52,13 @@ export type VaultStatistics = {
     byMember: Array<{
         userId: string | null;
         displayName: string;
+        totalAmount: number;
+        count: number;
+    }>;
+    byTag: Array<{
+        tagId: string;
+        tagName: string;
+        tagColor: string | null;
         totalAmount: number;
         count: number;
     }>;

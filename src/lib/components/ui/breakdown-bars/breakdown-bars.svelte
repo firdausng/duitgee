@@ -3,6 +3,7 @@
         id: string | null;
         label: string;
         icon?: string | null;
+        iconType?: string | null;
         /** Iconography color — used to tint the bar. Falls back to chart palette by index. */
         color?: string | null;
         value: number;
@@ -24,6 +25,7 @@
 
 <script lang="ts">
     import { cn } from '$lib/utils';
+    import { IconRenderer } from '$lib/components/ui/icon-renderer';
     import ChevronDown from '@lucide/svelte/icons/chevron-down';
     import ChevronUp from '@lucide/svelte/icons/chevron-up';
     import Inbox from '@lucide/svelte/icons/inbox';
@@ -77,7 +79,13 @@
                     <div class="flex items-baseline justify-between gap-2 mb-1">
                         <div class="flex items-center gap-2 min-w-0">
                             {#if row.icon}
-                                <span class="text-base leading-none shrink-0">{row.icon}</span>
+                                <IconRenderer
+                                    icon={row.icon}
+                                    iconType={row.iconType}
+                                    size={16}
+                                    emojiClass="text-base"
+                                    class="shrink-0"
+                                />
                             {/if}
                             <span class="text-sm font-medium truncate" title={row.label}>{row.label}</span>
                             <span class="text-xs text-muted-foreground shrink-0">· {row.count}</span>

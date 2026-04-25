@@ -4,8 +4,8 @@ import type {CreateExpense} from "$lib/schemas/expenses";
 import {createId} from "@paralleldrive/cuid2";
 import {categoryData} from "$lib/configurations/categories";
 import {initialAuditFields} from "$lib/server/utils/audit";
-import {expenses, expenseTemplates} from "$lib/server/db/schema";
-import {eq, sql} from "drizzle-orm";
+import {expenses, expenseTagAssignments, expenseTags, expenseTemplates} from "$lib/server/db/schema";
+import {and, eq, inArray, isNull, sql} from "drizzle-orm";
 import {formatISO} from "date-fns";
 import {UTCDate} from "@date-fns/utc";
 import {attachFundToExpense} from "$lib/server/api/funds/fundExpenseHelpers";
@@ -17,7 +17,7 @@ export const createExpense = async (
 ) => {
     const client = drizzle(env.DB, { schema });
     const expenseId = createId();
-    const { templateId, fundId, fundPaymentMode, ...expenseFields } = data;
+    const { templateId, fundId, fundPaymentMode, tagIds, ...expenseFields } = data;
     const userId = session.user.id;
 
     // If expense is tagged to a fund, create the fund transaction first so we
@@ -59,6 +59,30 @@ export const createExpense = async (
                 lastUsedAt: formatISO(new UTCDate())
             })
             .where(eq(expenseTemplates.id, templateId));
+    }
+
+    // Apply tag assignments if any tags were specified
+    if (tagIds && tagIds.length > 0) {
+        const uniqueTagIds = Array.from(new Set(tagIds));
+        // Verify tags belong to this vault to prevent cross-vault leaks
+        const validTags = await client
+            .select({ id: expenseTags.id })
+            .from(expenseTags)
+            .where(and(
+                inArray(expenseTags.id, uniqueTagIds),
+                eq(expenseTags.vaultId, data.vaultId),
+                isNull(expenseTags.deletedAt),
+            ));
+
+        if (validTags.length > 0) {
+            await client
+                .insert(expenseTagAssignments)
+                .values(validTags.map((t) => ({
+                    expenseId,
+                    tagId: t.id,
+                    createdBy: userId,
+                })));
+        }
     }
 
     return expense;

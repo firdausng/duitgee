@@ -24,6 +24,8 @@
     import { applyFilters } from '$lib/filters/filter-eval';
     import { paymentTypes } from '$lib/configurations/paymentTypes';
     import { categoryData } from '$lib/configurations/categories';
+    import { IconRenderer } from '$lib/components/ui/icon-renderer';
+    import { TagChips } from '$lib/components/ui/tag-chips';
     import Search from '@lucide/svelte/icons/search';
     import Plus from '@lucide/svelte/icons/plus';
     import Receipt from '@lucide/svelte/icons/receipt';
@@ -57,6 +59,7 @@
         category: {
             name: string;
             icon: string;
+            iconType?: string | null;
             color: string;
         } | null;
         paidBy: string | null;
@@ -66,6 +69,7 @@
         fundIcon: string | null;
         recurringExpenseId: string | null;
         date: string;
+        tags?: Array<{ id: string; name: string; color: string | null }>;
     };
 
     const params = useSearchParams(filterSchema);
@@ -120,6 +124,9 @@
             .map((m) => ({ id: m.userId, name: m.displayName }))
             .sort((a, b) => a.name.localeCompare(b.name)),
         paymentType: paymentTypes.map((p) => ({ value: p.value, label: p.label, icon: p.icon })),
+        tag: [...(data.tags ?? [])]
+            .map((t) => ({ id: t.id, name: t.name }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
     });
 
     function writePills(next: FilterPillData[]) {
@@ -177,6 +184,11 @@
         if (pill.field === 'paymentType') {
             return pill.values
                 .map((v) => paymentTypes.find((p) => p.value === v)?.label ?? v)
+                .join(', ');
+        }
+        if (pill.field === 'tag') {
+            return pill.values
+                .map((v) => (v === '__none__' ? 'No tag' : filterOptions.tag.find((t) => t.id === v)?.name ?? v))
                 .join(', ');
         }
         return pill.values.join(', ');
@@ -483,7 +495,15 @@
         <div class="flex-1 min-w-0">
             <!-- Title + inline amount pill -->
             <p class="font-medium break-words">
-                <span class="mr-1.5" aria-hidden="true">{expense.category?.icon ?? '📝'}</span>
+                <span class="mr-1.5 inline-flex align-middle" aria-hidden="true">
+                    <IconRenderer
+                        icon={expense.category?.icon}
+                        iconType={expense.category?.iconType}
+                        size={14}
+                        emojiClass="text-sm"
+                        fallback="📝"
+                    />
+                </span>
                 {expense.note || expense.category?.name || 'Expense'}
                 {#if expense.recurringExpenseId}
                     <RefreshCw
@@ -518,6 +538,9 @@
                 <span class="opacity-50">·</span>
                 <span class="whitespace-nowrap">{fmt.date(expense.date)}</span>
             </div>
+            {#if expense.tags && expense.tags.length > 0}
+                <TagChips tags={expense.tags} class="mt-1" />
+            {/if}
         </div>
 
         <DropdownMenu.Root>

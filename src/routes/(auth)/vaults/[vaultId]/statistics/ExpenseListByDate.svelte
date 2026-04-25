@@ -1,6 +1,7 @@
 <script lang="ts">
     import {Button} from "$lib/components/ui/button";
     import {Accordion, AccordionItem, AccordionTrigger, AccordionContent} from "$lib/components/ui/accordion";
+    import {IconRenderer} from "$lib/components/ui/icon-renderer";
     import { getPaymentTypeIcon, getPaymentTypeLabel } from "$lib/configurations/paymentTypes";
     import type {Expense} from "../types";
 
@@ -76,7 +77,12 @@
                                         {#if expense.category?.name}
                                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-semibold">
                                                 {#if expense.category.icon}
-                                                    <span class="text-sm">{expense.category.icon}</span>
+                                                    <IconRenderer
+                                                        icon={expense.category.icon}
+                                                        iconType={expense.category.iconType}
+                                                        size={14}
+                                                        emojiClass="text-sm"
+                                                    />
                                                 {/if}
                                                 <span>{expense.category.name}</span>
                                             </span>
@@ -192,7 +198,12 @@
                                         {#if expense.category?.name}
                                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-semibold">
                                                 {#if expense.category.icon}
-                                                    <span class="text-sm">{expense.category.icon}</span>
+                                                    <IconRenderer
+                                                        icon={expense.category.icon}
+                                                        iconType={expense.category.iconType}
+                                                        size={14}
+                                                        emojiClass="text-sm"
+                                                    />
                                                 {/if}
                                                 <span>{expense.category.name}</span>
                                             </span>
