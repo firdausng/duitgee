@@ -1,6 +1,12 @@
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { sharedExpenseDefaultsSchema } from '$lib/schemas/expenses';
+import { error } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+import { getExpenseTemplate } from '$lib/server/api/expense-templates/getExpenseTemplateHandler';
+import { getVault } from '$lib/server/api/vaults/getVaultHandler';
+import { getFunds } from '$lib/server/api/funds/getFundsHandler';
+import { getTags } from '$lib/server/api/tags/getTagsHandler';
 
 /**
  * Validate a `returnTo` query param to prevent open-redirect vectors.
@@ -17,33 +23,43 @@ function validateReturnTo(raw: string | null, vaultId: string): string {
 	return fallback;
 }
 
-export const load = async ({ params, url, fetch, locals }) => {
+export const load: PageServerLoad = async ({ params, url, locals, platform }) => {
+	if (platform === undefined) throw new Error('No platform');
+	if (!locals.currentUser) throw error(401, 'Unauthorized');
+
 	const vaultId = params.vaultId;
 	const templateId = url.searchParams.get('templateId');
 	const currentUserId = locals.currentUser?.id || '';
 	const returnTo = validateReturnTo(url.searchParams.get('returnTo'), vaultId);
+	const session = locals.currentSession;
+	const env = platform.env;
 
-	// If templateId is provided, fetch template and pre-populate shared defaults
-	let template = null;
-	if (templateId) {
-		try {
-			const response = await fetch(
-				`/api/getExpenseTemplate?vaultId=${vaultId}&id=${templateId}`
-			);
+	// All four reads can run in parallel — they're independent. Each is a direct
+	// handler call (no self-fetch overhead, no auth re-validation).
+	const [templateResult, vaultResult, fundRows, tagRows] = await Promise.all([
+		templateId
+			? getExpenseTemplate(session, { vaultId, id: templateId }, env).catch((err) => {
+					console.error('Failed to load template:', err);
+					return null;
+			  })
+			: Promise.resolve(null),
+		getVault(session, vaultId, env).catch((err) => {
+			console.error('Failed to load vault:', err);
+			return null;
+		}),
+		getFunds(vaultId, session, env).catch((err) => {
+			console.error('Failed to load funds:', err);
+			return [];
+		}),
+		getTags(session, vaultId, env).catch((err) => {
+			console.error('Failed to load tags:', err);
+			return [];
+		}),
+	]);
 
-			if (response.ok) {
-				const result: any = await response.json();
-				if (result.success) {
-					template = result.data;
-					// Resolve __creator__ placeholder
-					if (template.defaultPaidBy === '__creator__') {
-						template.defaultPaidBy = currentUserId;
-					}
-				}
-			}
-		} catch (error) {
-			console.error('Failed to fetch template:', error);
-		}
+	let template: any = templateResult;
+	if (template && template.defaultPaidBy === '__creator__') {
+		template = { ...template, defaultPaidBy: currentUserId };
 	}
 
 	// getExpenseTemplate already parses defaultTagIds into string[] for clients.
@@ -65,47 +81,20 @@ export const load = async ({ params, url, fetch, locals }) => {
 		})
 	);
 
-	// Fetch vault data (includes members)
-	let members: Array<{ userId: string; displayName: string }> = [];
-	try {
-		const response = await fetch(`/api/getVault?vaultId=${vaultId}`);
-		if (response.ok) {
-			const result: any = await response.json();
-			if (result.success && result.data) {
-				members = result.data.members || [];
-			}
-		}
-	} catch (error) {
-		console.error('Failed to fetch vault:', error);
-	}
+	const members: Array<{ userId: string; displayName: string }> = (vaultResult?.members ?? []).map((m) => ({
+		userId: m.userId,
+		displayName: m.displayName,
+	}));
 
-	// Fetch active funds for fund selector
-	let funds: Array<{ id: string; name: string; balance: number; icon?: string }> = [];
-	try {
-		const response = await fetch(`/api/getFunds?vaultId=${vaultId}`);
-		if (response.ok) {
-			const result: any = await response.json();
-			if (result.success) {
-				funds = (result.data ?? [])
-					.map((row: any) => row.fund)
-					.filter((f: any) => f.status === 'active');
-			}
-		}
-	} catch {
-		// non-critical — fund selector will be empty
-	}
+	const funds: Array<{ id: string; name: string; balance: number; icon?: string }> = (fundRows ?? [])
+		.map((row: any) => row.fund)
+		.filter((f: any) => f.status === 'active');
 
-	// Fetch tags for the picker
-	let tags: Array<{ id: string; name: string; color: string | null }> = [];
-	try {
-		const response = await fetch(`/api/getTags?vaultId=${vaultId}`);
-		if (response.ok) {
-			const result: any = await response.json();
-			if (result.success) tags = result.data ?? [];
-		}
-	} catch {
-		// non-critical — picker will start empty
-	}
+	const tags: Array<{ id: string; name: string; color: string | null }> = (tagRows ?? []).map((t) => ({
+		id: t.id,
+		name: t.name,
+		color: t.color ?? null,
+	}));
 
 	return {
 		form,

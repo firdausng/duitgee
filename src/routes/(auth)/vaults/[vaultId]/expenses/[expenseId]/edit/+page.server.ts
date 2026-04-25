@@ -2,73 +2,59 @@ import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { updateExpenseRequestSchema } from '$lib/schemas/expenses';
 import { error } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+import { getExpense } from '$lib/server/api/expenses/getExpenseHandler';
+import { getVault } from '$lib/server/api/vaults/getVaultHandler';
+import { getFunds } from '$lib/server/api/funds/getFundsHandler';
+import { getTags } from '$lib/server/api/tags/getTagsHandler';
 
-export const load = async ({ params, fetch }) => {
+export const load: PageServerLoad = async ({ params, locals, platform }) => {
+	if (platform === undefined) throw new Error('No platform');
+	if (!locals.currentUser) throw error(401, 'Unauthorized');
+
 	const vaultId = params.vaultId;
 	const expenseId = params.expenseId;
+	const session = locals.currentSession;
+	const env = platform.env;
 
-	// Fetch expense data
-	let expenseData;
-	try {
-		const expenseResponse = await fetch(
-			`/api/getExpense?vaultId=${vaultId}&id=${expenseId}`
-		);
-		if (!expenseResponse.ok) {
-			throw error(404, 'Expense not found');
-		}
-		const expenseResult = await expenseResponse.json();
-		if (!expenseResult.success || !expenseResult.data) {
-			throw error(404, 'Expense not found');
-		}
-		expenseData = expenseResult.data;
-	} catch (err) {
-		console.error('Failed to fetch expense:', err);
-		throw error(404, 'Expense not found');
-	}
+	// Expense first — if missing, no point loading the rest. The other 3 reads
+	// are independent and run in parallel below.
+	const expenseData = await getExpense(vaultId, expenseId, env).catch((err) => {
+		console.error('Failed to load expense:', err);
+		return undefined;
+	});
 
-	// Fetch vault data (includes members)
-	let members: Array<{ userId: string; displayName: string }> = [];
-	try {
-		const response = await fetch(`/api/getVault?vaultId=${vaultId}`);
-		if (response.ok) {
-			const result = await response.json();
-			if (result.success && result.data) {
-				members = result.data.members || [];
-			}
-		}
-	} catch (err) {
-		console.error('Failed to fetch vault:', err);
-	}
+	if (!expenseData) throw error(404, 'Expense not found');
 
-	// Fetch active funds for fund selector
-	let funds: Array<{ id: string; name: string; balance: number }> = [];
-	try {
-		const response = await fetch(`/api/getFunds?vaultId=${vaultId}`);
-		if (response.ok) {
-			const result = await response.json();
-			if (result.success) {
-				funds = (result.data ?? [])
-					.map((row: any) => row.fund)
-					.filter((f: any) => f.status === 'active');
-			}
-		}
-	} catch {
-		// non-critical — fund selector will be empty
-	}
+	const [vaultResult, fundRows, tagRows] = await Promise.all([
+		getVault(session, vaultId, env).catch((err) => {
+			console.error('Failed to load vault:', err);
+			return null;
+		}),
+		getFunds(vaultId, session, env).catch((err) => {
+			console.error('Failed to load funds:', err);
+			return [];
+		}),
+		getTags(session, vaultId, env).catch((err) => {
+			console.error('Failed to load tags:', err);
+			return [];
+		}),
+	]);
 
-	// Fetch all tags in this vault for the picker
-	let tags: Array<{ id: string; name: string; color: string | null }> = [];
-	try {
-		const response = await fetch(`/api/getTags?vaultId=${vaultId}`);
-		if (response.ok) {
-			const result = (await response.json()) as { success: boolean; data: any[] };
-			if (result.success) {
-				tags = result.data ?? [];
-			}
-		}
-	} catch {
-		// non-critical — tag picker will start empty
-	}
+	const members: Array<{ userId: string; displayName: string }> = (vaultResult?.members ?? []).map((m) => ({
+		userId: m.userId,
+		displayName: m.displayName,
+	}));
+
+	const funds: Array<{ id: string; name: string; balance: number }> = (fundRows ?? [])
+		.map((row: any) => row.fund)
+		.filter((f: any) => f.status === 'active');
+
+	const tags: Array<{ id: string; name: string; color: string | null }> = (tagRows ?? []).map((t) => ({
+		id: t.id,
+		name: t.name,
+		color: t.color ?? null,
+	}));
 
 	const expenseTagIds: string[] = (expenseData.tags ?? []).map((t: { id: string }) => t.id);
 
