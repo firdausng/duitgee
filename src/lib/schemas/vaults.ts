@@ -6,7 +6,7 @@ export const vaultSchema = v.object({
     description: v.nullable(v.string()), // nullable
     color: v.string(), // default "#3B82F6"
     icon: v.nullable(v.string()), // default "🏦"
-    iconType: v.nullable(v.picklist(["emoji", "phosphor"])), // DB default 'emoji'
+    iconType: v.nullable(v.picklist(["emoji", "lucide"])), // DB default 'emoji'
     teamId: v.nullable(v.string()),
     organizationId: v.nullable(v.string()),
     isDefault: v.boolean(),
