@@ -25,6 +25,7 @@
     import * as Tabs from '$lib/components/ui/tabs';
     import { DateTimePicker } from '$lib/components/ui/date-time-picker';
     import ArrowRight from '@lucide/svelte/icons/arrow-right';
+    import Sparkles from '@lucide/svelte/icons/sparkles';
 
     const BACKFILL_CAP = 50;
 
@@ -479,10 +480,17 @@
                             </select>
                         </div>
                         <div class="space-y-2">
-                            <Label for="scheduleInterval">
-                                Every N
+                            <Label for="scheduleInterval" class="inline-flex items-center gap-1.5 flex-wrap">
+                                <span>Every N</span>
                                 {#if !canCustomInterval}
-                                    <span class="text-[10px] uppercase tracking-wide rounded-full bg-secondary text-secondary-foreground px-1.5 py-0.5 ml-1">Pro</span>
+                                    <a
+                                        href="/settings/plan"
+                                        class="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                                        title="Custom intervals require Pro"
+                                    >
+                                        <Sparkles class="size-2.5" />
+                                        Pro
+                                    </a>
                                 {/if}
                             </Label>
                             <Input
@@ -502,9 +510,13 @@
                                 {/if}
                             </p>
                             {#if showIntervalUpsell}
-                                <p class="text-xs text-amber-600 dark:text-amber-400">
+                                <a
+                                    href="/settings/plan"
+                                    class="text-xs font-medium text-amber-600 dark:text-amber-400 inline-flex items-center gap-1 hover:text-amber-700 dark:hover:text-amber-300 hover:underline underline-offset-2 transition-colors"
+                                >
+                                    <Sparkles class="size-3" />
                                     Custom intervals require Pro. Keep it at 1 or upgrade.
-                                </p>
+                                </a>
                             {/if}
                         </div>
                     </div>
@@ -562,9 +574,19 @@
                                     class="mt-0.5"
                                 />
                                 <div>
-                                    <p class="text-sm font-medium">
-                                        Auto-create
-                                        <span class="text-[10px] uppercase tracking-wide rounded-full bg-secondary text-secondary-foreground px-1.5 py-0.5 ml-1">Pro</span>
+                                    <p class="text-sm font-medium inline-flex items-center gap-1.5 flex-wrap">
+                                        <span>Auto-create</span>
+                                        {#if !canAutoGeneration}
+                                            <a
+                                                href="/settings/plan"
+                                                onclick={(e) => e.stopPropagation()}
+                                                class="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                                                title="Auto-generation requires Pro"
+                                            >
+                                                <Sparkles class="size-2.5" />
+                                                Pro
+                                            </a>
+                                        {/if}
                                     </p>
                                     <p class="text-xs text-muted-foreground">
                                         Auto-records the expense on schedule.
@@ -573,9 +595,13 @@
                             </label>
                         </div>
                         {#if showAutoUpsell}
-                            <p class="text-xs text-amber-600 dark:text-amber-400">
+                            <a
+                                href="/settings/plan"
+                                class="text-xs font-medium text-amber-600 dark:text-amber-400 inline-flex items-center gap-1 hover:text-amber-700 dark:hover:text-amber-300 hover:underline underline-offset-2 transition-colors"
+                            >
+                                <Sparkles class="size-3" />
                                 Auto-create requires Pro. Switch to "Queue for approval" or upgrade.
-                            </p>
+                            </a>
                         {/if}
                     </div>
 

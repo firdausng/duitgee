@@ -9,6 +9,7 @@ import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { formatISO } from 'date-fns';
 import { UTCDate } from '@date-fns/utc';
 import { requireVaultPermission } from '$lib/server/utils/vaultPermissions';
+import { requireAttachmentCount } from '$lib/server/utils/entitlements';
 import { getActiveCycleOrCreate } from '$lib/server/api/funds/getActiveCycleOrCreate';
 
 interface ResolvedItem {
@@ -56,6 +57,14 @@ export const createExpenses = async (
                 : (data.shared.fundPaymentMode ?? null),
         attachmentIds: Array.from(new Set(item.attachmentIds ?? [])),
     }));
+
+    // 1b. Enforce per-row attachment-count cap. The check is per row (each row
+    //     creates its own expense), so we use the worst-case row's count.
+    const maxAttachmentsPerRow = resolvedItems.reduce(
+        (max, i) => Math.max(max, i.attachmentIds.length),
+        0,
+    );
+    await requireAttachmentCount(data.vaultId, maxAttachmentsPerRow, env);
 
     // 2. Group fund-tagged items by fundId
     const fundGroups = new Map<string, ResolvedItem[]>();

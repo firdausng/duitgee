@@ -11,6 +11,7 @@
 	import type { ExpenseRowData } from '$lib/components/ui/expense-row/expense-row.svelte';
 	import { TagPicker, type TagOption } from '$lib/components/ui/tag-picker';
 	import { hasEntitlement } from '$lib/configurations/plans';
+	import { getAttachmentLimitPerExpense } from '$lib/schemas/attachments';
 	import { page as pageState } from '$app/state';
 	import { paymentTypes } from '$lib/configurations/paymentTypes';
 	import { categoryData } from '$lib/configurations/categories';
@@ -53,6 +54,12 @@
 	);
 	const canScan = $derived(
 		hasEntitlement(currentVaultRow?.vaults?.planId ?? 'plan_free', 'attachment:scan'),
+	);
+	const maxAttachments = $derived(
+		getAttachmentLimitPerExpense(currentVaultRow?.vaults?.planId ?? 'plan_free'),
+	);
+	const hasAttachmentMultiple = $derived(
+		hasEntitlement(currentVaultRow?.vaults?.planId ?? 'plan_free', 'attachment:multiple'),
 	);
 
 
@@ -315,6 +322,9 @@
 					{paymentTypes}
 					allowedCategoryNames={data.template?.categoryNames ?? undefined}
 					{canScan}
+					scanProHint={!canScan}
+					attachmentLimitProHint={!hasAttachmentMultiple}
+					maxAttachments={maxAttachments}
 					onremove={() => removeRow(row.id)}
 					onduplicate={() => duplicateRow(row.id)}
 					canDuplicate={rows.length < MAX_ROWS}

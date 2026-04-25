@@ -3,6 +3,7 @@ import * as schema from '$lib/server/db/schema';
 import { attachments, expenses, expenseAttachments } from '$lib/server/db/schema';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { requireVaultPermission } from '$lib/server/utils/vaultPermissions';
+import { requireAttachmentCount } from '$lib/server/utils/entitlements';
 import type { SetExpenseAttachmentsRequest } from '$lib/schemas/attachments';
 
 export const setExpenseAttachments = async (
@@ -30,6 +31,9 @@ export const setExpenseAttachments = async (
     }
 
     const uniqueIds = Array.from(new Set(data.attachmentIds));
+
+    // Enforce per-plan attachment-count cap before touching anything else.
+    await requireAttachmentCount(data.vaultId, uniqueIds.length, env);
 
     // Verify all attachment IDs belong to this vault and aren't deleted
     if (uniqueIds.length > 0) {

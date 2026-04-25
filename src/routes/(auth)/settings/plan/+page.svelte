@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
     import { Button } from '$lib/components/ui/button';
-    import { PLANS, FREE_PLAN_ID } from '$lib/configurations/plans';
+    import { PLANS, FREE_PLAN_ID, ENTITLEMENT_LABELS } from '$lib/configurations/plans';
     import Sparkles from '@lucide/svelte/icons/sparkles';
     import Check from '@lucide/svelte/icons/check';
 
@@ -28,11 +28,17 @@
                         <p class="text-xs text-muted-foreground mt-0.5">Default plan for new vaults</p>
                     </div>
                 </div>
-                <ul class="mt-3 space-y-1.5 text-sm">
+                <ul class="mt-3 space-y-2 text-sm">
                     {#each freePlan.entitlements as entitlement (entitlement)}
-                        <li class="flex items-center gap-2 text-muted-foreground">
-                            <Check class="size-3.5 shrink-0" />
-                            <code class="text-xs">{entitlement}</code>
+                        {@const label = ENTITLEMENT_LABELS[entitlement]}
+                        <li class="flex items-start gap-2">
+                            <Check class="size-3.5 shrink-0 mt-1 text-muted-foreground" />
+                            <div class="min-w-0">
+                                <p class="text-foreground">{label.name}</p>
+                                {#if label.description}
+                                    <p class="text-xs text-muted-foreground">{label.description}</p>
+                                {/if}
+                            </div>
                         </li>
                     {/each}
                 </ul>
@@ -50,11 +56,17 @@
                         </p>
                     </div>
                 </div>
-                <ul class="mt-3 space-y-1.5 text-sm">
+                <ul class="mt-3 space-y-2 text-sm">
                     {#each proPlan.entitlements as entitlement (entitlement)}
-                        <li class="flex items-center gap-2 text-muted-foreground">
-                            <Check class="size-3.5 shrink-0 text-amber-500" />
-                            <code class="text-xs">{entitlement}</code>
+                        {@const label = ENTITLEMENT_LABELS[entitlement]}
+                        <li class="flex items-start gap-2">
+                            <Check class="size-3.5 shrink-0 mt-1 text-amber-500" />
+                            <div class="min-w-0">
+                                <p class="text-foreground">{label.name}</p>
+                                {#if label.description}
+                                    <p class="text-xs text-muted-foreground">{label.description}</p>
+                                {/if}
+                            </div>
                         </li>
                     {/each}
                 </ul>

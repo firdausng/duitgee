@@ -9,7 +9,8 @@ export type Entitlement =
     | 'recurring:create_multiple'
     | 'recurring:custom_interval'
     | 'recurring:auto_generation'
-    | 'attachment:scan';
+    | 'attachment:scan'
+    | 'attachment:multiple';
 
 export interface Plan {
     id: string;
@@ -43,6 +44,7 @@ export const PLANS: Plan[] = [
             'recurring:custom_interval',
             'recurring:auto_generation',
             'attachment:scan',
+            'attachment:multiple',
         ],
     },
 ];
@@ -57,3 +59,56 @@ export function hasEntitlement(planId: string, entitlement: Entitlement): boolea
     const plan = getPlanById(planId);
     return plan.entitlements.includes(entitlement);
 }
+
+// Human-readable copy for each entitlement. Used by the plan/billing screen
+// so users see what they actually get, not the internal ID.
+export const ENTITLEMENT_LABELS: Record<Entitlement, { name: string; description?: string }> = {
+    'fund:create': {
+        name: 'One fund per vault',
+        description: 'Track a single envelope of money — e.g. groceries or fuel.',
+    },
+    'fund:create_multiple': {
+        name: 'Multiple funds per vault',
+        description: 'Split your vault across as many envelopes as you need.',
+    },
+    'fund:auto_replenishment': {
+        name: 'Auto-replenishment',
+        description: 'Schedule fixed-amount or top-to-ceiling refills automatically.',
+    },
+    'fund:cycle_history': {
+        name: 'Fund cycle history',
+        description: 'Review past cycles, not just the current one.',
+    },
+    'fund:transfer': {
+        name: 'Transfer between funds',
+        description: 'Move balance from one fund to another in the same vault.',
+    },
+    'fund:cross_fund_reimbursement': {
+        name: 'Cross-fund reimbursements',
+        description: 'Settle pending reimbursements across all funds at once.',
+    },
+    'recurring:create': {
+        name: 'Up to 5 recurring expenses',
+        description: 'Track subscriptions, bills, or repeating payments — covers most everyday needs.',
+    },
+    'recurring:create_multiple': {
+        name: 'Unlimited recurring expenses',
+        description: 'No cap on active rules — track every subscription, installment, and bill.',
+    },
+    'recurring:custom_interval': {
+        name: 'Custom recurring intervals',
+        description: 'Beyond daily, weekly, monthly, or yearly.',
+    },
+    'recurring:auto_generation': {
+        name: 'Auto-generate recurring expenses',
+        description: 'Skip manual entry — recurring items appear on schedule.',
+    },
+    'attachment:scan': {
+        name: 'Scan receipts with AI',
+        description: 'Upload a receipt or PDF; auto-fill amount, merchant, date, and category.',
+    },
+    'attachment:multiple': {
+        name: 'More attachments per expense',
+        description: 'Attach up to 20 receipts to a single expense (5 on Free).',
+    },
+};

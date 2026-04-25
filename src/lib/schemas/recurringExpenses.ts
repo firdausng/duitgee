@@ -1,5 +1,10 @@
 import * as v from 'valibot';
 
+// Free plan caps active recurring rules per vault. Pro removes the cap entirely
+// (`recurring:create_multiple` entitlement). Single source of truth — both the
+// list-page hint and server gates read from here.
+export const RECURRING_MAX_PER_VAULT_FREE = 5;
+
 export const scheduleUnitSchema = v.picklist(['day', 'week', 'month', 'year']);
 export const generationModeSchema = v.picklist(['auto', 'queue']);
 export const recurringStatusSchema = v.picklist(['active', 'paused', 'ended']);

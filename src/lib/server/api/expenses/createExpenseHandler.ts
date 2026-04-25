@@ -9,6 +9,7 @@ import {and, eq, inArray, isNull, sql} from "drizzle-orm";
 import {formatISO} from "date-fns";
 import {UTCDate} from "@date-fns/utc";
 import {attachFundToExpense} from "$lib/server/api/funds/fundExpenseHelpers";
+import { requireAttachmentCount } from "$lib/server/utils/entitlements";
 
 export const createExpense = async (
     session: App.AuthSession,
@@ -88,6 +89,7 @@ export const createExpense = async (
     // Apply attachment links if any attachments were specified
     if (attachmentIds && attachmentIds.length > 0) {
         const uniqueIds = Array.from(new Set(attachmentIds));
+        await requireAttachmentCount(data.vaultId, uniqueIds.length, env);
         const validAttachments = await client
             .select({ id: attachments.id })
             .from(attachments)

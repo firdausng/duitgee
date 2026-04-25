@@ -11,7 +11,7 @@ import {
     computeNextOccurrence,
     type ScheduleUnit,
 } from '$lib/utils/recurringSchedule';
-import type { CreateRecurringExpenseRequest } from '$lib/schemas/recurringExpenses';
+import { type CreateRecurringExpenseRequest, RECURRING_MAX_PER_VAULT_FREE } from '$lib/schemas/recurringExpenses';
 
 export const createRecurringExpense = async (
     session: App.AuthSession,
@@ -61,7 +61,7 @@ export const createRecurringExpense = async (
                 isNull(recurringExpenses.deletedAt),
             ),
         );
-    if ((activeCount?.n ?? 0) >= 1) {
+    if ((activeCount?.n ?? 0) >= RECURRING_MAX_PER_VAULT_FREE) {
         const canMultiple = await checkVaultEntitlement(
             data.vaultId,
             'recurring:create_multiple',
@@ -69,7 +69,7 @@ export const createRecurringExpense = async (
         );
         if (!canMultiple) {
             throw new Error(
-                'Free plan allows only 1 active recurring rule per vault. Upgrade to Pro to add more.',
+                `Free plan allows up to ${RECURRING_MAX_PER_VAULT_FREE} active recurring rules per vault. Upgrade to Pro to add more.`,
             );
         }
     }

@@ -39,6 +39,13 @@
         /** When true, the Scan button appears next to ready image chips and the
          *  user can run AI extraction on them. Parent decides this from plan entitlement. */
         canScan?: boolean;
+        /** When true (and `canScan` is false), shows a subtle "Pro feature" footer
+         *  hint so users on the free plan know scanning exists. */
+        scanProHint?: boolean;
+        /** When true, surfaces a subtle indicator that this vault is on the free
+         *  attachment-count cap and Pro raises it. Only shows once at least one
+         *  attachment is uploaded, to keep the picker quiet for empty forms. */
+        attachmentLimitProHint?: boolean;
         /** Called when the user clicks "Apply" on a successful scan preview.
          *  Parent decides how to merge with existing form state. */
         onScanApply?: (data: ScanApplyPayload) => void;
@@ -61,6 +68,7 @@
     import Download from '@lucide/svelte/icons/download';
     import Sparkles from '@lucide/svelte/icons/sparkles';
     import { cn } from '$lib/utils';
+    import { ATTACHMENT_MAX_PER_EXPENSE_PRO } from '$lib/schemas/attachments';
 
     let {
         vaultId,
@@ -72,6 +80,8 @@
         accept = 'image/jpeg,image/png,image/webp,application/pdf',
         captureCamera = false,
         canScan = false,
+        scanProHint = false,
+        attachmentLimitProHint = false,
         onScanApply,
     }: AttachmentPickerProps = $props();
 
@@ -173,6 +183,20 @@
     let scanModalOpen = $state(false);
 
     const isScannable = (mime: string) => isImage(mime) || isPdf(mime);
+
+    // Show the Pro hint only when scanning is gated AND there's at least
+    // one scannable ready item — keeps it contextual, not preemptive.
+    const showProHint = $derived(
+        scanProHint &&
+            !canScan &&
+            items.some((i) => i.status === 'ready' && isScannable(i.mimeType)),
+    );
+
+    // Show the attachment-cap hint when the vault is on free AND at least one
+    // attachment is uploaded — gives users a "you're approaching the cap" signal.
+    const showLimitProHint = $derived(
+        attachmentLimitProHint && items.some((i) => i.status === 'ready'),
+    );
 
     async function handleScan(item: AttachmentMeta) {
         if (!canScan || disabled) return;
@@ -531,6 +555,29 @@
             {/if}
         </div>
     </div>
+
+    {#if showProHint || showLimitProHint}
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {#if showProHint}
+                <a
+                    href="/settings/plan"
+                    class="text-[11px] font-medium text-amber-600 dark:text-amber-400 inline-flex items-center gap-1 hover:text-amber-700 dark:hover:text-amber-300 hover:underline underline-offset-2 transition-colors"
+                >
+                    <Sparkles class="size-3" />
+                    Auto-fill from receipts with Pro
+                </a>
+            {/if}
+            {#if showLimitProHint}
+                <a
+                    href="/settings/plan"
+                    class="text-[11px] font-medium text-amber-600 dark:text-amber-400 inline-flex items-center gap-1 hover:text-amber-700 dark:hover:text-amber-300 hover:underline underline-offset-2 transition-colors"
+                >
+                    <Sparkles class="size-3" />
+                    Free: {maxFiles} max · Pro: up to {ATTACHMENT_MAX_PER_EXPENSE_PRO}
+                </a>
+            {/if}
+        </div>
+    {/if}
 </div>
 
 <!-- Image lightbox — overlays the whole viewport when an image is opened. -->

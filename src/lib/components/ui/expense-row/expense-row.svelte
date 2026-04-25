@@ -70,6 +70,12 @@
 		vaultId: string;
 		/** Pro-plan flag — enables the Scan button on receipt chips. */
 		canScan?: boolean;
+		/** When true (and canScan is false), AttachmentPicker shows a subtle Pro hint. */
+		scanProHint?: boolean;
+		/** When true, AttachmentPicker shows a "Free: 5 max · Pro: 20" hint after first upload. */
+		attachmentLimitProHint?: boolean;
+		/** Per-expense attachment cap — derived from the vault's plan. */
+		maxAttachments?: number;
 		onremove: () => void;
 		onduplicate: () => void;
 	}
@@ -88,6 +94,9 @@
 		allowedCategoryNames,
 		vaultId,
 		canScan = false,
+		scanProHint = false,
+		attachmentLimitProHint = false,
+		maxAttachments = 5,
 		onremove,
 		onduplicate,
 	}: ExpenseRowProps = $props();
@@ -250,8 +259,10 @@
 		label="Receipts"
 		bind:value={rowAttachmentIds}
 		{disabled}
-		maxFiles={5}
+		maxFiles={maxAttachments}
 		{canScan}
+		{scanProHint}
+		{attachmentLimitProHint}
 		onScanApply={handleScanApply}
 	/>
 

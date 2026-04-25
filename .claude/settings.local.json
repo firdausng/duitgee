@@ -69,7 +69,8 @@
       "Bash(grep -E \"edit.\\\\\\\\\\\\+page.svelte|new.form.\\\\\\\\\\\\+page.svelte|attachment-picker|expense-row\")",
       "WebFetch(domain:developers.cloudflare.com)",
       "Read(//tmp/**)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(grep -A 4 -E \"expenseId..edit\\\\\\\\\\\\\\\\.\\\\+page\\\\\\\\\\\\\\\\.\\(server|svelte\\)\")"
     ]
   }
 }

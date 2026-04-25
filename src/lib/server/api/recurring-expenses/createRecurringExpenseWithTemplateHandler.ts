@@ -13,7 +13,7 @@ import {
     type ScheduleUnit,
 } from '$lib/utils/recurringSchedule';
 import { processDueRecurringExpenses } from './processDueRecurringExpenses';
-import type { CreateRecurringExpenseWithTemplateRequest } from '$lib/schemas/recurringExpenses';
+import { type CreateRecurringExpenseWithTemplateRequest, RECURRING_MAX_PER_VAULT_FREE } from '$lib/schemas/recurringExpenses';
 
 /**
  * Create a recurring rule and its backing template in a single atomic D1 batch.
@@ -54,7 +54,7 @@ export const createRecurringExpenseWithTemplate = async (
                 isNull(recurringExpenses.deletedAt),
             ),
         );
-    if ((activeCount?.n ?? 0) >= 1) {
+    if ((activeCount?.n ?? 0) >= RECURRING_MAX_PER_VAULT_FREE) {
         const canMultiple = await checkVaultEntitlement(
             data.vaultId,
             'recurring:create_multiple',
@@ -62,7 +62,7 @@ export const createRecurringExpenseWithTemplate = async (
         );
         if (!canMultiple) {
             throw new Error(
-                'Free plan allows only 1 active recurring rule per vault. Upgrade to Pro to add more.',
+                `Free plan allows up to ${RECURRING_MAX_PER_VAULT_FREE} active recurring rules per vault. Upgrade to Pro to add more.`,
             );
         }
     }

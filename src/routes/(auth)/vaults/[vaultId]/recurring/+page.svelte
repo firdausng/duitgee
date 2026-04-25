@@ -40,6 +40,9 @@
     import Check from '@lucide/svelte/icons/check';
     import X from '@lucide/svelte/icons/x';
     import Search from '@lucide/svelte/icons/search';
+    import Sparkles from '@lucide/svelte/icons/sparkles';
+    import { hasEntitlement } from '$lib/configurations/plans';
+    import { RECURRING_MAX_PER_VAULT_FREE } from '$lib/schemas/recurringExpenses';
     import type { UpcomingOccurrence } from '$lib/server/api/recurring-expenses/getUpcomingOccurrencesHandler';
 
     const vaultId = $derived(page.params.vaultId);
@@ -161,6 +164,14 @@
     const allRules = $derived(rulesResource.current ?? []);
     const allPending = $derived(pendingResource.current ?? []);
     const allUpcoming = $derived(upcomingResource.current ?? []);
+
+    // Plan-gate: free vaults can have up to RECURRING_MAX_PER_VAULT_FREE active rules.
+    const planId = $derived(vaultResource.current?.vaults.planId ?? 'plan_free');
+    const canCreateMultiple = $derived(hasEntitlement(planId, 'recurring:create_multiple'));
+    const activeRulesCount = $derived(allRules.filter((r) => r.status === 'active').length);
+    const atRecurringLimit = $derived(
+        !canCreateMultiple && activeRulesCount >= RECURRING_MAX_PER_VAULT_FREE,
+    );
 
     // Search-filtered views. Empty search → unchanged arrays.
     const rules = $derived(
@@ -535,10 +546,26 @@
             <h1 class="text-2xl font-bold">Recurring</h1>
             <p class="text-xs text-muted-foreground mt-0.5">Rules that generate expenses on a schedule.</p>
         </div>
-        <Button size="sm" onclick={() => goto(`/vaults/${vaultId}/recurring/new`)}>
-            <Plus class="size-4" />
-            <span>New rule</span>
-        </Button>
+        <div class="flex flex-col items-end gap-1">
+            <Button
+                size="sm"
+                onclick={() => goto(`/vaults/${vaultId}/recurring/new`)}
+                disabled={atRecurringLimit}
+                title={atRecurringLimit ? `Free plan allows up to ${RECURRING_MAX_PER_VAULT_FREE} active recurring rules. Upgrade to Pro for unlimited.` : undefined}
+            >
+                <Plus class="size-4" />
+                <span>New rule</span>
+            </Button>
+            {#if atRecurringLimit}
+                <a
+                    href="/settings/plan"
+                    class="text-[11px] font-medium text-amber-600 dark:text-amber-400 inline-flex items-center gap-1 hover:text-amber-700 dark:hover:text-amber-300 hover:underline underline-offset-2 transition-colors"
+                >
+                    <Sparkles class="size-3" />
+                    Free: {RECURRING_MAX_PER_VAULT_FREE} rules · Pro: unlimited
+                </a>
+            {/if}
+        </div>
     </div>
 
     <!-- Search -->
@@ -850,10 +877,11 @@
         </DropdownMenu.Trigger>
         <DropdownMenu.Content align="end" class="min-w-[13rem]">
             <DropdownMenu.Item
+                disabled={atRecurringLimit}
                 onclick={() => goto(`/vaults/${vaultId}/recurring/new?duplicateFrom=${rule.id}`)}
             >
                 <Copy class="size-3.5" />
-                <span>Duplicate</span>
+                <span>Duplicate{atRecurringLimit ? ' (Pro)' : ''}</span>
             </DropdownMenu.Item>
             {#if rule.status === 'active'}
                 <DropdownMenu.Separator />
@@ -1200,10 +1228,11 @@
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content align="end" class="min-w-[13rem]">
                     <DropdownMenu.Item
+                        disabled={atRecurringLimit}
                         onclick={() => goto(`/vaults/${vaultId}/recurring/new?duplicateFrom=${rule.id}`)}
                     >
                         <Copy class="size-3.5" />
-                        <span>Duplicate</span>
+                        <span>Duplicate{atRecurringLimit ? ' (Pro)' : ''}</span>
                     </DropdownMenu.Item>
                     {#if rule.status === 'active'}
                         <DropdownMenu.Separator />

@@ -6,6 +6,7 @@ import {and, eq, inArray, isNull} from "drizzle-orm";
 import {updateAuditFields} from "$lib/server/utils/audit";
 import {requireVaultPermission} from "$lib/server/utils/vaultPermissions";
 import {attachFundToExpense, detachFundFromExpense, applyFundAmountDelta} from "$lib/server/api/funds/fundExpenseHelpers";
+import {requireAttachmentCount} from "$lib/server/utils/entitlements";
 
 export const updateExpense = async (
     session: App.AuthSession,
@@ -124,6 +125,7 @@ export const updateExpense = async (
     // Replace attachment assignments if attachmentIds was provided. Undefined = no change.
     if (attachmentIds !== undefined) {
         const uniqueIds = Array.from(new Set(attachmentIds));
+        await requireAttachmentCount(vaultId, uniqueIds.length, env);
 
         if (uniqueIds.length > 0) {
             const validAttachments = await client
