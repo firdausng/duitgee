@@ -4,7 +4,6 @@
     import { onMount } from 'svelte';
     import { ofetch } from 'ofetch';
     import { resource } from 'runed';
-    import { parseISO } from 'date-fns';
     import { Button } from '$lib/components/ui/button';
     import { Card, CardContent } from '$lib/components/ui/card';
     import { EmptyState } from '$lib/components/ui/empty-state';
@@ -12,6 +11,13 @@
     import { Toaster } from '$lib/components/ui/sonner';
     import { toast } from 'svelte-sonner';
     import { createVaultFormatters } from '$lib/vaultFormatting';
+    import {
+        ruleAmount,
+        ordinal,
+        scheduleLabel as buildScheduleLabel,
+        installmentSummary as computeInstallmentSummary,
+        remainingAmount,
+    } from '$lib/recurring-helpers';
     import type { VaultWithMember } from '$lib/schemas/read/vaultWithMember';
     import Plus from '@lucide/svelte/icons/plus';
     import Pencil from '@lucide/svelte/icons/pencil';
@@ -175,40 +181,7 @@
     );
 
     function scheduleLabel(rule: Rule): string {
-        const { scheduleUnit, scheduleInterval, anchorDate } = rule;
-        const unitMap = { day: 'day', week: 'week', month: 'month', year: 'year' } as const;
-        const unitPlural = (n: number, u: string) => (n === 1 ? u : `${u}s`);
-        if (scheduleInterval === 1) {
-            if (scheduleUnit === 'day') return 'Daily';
-            if (scheduleUnit === 'week') {
-                const dow = parseISO(anchorDate).toLocaleDateString(fmt.getLocale(), { weekday: 'long' });
-                return `Weekly on ${dow}`;
-            }
-            if (scheduleUnit === 'month') {
-                const dom = parseISO(anchorDate).getDate();
-                return `Monthly on the ${dom}${ordinal(dom)}`;
-            }
-            if (scheduleUnit === 'year') {
-                const d = parseISO(anchorDate);
-                return `Yearly on ${d.toLocaleDateString(fmt.getLocale(), { month: 'short', day: 'numeric' })}`;
-            }
-        }
-        return `Every ${scheduleInterval} ${unitPlural(scheduleInterval, unitMap[scheduleUnit])}`;
-    }
-
-    function ordinal(n: number): string {
-        const mod100 = n % 100;
-        if (mod100 >= 11 && mod100 <= 13) return 'th';
-        switch (n % 10) {
-            case 1: return 'st';
-            case 2: return 'nd';
-            case 3: return 'rd';
-            default: return 'th';
-        }
-    }
-
-    function ruleAmount(rule: Rule): number {
-        return rule.amountOverride ?? rule.template.defaultAmount ?? 0;
+        return buildScheduleLabel(rule, fmt.getLocale());
     }
 
     async function handleApprove(occ: PendingOccurrence) {
@@ -279,9 +252,10 @@
     let settling = $state(false);
 
     function askSettle(rule: Rule) {
-        const remaining = (rule.endAfterCount ?? 0) - rule.progress.paidCount;
-        const perPeriod = ruleAmount(rule);
-        settleAmount = Math.max(0.01, remaining * perPeriod);
+        // Prefer the *declared* outstanding balance (totalAmount − paidAmount) when set;
+        // fall back to estimated (remaining_count × per_period) for rules without a declared total.
+        const remaining = remainingAmount(rule);
+        settleAmount = Math.max(0.01, remaining.value);
         settleDate = formatDatetimeLocal(new Date());
         settleTarget = rule;
     }
@@ -425,23 +399,15 @@
     const activeInstallments = $derived(installmentRules.filter((r) => r.status !== 'ended'));
     const completedInstallments = $derived(installmentRules.filter((r) => r.status === 'ended'));
 
-    const installmentSummary = $derived.by(() => {
-        const active = activeInstallments.length;
-        const monthlyCommit = activeInstallments.reduce((sum, r) => sum + ruleAmount(r), 0);
-        const paidAmount = installmentRules.reduce((sum, r) => sum + r.progress.paidAmount, 0);
-        const totalAmount = installmentRules.reduce(
-            (sum, r) => sum + (r.progress.totalAmount ?? 0),
-            0,
-        );
-        const pct = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
-        return { active, monthlyCommit, paidAmount, totalAmount, pct };
-    });
+    const installmentSummary = $derived(computeInstallmentSummary(rules));
 
     type SortMode =
         | 'almost-finished'
         | 'end-date-desc'
         | 'amount-desc'
         | 'amount-asc'
+        | 'remaining-amount-asc'
+        | 'remaining-amount-desc'
         | 'progress-desc'
         | 'progress-asc';
     let sortMode = $state<SortMode>('almost-finished');
@@ -451,6 +417,8 @@
         'end-date-desc': 'End date (latest)',
         'amount-desc': 'Amount (high → low)',
         'amount-asc': 'Amount (low → high)',
+        'remaining-amount-asc': 'Remaining (low → high)',
+        'remaining-amount-desc': 'Remaining (high → low)',
         'progress-desc': 'Progress (high → low)',
         'progress-asc': 'Progress (low → high)',
     };
@@ -483,6 +451,10 @@
                     return ruleAmount(b) - ruleAmount(a);
                 case 'amount-asc':
                     return ruleAmount(a) - ruleAmount(b);
+                case 'remaining-amount-asc':
+                    return remainingAmount(a).value - remainingAmount(b).value;
+                case 'remaining-amount-desc':
+                    return remainingAmount(b).value - remainingAmount(a).value;
                 case 'progress-desc':
                     return progressFraction(b) - progressFraction(a);
                 case 'progress-asc':
@@ -754,6 +726,8 @@
                                 <Select.Content>
                                     <Select.Item value="almost-finished" label="Almost finished" />
                                     <Select.Item value="end-date-desc" label="End date (latest)" />
+                                    <Select.Item value="remaining-amount-asc" label="Remaining (low → high)" />
+                                    <Select.Item value="remaining-amount-desc" label="Remaining (high → low)" />
                                     <Select.Item value="amount-desc" label="Amount (high → low)" />
                                     <Select.Item value="amount-asc" label="Amount (low → high)" />
                                     <Select.Item value="progress-desc" label="Progress (high → low)" />
@@ -916,7 +890,7 @@
                     <th class="text-left font-medium px-3 py-2">Schedule</th>
                     <th class="text-right font-medium px-3 py-2">Amount</th>
                     <th class="text-left font-medium px-3 py-2 min-w-[160px]">Progress</th>
-                    <th class="text-right font-medium px-3 py-2">Paid</th>
+                    <th class="text-right font-medium px-3 py-2">Remaining</th>
                     <th class="text-left font-medium px-3 py-2">Status</th>
                     <th class="w-10"></th>
                 </tr>
@@ -975,13 +949,31 @@
                                 <span class="text-xs tabular-nums text-muted-foreground whitespace-nowrap">{paid}/{total}</span>
                             </div>
                         </td>
-                        <td class="px-3 py-2 text-right font-mono tabular-nums text-muted-foreground whitespace-nowrap">
+                        <td class="px-3 py-2 text-right whitespace-nowrap">
                             {#if endedMeetsTarget}
-                                <span class="font-medium text-foreground">Settled in full</span>
+                                <span class="text-xs font-medium text-foreground">Settled</span>
                             {:else if endedEarly}
-                                <span class="font-medium text-foreground">Settled early</span>
+                                <span class="text-xs font-medium text-foreground">Settled early</span>
                             {:else}
-                                {fmt.currency(paidAmt)}<span class="opacity-60"> / {fmt.currency(totalAmt)}</span>
+                                {@const remaining = remainingAmount(rule)}
+                                {@const canSettle = rule.status === 'active' && remaining.value > 0}
+                                <div class="flex items-center justify-end gap-2">
+                                    <span class="font-mono tabular-nums text-sm font-medium" title="{remaining.source === 'declared' ? 'Declared outstanding balance' : 'Estimated from per-period amount'}">
+                                        {remaining.source === 'estimated' ? '~' : ''}{fmt.currency(remaining.value)}
+                                    </span>
+                                    {#if canSettle}
+                                        <button
+                                            type="button"
+                                            data-no-nav
+                                            onclick={(e) => { e.stopPropagation(); askSettle(rule); }}
+                                            class="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors"
+                                            title="Settle this installment in full"
+                                        >
+                                            <CircleCheck class="size-3" />
+                                            Settle
+                                        </button>
+                                    {/if}
+                                </div>
                             {/if}
                         </td>
                         <td class="px-3 py-2">
@@ -1125,6 +1117,8 @@
                 {@const pct = endedMeetsTarget || endedEarly
                     ? 100
                     : Math.min(100, Math.round((paid / total) * 100))}
+                {@const remaining = remainingAmount(rule)}
+                {@const canSettle = rule.status === 'active' && remaining.value > 0}
                 <p class="text-xs text-muted-foreground mt-0.5">
                     {#if endedMeetsTarget}
                         <span class="font-medium text-foreground">Settled in full</span>
@@ -1140,11 +1134,15 @@
                         {scheduleLabel(rule)}
                         <span class="opacity-50">·</span>
                         <span class="tabular-nums font-medium text-foreground">{paid}/{total}</span>
-                        {#if totalAmt > 0}
+                        {#if remaining.value > 0}
                             <span class="opacity-50">·</span>
-                            <span class="font-mono tabular-nums">{fmt.currency(paidAmt)}</span>
-                            <span>of</span>
-                            <span class="font-mono tabular-nums">{fmt.currency(totalAmt)}</span>
+                            <span class="font-mono tabular-nums font-medium text-foreground">
+                                {remaining.source === 'estimated' ? '~' : ''}{fmt.currency(remaining.value)}
+                            </span>
+                            <span>left</span>
+                            {#if remaining.source === 'estimated'}
+                                <span class="opacity-60" title="No declared total — estimated from per-period amount">est.</span>
+                            {/if}
                         {/if}
                     {/if}
                 </p>
@@ -1154,6 +1152,19 @@
                         style="width: {pct}%"
                     ></div>
                 </div>
+                {#if canSettle}
+                    <div class="mt-2">
+                        <button
+                            type="button"
+                            data-no-nav
+                            onclick={(e) => { e.stopPropagation(); askSettle(rule); }}
+                            class="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/5 px-2.5 py-0.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                        >
+                            <CircleCheck class="size-3" />
+                            Settle <span class="font-mono">{fmt.currency(remaining.value)}</span>
+                        </button>
+                    </div>
+                {/if}
             {:else}
                 <p class="text-xs text-muted-foreground mt-0.5">
                     {scheduleLabel(rule)}
@@ -1289,8 +1300,8 @@
 
 {#if settleTarget}
     {@const rule = settleTarget}
-    {@const remaining = (rule.endAfterCount ?? 0) - rule.progress.paidCount}
-    {@const suggested = remaining * ruleAmount(rule)}
+    {@const remainingCount = (rule.endAfterCount ?? 0) - rule.progress.paidCount}
+    {@const outstanding = remainingAmount(rule)}
     <div
         class="fixed inset-0 z-50 flex items-center justify-center p-4"
         role="dialog"
@@ -1309,7 +1320,10 @@
                         Settle "{displayName(rule)}" in full?
                     </h3>
                     <p class="text-xs text-muted-foreground mt-1">
-                        {remaining} period{remaining === 1 ? '' : 's'} remaining · suggested <span class="font-mono">{fmt.currency(suggested)}</span>
+                        {remainingCount} period{remainingCount === 1 ? '' : 's'} remaining ·
+                        outstanding
+                        <span class="font-mono text-foreground">{fmt.currency(outstanding.value)}</span>
+                        <span class="opacity-60">({outstanding.source})</span>
                     </p>
                 </div>
                 <div class="space-y-2">

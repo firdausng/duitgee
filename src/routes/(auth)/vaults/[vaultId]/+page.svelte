@@ -24,7 +24,10 @@
         PendingActionsCard,
         CategoryBreakdownCard,
         EmptyVaultChecklist,
+        RecurringCommitmentsCard,
+        type RecurringCommitmentsUpcoming,
     } from "$lib/components/home";
+    import type { RecurringRule } from "$lib/recurring-helpers";
     import ArrowRight from "@lucide/svelte/icons/arrow-right";
     import ExternalLink from "@lucide/svelte/icons/external-link";
     import Receipt from "@lucide/svelte/icons/receipt";
@@ -203,6 +206,37 @@
         },
     );
 
+    // Active recurring rules — drives the RecurringCommitmentsCard headline + counts.
+    const recurringRulesResource = resource(
+        () => [vaultId, refetchKey] as const,
+        async ([id]) => {
+            try {
+                const res = await ofetch<{ success: boolean; data: RecurringRule[] }>(
+                    `/api/getRecurringExpenses?vaultId=${id}`,
+                );
+                return res.data ?? [];
+            } catch {
+                return [] as RecurringRule[];
+            }
+        },
+    );
+
+    // Upcoming dues in the next 7 days — feeds the card's preview list.
+    const upcomingRecurringResource = resource(
+        () => [vaultId, refetchKey] as const,
+        async ([id]) => {
+            try {
+                const res = await ofetch<{
+                    success: boolean;
+                    data: RecurringCommitmentsUpcoming[];
+                }>(`/api/getUpcomingOccurrences?vaultId=${id}&days=7`);
+                return res.data ?? [];
+            } catch {
+                return [] as RecurringCommitmentsUpcoming[];
+            }
+        },
+    );
+
     // Pending reimbursements (Pro only — gracefully no-op for free).
     type ReimbRow = { expense: { amount: number } };
     const pendingReimbursementsResource = resource(
@@ -268,6 +302,11 @@
     const allTimeExpenseCount = $derived(allTimeCountResource.current ?? null);
     const isEmptyVault = $derived(allTimeExpenseCount === 0);
     const showChecklist = $derived(isEmptyVault && !checklistDismissed);
+    const recurringRules = $derived(recurringRulesResource.current ?? []);
+    const upcomingRecurring = $derived(upcomingRecurringResource.current ?? []);
+    const isLoadingRecurring = $derived(
+        recurringRulesResource.loading || upcomingRecurringResource.loading,
+    );
     const isLoadingVault = $derived(vaultResource.loading);
     const isLoadingStats = $derived(statisticsResource.loading);
     const isLoadingExpenses = $derived(expensesResource.loading);
@@ -533,6 +572,17 @@
                 {pendingRecurringCount}
                 pendingReimbursementsCount={pendingReimbursements.count}
                 pendingReimbursementsTotal={pendingReimbursements.total}
+                formatCurrency={vaultFormatters.currency}
+            />
+        </div>
+
+        <!-- Recurring commitments — locked-in money + upcoming preview (conditional) -->
+        <div class="mb-3">
+            <RecurringCommitmentsCard
+                {vaultId}
+                rules={recurringRules}
+                upcoming={upcomingRecurring}
+                loading={isLoadingRecurring}
                 formatCurrency={vaultFormatters.currency}
             />
         </div>
