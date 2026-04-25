@@ -14,6 +14,8 @@
     } from '$lib/components/app-shell';
     import DesktopAppBar, { type DesktopAppBarVault } from '$lib/components/app-shell/DesktopAppBar.svelte';
     import { AddExpenseMenu, type AddExpenseMenuTemplate } from '$lib/components/ui/add-expense-menu';
+    import { NotificationBell } from '$lib/components/notifications';
+    import { QuickLogModal } from '$lib/components/unidentified';
     import type { ExpandableFabTemplate } from '$lib/components/ui/expandable-fab';
 
     import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
@@ -141,6 +143,10 @@
         await goto('/login');
     }
 
+    // Quick-log modal state. Triggered from AddExpenseMenu's onQuickLog callback.
+    let quickLogOpen = $state(false);
+    const currentUserId = $derived(data.user?.id ?? '');
+
     let stoppingImpersonation = $state(false);
     async function stopImpersonating() {
         stoppingImpersonation = true;
@@ -203,15 +209,21 @@
 
             <DesktopAppBar vault={appBarVault} onSetDefault={handleSetDefaultVault}>
                 {#snippet trailing()}
-                    {#if quickAdd}
-                        <AddExpenseMenu
-                            templates={quickAdd.templates as AddExpenseMenuTemplate[]}
-                            resolveTemplateHref={quickAdd.resolveTemplateHref}
-                            scratchHref={quickAdd.scratchHref}
-                            browseHref={quickAdd.browseHref}
-                            anchor="bottom"
-                        />
-                    {/if}
+                    <div class="flex items-center gap-1">
+                        {#if currentVaultId}
+                            <NotificationBell vaultId={currentVaultId} />
+                        {/if}
+                        {#if quickAdd}
+                            <AddExpenseMenu
+                                templates={quickAdd.templates as AddExpenseMenuTemplate[]}
+                                resolveTemplateHref={quickAdd.resolveTemplateHref}
+                                scratchHref={quickAdd.scratchHref}
+                                browseHref={quickAdd.browseHref}
+                                onQuickLog={chipVaultId ? () => (quickLogOpen = true) : undefined}
+                                anchor="bottom"
+                            />
+                        {/if}
+                    </div>
                 {/snippet}
             </DesktopAppBar>
 
@@ -228,5 +240,14 @@
         {searchParams}
         badges={{ pendingRecurring }}
         {quickAdd}
+        onQuickLog={chipVaultId ? () => (quickLogOpen = true) : undefined}
     />
+
+    {#if chipVaultId && currentUserId}
+        <QuickLogModal
+            vaultId={chipVaultId}
+            {currentUserId}
+            bind:open={quickLogOpen}
+        />
+    {/if}
 </div>

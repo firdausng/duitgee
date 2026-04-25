@@ -28,6 +28,21 @@
 	let { data } = $props();
 	let isLoading = $state(false);
 
+	// --- Unidentified duplicate prompt state ---
+	type DuplicateMatch = {
+		id: string;
+		amount: number;
+		date: string;
+		paidBy: string | null;
+		paidByName: string | null;
+		createdAt: string;
+		createdBy: string;
+	};
+	let duplicateMatches = $state<DuplicateMatch[]>([]);
+	let duplicatePromptOpen = $state(false);
+	/** Snapshot of what we'd POST if user picks "Create new". */
+	let pendingPayload = $state<Record<string, unknown> | null>(null);
+
 	// --- Shared defaults managed by superForm ---
 	const { form, errors, delayed } = superForm(data.form, {
 		validators: valibotClient(sharedExpenseDefaultsSchema),
@@ -199,6 +214,39 @@
 			return;
 		}
 
+		// Duplicate-check guard: only when submitting a single expense and only
+		// for confirmed (non-templated) entries. Multi-row batches skip the check
+		// — bulk submission isn't where dedup matters.
+		if (rows.length === 1 && !data.templateId) {
+			const onlyRow = rows[0];
+			const candidateAmount = onlyRow.amount!;
+			const candidateDate = localDatetimeToUtcIso(
+				(onlyRow.expanded && onlyRow.date) || $form.date,
+			);
+			try {
+				const params = new URLSearchParams({
+					vaultId: data.vaultId,
+					amount: String(candidateAmount),
+					date: candidateDate,
+				});
+				const r = await ofetch<{ success: boolean; data: DuplicateMatch[] }>(
+					`/api/findUnidentifiedDuplicates?${params.toString()}`,
+				);
+				if (r.success && r.data.length > 0) {
+					duplicateMatches = r.data;
+					duplicatePromptOpen = true;
+					return; // Pause submission until user picks an action.
+				}
+			} catch (err) {
+				// Duplicate check is best-effort — never block create on its failure.
+				console.warn('Duplicate check failed:', err);
+			}
+		}
+
+		await submitCreate();
+	}
+
+	async function submitCreate() {
 		isLoading = true;
 
 		try {
@@ -267,6 +315,72 @@
 				error?.data?.error ||
 				error?.message ||
 				'Failed to create expenses. Please try again.';
+			toast.error(errorMessage);
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	function dismissDuplicatePrompt() {
+		duplicatePromptOpen = false;
+		duplicateMatches = [];
+	}
+
+	async function proceedAsNewFromPrompt() {
+		dismissDuplicatePrompt();
+		await submitCreate();
+	}
+
+	async function claimMatch(match: DuplicateMatch) {
+		// Single-row form is the only path that reaches this prompt — claim with
+		// row[0]'s details, mapped to claimUnidentifiedExpense's contract.
+		const row = rows[0];
+		isLoading = true;
+		try {
+			const payload = {
+				id: match.id,
+				vaultId: data.vaultId,
+				amount: row.amount!,
+				categoryName: row.categoryName,
+				note: row.note || undefined,
+				paymentType: (row.expanded && row.paymentType) || $form.paymentType,
+				date: localDatetimeToUtcIso((row.expanded && row.date) || $form.date),
+				paidBy: (row.expanded ? row.paidBy : $form.paidBy) ?? null,
+				fundId: (row.expanded ? row.fundId : $form.fundId) ?? null,
+				fundPaymentMode:
+					((row.expanded ? row.fundPaymentMode : $form.fundPaymentMode) as
+						| 'paid_by_fund'
+						| 'pending_reimbursement'
+						| null
+						| undefined) ?? null,
+				tagIds: sharedTagIds,
+				attachmentIds:
+					row.attachmentIds && row.attachmentIds.length > 0 ? row.attachmentIds : undefined,
+			};
+
+			const response = await ofetch<{ success: boolean; data?: { id: string }; error?: string }>(
+				'/api/claimUnidentifiedExpense',
+				{
+					method: 'POST',
+					body: payload,
+					headers: { 'Content-Type': 'application/json' },
+				},
+			);
+
+			if (!response.success) {
+				toast.error(response.error || 'Failed to claim expense');
+				return;
+			}
+
+			toast.success('Unidentified charge claimed');
+			dismissDuplicatePrompt();
+			await goto(returnTo);
+		} catch (error: unknown) {
+			console.error('Failed to claim unidentified expense:', error);
+			const errorMessage =
+				(error as { data?: { error?: string }; message?: string })?.data?.error ||
+				(error as { message?: string })?.message ||
+				'Failed to claim expense';
 			toast.error(errorMessage);
 		} finally {
 			isLoading = false;
@@ -553,6 +667,63 @@
 		</div>
 	</div>
 </div>
+
+{#if duplicatePromptOpen}
+	<div
+		class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="dup-prompt-title"
+	>
+		<div class="w-full max-w-md rounded-[var(--radius-md)] bg-popover text-popover-foreground border shadow-lg p-5 space-y-4">
+			<div>
+				<h2 id="dup-prompt-title" class="text-base font-semibold">Looks like a duplicate?</h2>
+				<p class="text-sm text-muted-foreground mt-1">
+					{#if duplicateMatches.length === 1}
+						An unidentified charge with the same amount was logged near this date. Claim it instead of creating a new one?
+					{:else}
+						Several unidentified charges with the same amount were logged near this date. Claim one of them?
+					{/if}
+				</p>
+			</div>
+
+			<ul class="space-y-2">
+				{#each duplicateMatches as match (match.id)}
+					<li class="border rounded-[var(--radius-sm)] p-3 flex items-center justify-between gap-3">
+						<div class="text-sm min-w-0">
+							<p class="font-mono">
+								{new Intl.NumberFormat(undefined, {
+									style: 'currency',
+									currency: data.vault?.currency || 'USD',
+								}).format(match.amount)}
+							</p>
+							<p class="text-xs text-muted-foreground">
+								{new Date(match.date).toLocaleDateString(undefined, {
+									month: 'short',
+									day: 'numeric',
+									year: 'numeric',
+								})}
+								{#if match.paidByName}· {match.paidByName}{/if}
+							</p>
+						</div>
+						<Button size="sm" onclick={() => claimMatch(match)} disabled={isLoading}>
+							Claim
+						</Button>
+					</li>
+				{/each}
+			</ul>
+
+			<div class="flex items-center justify-end gap-2 pt-1">
+				<Button variant="ghost" onclick={dismissDuplicatePrompt} disabled={isLoading}>
+					Cancel
+				</Button>
+				<Button variant="outline" onclick={proceedAsNewFromPrompt} disabled={isLoading}>
+					Create new
+				</Button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	details > summary::-webkit-details-marker {

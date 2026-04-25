@@ -26,6 +26,15 @@ import {
     confirmImportExpenses,
     undoImportExpenses,
 } from "$lib/server/api/expenses/confirmImportExpensesHandler";
+import {createUnidentifiedExpense} from "$lib/server/api/expenses/createUnidentifiedExpenseHandler";
+import {findUnidentifiedDuplicates} from "$lib/server/api/expenses/findUnidentifiedDuplicatesHandler";
+import {claimUnidentifiedExpense} from "$lib/server/api/expenses/claimUnidentifiedExpenseHandler";
+import {getUnidentifiedExpenses} from "$lib/server/api/expenses/getUnidentifiedExpensesHandler";
+import {
+    createUnidentifiedExpenseSchema,
+    findUnidentifiedDuplicatesQuerySchema,
+    claimUnidentifiedExpenseSchema,
+} from "$lib/schemas/unidentifiedExpenses";
 
 const EXPENSE_TAG = ['Expense'];
 const commonExpenseConfig = {
@@ -400,6 +409,147 @@ export const expensesApi = new Hono<App.Api>()
                 }, 400);
             }
         })
+    // Query: Recent unidentified expenses + totals (for the dashboard widget)
+    .get(
+        '/getUnidentifiedExpenses',
+        describeRoute({
+            ...commonExpenseConfig,
+            description: 'Recent unidentified expenses for a vault, plus running totals.',
+            responses: {
+                200: {
+                    description: 'OK',
+                    content: { 'application/json': { schema: resolver(v.any()) } },
+                },
+            },
+        }),
+        vValidator('query', v.object({
+            vaultId: v.string(),
+            limit: v.optional(v.pipe(v.string(), v.transform(Number)), '5'),
+        })),
+        async (c) => {
+            const session = c.get('currentSession');
+            const { vaultId, limit } = c.req.valid('query');
+            try {
+                const data = await getUnidentifiedExpenses(vaultId, session, c.env, limit);
+                return c.json({ success: true, data });
+            } catch (error) {
+                console.error({ message: 'Error fetching unidentified expenses', error });
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed',
+                }, 400);
+            }
+        },
+    )
+    // Command: Create an unidentified expense (just amount + date + paidBy)
+    .post(
+        '/createUnidentifiedExpense',
+        describeRoute({
+            ...commonExpenseConfig,
+            description: 'Quick-log a charge from a bank notification. Just amount + date + paidBy; details are filled in later via claim.',
+            responses: {
+                201: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.object({ id: v.string() }),
+                            })),
+                        },
+                    },
+                },
+            },
+        }),
+        vValidator('json', createUnidentifiedExpenseSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+            try {
+                const result = await createUnidentifiedExpense(session, data, c.env);
+                return c.json({ success: true, data: result }, 201);
+            } catch (error) {
+                console.error({ message: 'Error creating unidentified expense', error });
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed',
+                }, 400);
+            }
+        },
+    )
+    // Query: Find unidentified expenses matching a candidate amount + date
+    .get(
+        '/findUnidentifiedDuplicates',
+        describeRoute({
+            ...commonExpenseConfig,
+            description: 'Look for unidentified expenses with the same amount within ±1 day of the given date.',
+            responses: {
+                200: {
+                    description: 'Match list (may be empty)',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.array(v.any()),
+                            })),
+                        },
+                    },
+                },
+            },
+        }),
+        vValidator('query', findUnidentifiedDuplicatesQuerySchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const query = c.req.valid('query');
+            try {
+                const data = await findUnidentifiedDuplicates(session, c.env, query);
+                return c.json({ success: true, data });
+            } catch (error) {
+                console.error({ message: 'Error finding unidentified duplicates', error });
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed',
+                }, 400);
+            }
+        },
+    )
+    // Command: Claim an unidentified expense — fill in details, flip status to confirmed
+    .post(
+        '/claimUnidentifiedExpense',
+        describeRoute({
+            ...commonExpenseConfig,
+            description: 'Fill in the missing details of an unidentified expense and mark it confirmed.',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.object({ id: v.string() }),
+                            })),
+                        },
+                    },
+                },
+            },
+        }),
+        vValidator('json', claimUnidentifiedExpenseSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+            try {
+                const result = await claimUnidentifiedExpense(session, data, c.env);
+                return c.json({ success: true, data: result });
+            } catch (error) {
+                console.error({ message: 'Error claiming unidentified expense', error });
+                const status = error instanceof Error && error.message.includes('not found') ? 404 : 400;
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed',
+                }, status);
+            }
+        },
+    )
     // Command: Delete expense (POST)
     .post(
         '/deleteExpense',

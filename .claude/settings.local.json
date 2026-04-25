@@ -73,7 +73,16 @@
       "Bash(grep -A 4 -E \"expenseId..edit\\\\\\\\\\\\\\\\.\\\\+page\\\\\\\\\\\\\\\\.\\(server|svelte\\)\")",
       "Bash(pnpm add *)",
       "WebFetch(domain:shadcn-svelte.com)",
-      "Bash(pnpm dlx *)"
+      "Bash(pnpm dlx *)",
+      "Bash(grep -n \"^        {$\\\\|name:.*\\\\\"\" \"D:/projects/duitgee-app/src/lib/configurations/categories.ts\")",
+      "Bash(grep -B1 -A3 \"form\\\\\\\\\\\\\\\\+page\\\\|form/+page\")",
+      "Bash(grep -iE \"expense\\\\\\\\\\\\\\\\|claim|notifications|unidentified|/form\")",
+      "Bash(grep -A5 \"form/+page.svelte\\\\|form\\\\\\\\\\\\\\\\+page.svelte\")",
+      "Bash(grep -n 'page.data\\\\|let.*data\\\\b\\\\|$page' 'D:/projects/duitgee-app/src/routes/\\(auth\\)/vaults/[vaultId]/+page.svelte')",
+      "Bash(grep -B1 -A4 \"expenses/\\\\[expenseId\\\\]/edit\\\\|expenses\\\\\\\\\\\\\\\\\\\\[expenseId\\\\\\\\\\\\\\\\\\\\]\\\\\\\\\\\\\\\\edit\")",
+      "Bash(grep -B1 -A4 \"expense\\\\\\\\\\\\\\\\|template\\\\|status\")",
+      "Bash(grep -v \"members\\\\|funds\\\\|recurring\\\\|templates/.*edit\\\\|templates/new\\\\|vaults/new\\\\|vaults\\\\\\\\\\\\\\\\new\\\\|+layout\\\\|page.svelte.spec\\\\|better-auth\\\\|hooks\\\\|VaultStatistics\\\\|calendar\\\\|edit\\\\\\\\\\\\\\\\+page.svelte\\\\|funds\\\\\\\\\\\\\\\\\\\\[fundId\\\\\\\\\\\\\\\\\\\\]\")",
+      "Bash(grep -A4 \"expenses\\\\\\\\\\\\\\\\\\\\[expenseId\\\\\\\\\\\\\\\\\\\\]\\\\\\\\\\\\\\\\edit\\\\\\\\\\\\\\\\+page.svelte\\\\\\\\\\\\\\\\\\\\[39m:184\")"
     ]
   }
 }

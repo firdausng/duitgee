@@ -150,6 +150,7 @@ export const getExpenses = async (
             templateId: parsedExpense.expenseTemplateId || null,
             recurringExpenseId: parsedExpense.recurringExpenseId || null,
             vaultId: parsedExpense.vaultId || undefined,
+            status: parsedExpense.status,
             category: categoryData.categories.find(c => c.name === parsedExpense.categoryName) || null,
             tags: tagsByExpense.get(parsedExpense.id) ?? [],
             attachments: attachmentsByExpense.get(parsedExpense.id) ?? [],

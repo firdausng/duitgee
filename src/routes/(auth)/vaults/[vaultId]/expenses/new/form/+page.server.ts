@@ -96,9 +96,17 @@ export const load: PageServerLoad = async ({ params, url, locals, platform }) =>
 		color: t.color ?? null,
 	}));
 
+	const vault = vaultResult?.vaults
+		? {
+				currency: vaultResult.vaults.currency || 'USD',
+				locale: vaultResult.vaults.locale || 'en-US',
+		  }
+		: null;
+
 	return {
 		form,
 		vaultId,
+		vault,
 		template,
 		templateId,
 		members,

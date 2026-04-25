@@ -15,6 +15,8 @@
             scratchHref: string;
             browseHref: string;
         } | null;
+        /** Optional callback for the "Quick log" entry inside the quick-add sheet. */
+        onQuickLog?: () => void;
     };
 </script>
 
@@ -38,6 +40,7 @@
         searchParams,
         badges = {},
         quickAdd,
+        onQuickLog,
     }: MobileBottomBarProps = $props();
 
     let moreOpen = $state(false);
@@ -179,5 +182,6 @@
         resolveTemplateHref={quickAdd.resolveTemplateHref}
         scratchHref={quickAdd.scratchHref}
         browseHref={quickAdd.browseHref}
+        {onQuickLog}
     />
 {/if}

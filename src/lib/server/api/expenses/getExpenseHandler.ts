@@ -64,6 +64,7 @@ export const getExpense = async (
         date: expenseResult.date,
         paidBy: expenseResult.paidBy,
         createdAt: expenseResult.createdAt,
+        status: expenseResult.status,
         vaultId: expenseResult.vaultId || undefined,
         vault: null, // Not included in this query
         category: categoryData.categories.find(c => c.name === expenseResult.categoryName) || null,

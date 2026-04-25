@@ -74,6 +74,14 @@ export interface LlmDashboardSummary {
         multiple: number;
         categoryAverage: number;
     }>;
+    /**
+     * Set when the vault has unidentified expenses sitting around. The LLM can
+     * mention this once if material — don't make every bullet about it.
+     */
+    unidentifiedReminder: {
+        count: number;
+        totalAmount: number;
+    } | null;
 }
 
 const truncate = (s: string, n = 32) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
@@ -96,6 +104,7 @@ export const summarizeDashboardForLlm = (
     currency: string,
     history?: MonthlyHistoryResult,
     anomalies?: AnomalyItem[],
+    unidentified?: { count: number; totalAmount: number },
 ): LlmDashboardSummary => {
     const currentTotal = sumBuckets(payload.spendTrend.current);
     const previousTotal = payload.spendTrend.previous
@@ -197,6 +206,13 @@ export const summarizeDashboardForLlm = (
             multiple: a.multiple,
             categoryAverage: a.categoryAverage,
         })),
+        unidentifiedReminder:
+            unidentified && unidentified.count > 0
+                ? {
+                      count: unidentified.count,
+                      totalAmount: round(unidentified.totalAmount),
+                  }
+                : null,
     };
 };
 
@@ -247,6 +263,10 @@ export const filterUngroundedBullets = (
         collect(a.amount);
         collect(a.multiple);
         collect(a.categoryAverage);
+    }
+    if (summary.unidentifiedReminder) {
+        collect(summary.unidentifiedReminder.count);
+        collect(summary.unidentifiedReminder.totalAmount);
     }
 
     // Numbers under 5 are usually counts/percents/small qualifiers — treat as

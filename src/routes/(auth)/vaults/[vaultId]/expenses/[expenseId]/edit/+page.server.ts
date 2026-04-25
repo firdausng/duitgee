@@ -7,6 +7,7 @@ import { getExpense } from '$lib/server/api/expenses/getExpenseHandler';
 import { getVault } from '$lib/server/api/vaults/getVaultHandler';
 import { getFunds } from '$lib/server/api/funds/getFundsHandler';
 import { getTags } from '$lib/server/api/tags/getTagsHandler';
+import { getExpenseTemplates } from '$lib/server/api/expense-templates/getExpenseTemplatesHandler';
 
 export const load: PageServerLoad = async ({ params, locals, platform }) => {
 	if (platform === undefined) throw new Error('No platform');
@@ -26,7 +27,9 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
 
 	if (!expenseData) throw error(404, 'Expense not found');
 
-	const [vaultResult, fundRows, tagRows] = await Promise.all([
+	const isUnidentified = expenseData.status === 'unidentified';
+
+	const [vaultResult, fundRows, tagRows, templatesResult] = await Promise.all([
 		getVault(session, vaultId, env).catch((err) => {
 			console.error('Failed to load vault:', err);
 			return null;
@@ -39,6 +42,13 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
 			console.error('Failed to load tags:', err);
 			return [];
 		}),
+		// Templates only matter for unidentified expenses (the prefill/claim flow).
+		isUnidentified
+			? getExpenseTemplates(session, { vaultId }, env).catch((err) => {
+					console.error('Failed to load templates:', err);
+					return { templates: [] };
+			  })
+			: Promise.resolve({ templates: [] }),
 	]);
 
 	const members: Array<{ userId: string; displayName: string }> = (vaultResult?.members ?? []).map((m) => ({
@@ -81,12 +91,29 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
 		valibot(updateExpenseRequestSchema)
 	);
 
+	const templates = (templatesResult?.templates ?? []).map((t) => ({
+		id: t.id,
+		name: t.name,
+		icon: t.icon,
+		defaultAmount: t.defaultAmount,
+		defaultCategoryName: t.defaultCategoryName,
+		defaultPaymentType: t.defaultPaymentType,
+		defaultPaidBy: t.defaultPaidBy,
+		defaultFundId: t.defaultFundId,
+		defaultFundPaymentMode: t.defaultFundPaymentMode,
+		defaultTagIds: t.defaultTagIds,
+		defaultNote: t.defaultNote,
+		usageCount: t.usageCount,
+	}));
+
 	return {
 		form,
 		vaultId,
 		expenseId,
 		expense: expenseData,
 		expenseDateUtc: expenseData.date, // Pass raw UTC date to client
+		isUnidentified,
+		templates,
 		members,
 		funds,
 		tags,

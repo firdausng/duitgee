@@ -8,6 +8,8 @@
         scratchHref: string;
         browseHref: string;
         onOpenChange: (open: boolean) => void;
+        /** Optional: when set, renders a "Quick log" entry that calls this on click. */
+        onQuickLog?: () => void;
     };
 </script>
 
@@ -16,6 +18,7 @@
     import * as Drawer from '$lib/components/ui/drawer';
     import FilePlus from '@lucide/svelte/icons/file-plus';
     import ArrowRight from '@lucide/svelte/icons/arrow-right';
+    import HelpCircle from '@lucide/svelte/icons/circle-help';
 
     let {
         open,
@@ -24,7 +27,13 @@
         scratchHref,
         browseHref,
         onOpenChange,
+        onQuickLog,
     }: QuickAddSheetProps = $props();
+
+    function handleQuickLog() {
+        onOpenChange(false);
+        onQuickLog?.();
+    }
 
     const TOP_COUNT = 5;
     const visibleTemplates = $derived(templates.slice(0, TOP_COUNT));
@@ -93,6 +102,23 @@
                         </div>
                     </button>
                 </li>
+                {#if onQuickLog}
+                    <li>
+                        <button
+                            type="button"
+                            onclick={handleQuickLog}
+                            class="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-accent transition-colors text-left"
+                        >
+                            <span class="flex items-center justify-center size-9 rounded-full bg-amber-100 dark:bg-amber-950/40 shrink-0">
+                                <HelpCircle class="size-4 text-amber-700 dark:text-amber-300" />
+                            </span>
+                            <div class="flex-1">
+                                <div class="font-medium text-sm">Quick log unidentified</div>
+                                <div class="text-xs text-muted-foreground">Just amount — fill details later</div>
+                            </div>
+                        </button>
+                    </li>
+                {/if}
                 {#if browseLabel}
                     <li>
                         <button

@@ -16,6 +16,7 @@ import {adminApi} from "$lib/server/api/admin/admin-api";
 import {tagsApi} from "$lib/server/api/tags/tags-api";
 import {attachmentsApi} from "$lib/server/api/attachments/attachments-api";
 import {statisticsApi} from "$lib/server/api/statistics/statistics-api";
+import {notificationsApi} from "$lib/server/api/notifications/notifications-api";
 
 const router = new Hono<App.Api>()
     .use('*', trimTrailingSlash())
@@ -46,6 +47,7 @@ const router = new Hono<App.Api>()
     .route('/', tagsApi)
     .route('/', attachmentsApi)
     .route('/', statisticsApi)
+    .route('/', notificationsApi)
     // .route('/user-team', teamVaultsApi)
     // .route('/', categoriesApi)
     // .route('/', categoryGroupsApi)

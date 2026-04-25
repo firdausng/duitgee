@@ -8,10 +8,12 @@
     import FilePlus from '@lucide/svelte/icons/file-plus';
     import Pencil from '@lucide/svelte/icons/pencil';
     import Plus from '@lucide/svelte/icons/plus';
+    import HelpCircle from '@lucide/svelte/icons/circle-help';
     import Loader2 from '@lucide/svelte/icons/loader-2';
     import { createVaultFormatters } from '$lib/vaultFormatting';
+    import { QuickLogModal } from '$lib/components/unidentified';
 
-    let { vaultId } = page.params;
+    const vaultId = page.params.vaultId as string;
 
     // Forward the caller's returnTo (if any) through to the form.
     const returnToParam = $derived(page.url.searchParams.get('returnTo'));
@@ -27,6 +29,8 @@
     let templates = $state<Client.ExpenseTemplate[]>([]);
     let isLoading = $state(true);
     let vault = $state<{ locale?: string; currency?: string } | null>(null);
+    let quickLogOpen = $state(false);
+    const currentUserId = $derived(page.data.currentSession?.user?.id ?? '');
 
     const fmt = $derived(
         createVaultFormatters({
@@ -118,6 +122,21 @@
                 </div>
             </button>
 
+            <!-- Quick log unidentified card -->
+            <button
+                type="button"
+                onclick={() => (quickLogOpen = true)}
+                class="group relative rounded-[var(--radius-md)] border border-dashed border-border bg-card p-2 hover:border-amber-300 hover:bg-amber-50/40 dark:hover:bg-amber-950/20 transition-colors text-center"
+            >
+                <div class="flex flex-col items-center gap-1">
+                    <div class="flex items-center justify-center size-9 rounded-full bg-amber-100 dark:bg-amber-950/40 group-hover:bg-amber-200/70 dark:group-hover:bg-amber-900/40 transition-colors">
+                        <HelpCircle class="size-4 text-amber-700 dark:text-amber-300" />
+                    </div>
+                    <div class="text-xs font-medium truncate w-full">Quick log</div>
+                    <p class="text-[10px] text-muted-foreground">Just amount</p>
+                </div>
+            </button>
+
             {#each templates as template (template.id)}
                 <button
                     type="button"
@@ -164,6 +183,15 @@
         </div>
     {/if}
 </div>
+
+{#if currentUserId}
+    <QuickLogModal
+        {vaultId}
+        {currentUserId}
+        bind:open={quickLogOpen}
+        onCreated={() => goto(returnToParam ?? `/vaults/${vaultId}/expenses`)}
+    />
+{/if}
 
 <style>
     @media (hover: none) {

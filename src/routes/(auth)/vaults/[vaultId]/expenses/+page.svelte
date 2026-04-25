@@ -37,6 +37,7 @@
     import X from '@lucide/svelte/icons/x';
     import CalendarDays from '@lucide/svelte/icons/calendar-days';
     import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+    import HelpCircle from '@lucide/svelte/icons/circle-help';
     import MoreVertical from '@lucide/svelte/icons/more-vertical';
     import Download from '@lucide/svelte/icons/download';
     import Upload from '@lucide/svelte/icons/upload';
@@ -72,6 +73,8 @@
         fundIcon: string | null;
         recurringExpenseId: string | null;
         date: string;
+        /** 'unidentified' rows are placeholders awaiting details. */
+        status?: 'confirmed' | 'unidentified';
         tags?: Array<{ id: string; name: string; color: string | null }>;
         attachments?: Array<{ id: string; fileName: string; mimeType: string; fileSize: number }>;
     };
@@ -610,6 +613,15 @@
                         class="inline-block size-3 text-muted-foreground align-middle ml-1 shrink-0"
                         aria-label="From recurring rule"
                     />
+                {/if}
+                {#if expense.status === 'unidentified'}
+                    <span
+                        class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-700 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 text-[10px] font-medium align-middle ml-1.5"
+                        title="Logged from a bank notification — add details to confirm"
+                    >
+                        <HelpCircle class="size-3" />
+                        Unidentified
+                    </span>
                 {/if}
                 <Amount
                     class="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs align-middle ml-2"

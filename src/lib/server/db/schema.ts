@@ -107,6 +107,10 @@ export const expenses = sqliteTable('expenses', {
     // CSV import provenance — stamped on expenses created via import; null otherwise.
     // Used to power "undo import" by soft-deleting all rows from a single batch.
     importBatchId: text('import_batch_id'),
+    // Lifecycle: 'confirmed' = normal expense; 'unidentified' = placeholder logged from a
+    // bank notification when the user doesn't yet know the details. Claimed via
+    // claimUnidentifiedExpense which fills category/note and flips status.
+    status: text('status').notNull().default('confirmed'),
     // Audit fields
     createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
     createdBy: text('created_by').notNull(), // User ID as string, no FK constraint - who created the record (different from userId which is who the expense is for)
@@ -123,6 +127,9 @@ export const expenses = sqliteTable('expenses', {
     vaultDateIdx: index('idx_expenses_vault_date').on(table.vaultId, table.date),
     // Member breakdown queries
     vaultPaidByIdx: index('idx_expenses_vault_paid_by').on(table.vaultId, table.paidBy),
+    // Duplicate-match lookups for unidentified expenses (rare-value status filter
+    // pairs with amount lookup; works for both list-by-status and amount-match queries).
+    unidentifiedIdx: index('idx_expenses_unidentified').on(table.vaultId, table.status, table.amount),
 }));
 
 // RecurringExpenses - rules that generate expenses on a schedule
@@ -351,6 +358,29 @@ export const attachments = sqliteTable('attachments', {
     deletedBy: text('deleted_by'),
 }, (table) => ({
     vaultIdIdx: index('idx_attachments_vault').on(table.vaultId),
+}));
+
+// Notifications - horizontal in-app notification surface. Used by unidentified
+// expenses today; budgets, anomalies, and reimbursement reminders will reuse it.
+export const notifications = sqliteTable('notifications', {
+    id: text('id').primaryKey().$defaultFn(() => createId()),
+    vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
+    /** null = vault-wide (all members see it). Set to a userId to target one member. */
+    userId: text('user_id'),
+    /** Namespaced type — `expense:unidentified_created`, `expense:unidentified_claimed`, etc. */
+    type: text('type').notNull(),
+    title: text('title').notNull(),
+    body: text('body'),
+    /** Optional deep-link path within the app. */
+    linkUrl: text('link_url'),
+    /** Free-form JSON payload for type-specific data (no schema enforcement). */
+    metadata: text('metadata'),
+    readAt: text('read_at'),
+    createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
+    createdBy: text('created_by').notNull(),
+}, (table) => ({
+    // Primary read path: "show me unread notifications for this user in this vault".
+    unreadIdx: index('idx_notifications_unread').on(table.vaultId, table.userId, table.readAt),
 }));
 
 // StatisticsInsights - cached LLM-generated period insights (Pro feature)

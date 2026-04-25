@@ -181,7 +181,8 @@ export const categoryData: CategoryData = {
         // Other
         { name: "Pets", description: "Pet food, vet care, supplies", icon: "paw-print", iconType: "lucide", color: "#F59E0B", isPublic: true, group: "Other" },
         { name: "Legal", description: "Legal fees, professional services", icon: "scale", iconType: "lucide", color: "#6B7280", isPublic: true, group: "Other" },
-        { name: "Misc", description: "Miscellaneous and uncategorized expenses", icon: "more-horizontal", iconType: "lucide", color: "#9CA3AF", isPublic: true, group: "Other" }
+        { name: "Misc", description: "Miscellaneous and uncategorized expenses", icon: "more-horizontal", iconType: "lucide", color: "#9CA3AF", isPublic: true, group: "Other" },
+        { name: "Unidentified", description: "Logged from a bank notification before details were known. Claim to fill in.", icon: "circle-help", iconType: "lucide", color: "#9CA3AF", isPublic: true, group: "Other" }
     ]
 };
 

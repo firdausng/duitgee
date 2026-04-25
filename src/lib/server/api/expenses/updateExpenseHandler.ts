@@ -75,6 +75,14 @@ export const updateExpense = async (
         await applyFundAmountDelta(existing.fundTransactionId!, existing.amount, data.amount, userId, env);
     }
 
+    // Auto-promote: if this expense was unidentified and the user is now setting
+    // a real (non-Unidentified) category, flip status to 'confirmed' so the
+    // edit-flow doubles as the claim flow.
+    const shouldConfirm =
+        existing.status === 'unidentified' &&
+        updateFields.categoryName &&
+        updateFields.categoryName !== 'Unidentified';
+
     const [updatedExpense] = await client
         .update(expenses)
         .set({
@@ -82,6 +90,7 @@ export const updateExpense = async (
             fundId: newFundId,
             fundPaymentMode: newFundPaymentMode,
             fundTransactionId: newFundTransactionId,
+            ...(shouldConfirm ? { status: 'confirmed' as const } : {}),
             ...updateAuditFields({ userId }),
         })
         .where(eq(expenses.id, id))

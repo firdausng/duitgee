@@ -26,6 +26,7 @@
         RecurringCommitmentsCard,
         type RecurringCommitmentsUpcoming,
     } from "$lib/components/home";
+    import { UnidentifiedCard } from "$lib/components/home/unidentified";
     import type { RecurringRule } from "$lib/recurring-helpers";
     import ArrowRight from "@lucide/svelte/icons/arrow-right";
     import ExternalLink from "@lucide/svelte/icons/external-link";
@@ -312,6 +313,11 @@
     const vaultError = $derived(vaultResource.error);
     const statisticsError = $derived(statisticsResource.error);
 
+    // Members + current user — used by the unidentified card for paidBy selection.
+    const vaultMembersList = $derived(currentVault?.members ?? []);
+    const currentUserId = $derived(page.data.currentSession?.user?.id ?? '');
+    const hasSharedMembers = $derived(vaultMembersList.length > 1);
+
     // Create vault-specific formatters
     const vaultFormatters = $derived(
         currentVault
@@ -546,6 +552,17 @@
                 formatCurrency={vaultFormatters.currency}
             />
         </div>
+
+        <!-- Unidentified expenses — bank-notification placeholders awaiting details -->
+        {#if currentUserId}
+            <UnidentifiedCard
+                {vaultId}
+                members={vaultMembersList}
+                {currentUserId}
+                formatCurrency={vaultFormatters.currency}
+                {hasSharedMembers}
+            />
+        {/if}
 
         <!-- Recurring commitments — locked-in money + upcoming preview (conditional) -->
         <div class="mb-3">

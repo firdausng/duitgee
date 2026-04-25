@@ -15,6 +15,8 @@
         scratchHref: string;
         /** Route for the full browse-all-templates page. */
         browseHref: string;
+        /** Optional: when set, renders a "Quick log" entry that calls this on click. */
+        onQuickLog?: () => void;
         /** When true the button renders but is disabled. */
         disabled?: boolean;
         /** Where the popover panel should anchor relative to the button. Default 'bottom'
@@ -31,12 +33,14 @@
     import ChevronUp from '@lucide/svelte/icons/chevron-up';
     import FilePlus from '@lucide/svelte/icons/file-plus';
     import ArrowRight from '@lucide/svelte/icons/arrow-right';
+    import HelpCircle from '@lucide/svelte/icons/circle-help';
 
     let {
         templates,
         resolveTemplateHref,
         scratchHref,
         browseHref,
+        onQuickLog,
         disabled = false,
         anchor = 'bottom',
         class: className,
@@ -47,6 +51,9 @@
     let triggerRef: HTMLButtonElement | null = $state(null);
 
     const hasTemplates = $derived(templates.length > 0);
+    const hasQuickLog = $derived(typeof onQuickLog === 'function');
+    /** Whether the popover should render at all. */
+    const hasMenuContent = $derived(hasTemplates || hasQuickLog);
     const TOP_COUNT = 5;
     const visibleTemplates = $derived(templates.slice(0, TOP_COUNT));
     const browseLabel = $derived(
@@ -59,12 +66,17 @@
 
     function toggle() {
         if (disabled) return;
-        if (!hasTemplates) {
-            // No templates — skip the popover and go straight to scratch.
+        if (!hasMenuContent) {
+            // No templates and no quick-log callback — skip the popover, go straight to scratch.
             window.location.href = scratchHref;
             return;
         }
         open = !open;
+    }
+
+    function handleQuickLog() {
+        close();
+        onQuickLog?.();
     }
 
     function close() {
@@ -122,7 +134,7 @@
     </button>
 
     <!-- Popover panel -->
-    {#if open && hasTemplates}
+    {#if open && hasMenuContent}
         <div
             bind:this={popoverRef}
             role="menu"
@@ -132,30 +144,32 @@
             )}
             style="animation: aem-pop-in 150ms var(--ease-out);"
         >
-            <div class="px-3 py-2 border-b">
-                <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Start from a template
-                </p>
-            </div>
-            <div class="py-1">
-                {#each visibleTemplates as t (t.id)}
-                    <a
-                        href={resolveTemplateHref(t.id)}
-                        role="menuitem"
-                        class="flex items-center gap-3 px-3 py-2.5 hover:bg-muted transition-colors"
-                    >
-                        <span class="text-xl leading-none shrink-0">{t.icon ?? '📝'}</span>
-                        <div class="flex-1 min-w-0">
-                            <div class="font-medium truncate" title={t.name}>{t.name}</div>
-                            <div class="text-xs text-muted-foreground">
-                                {t.usageCount} {t.usageCount === 1 ? 'use' : 'uses'}
+            {#if hasTemplates}
+                <div class="px-3 py-2 border-b">
+                    <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Start from a template
+                    </p>
+                </div>
+                <div class="py-1">
+                    {#each visibleTemplates as t (t.id)}
+                        <a
+                            href={resolveTemplateHref(t.id)}
+                            role="menuitem"
+                            class="flex items-center gap-3 px-3 py-2.5 hover:bg-muted transition-colors"
+                        >
+                            <span class="text-xl leading-none shrink-0">{t.icon ?? '📝'}</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium truncate" title={t.name}>{t.name}</div>
+                                <div class="text-xs text-muted-foreground">
+                                    {t.usageCount} {t.usageCount === 1 ? 'use' : 'uses'}
+                                </div>
                             </div>
-                        </div>
-                        <ArrowRight class="size-4 text-muted-foreground shrink-0" />
-                    </a>
-                {/each}
-            </div>
-            <div class="border-t py-1">
+                            <ArrowRight class="size-4 text-muted-foreground shrink-0" />
+                        </a>
+                    {/each}
+                </div>
+            {/if}
+            <div class={hasTemplates ? 'border-t py-1' : 'py-1'}>
                 <a
                     href={scratchHref}
                     role="menuitem"
@@ -169,6 +183,22 @@
                         <div class="text-xs text-muted-foreground">Blank form</div>
                     </div>
                 </a>
+                {#if hasQuickLog}
+                    <button
+                        type="button"
+                        role="menuitem"
+                        onclick={handleQuickLog}
+                        class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted transition-colors text-left"
+                    >
+                        <span class="flex items-center justify-center size-7 rounded-full bg-amber-100 dark:bg-amber-950/40 shrink-0">
+                            <HelpCircle class="size-4 text-amber-700 dark:text-amber-300" />
+                        </span>
+                        <div class="flex-1">
+                            <div class="font-medium">Quick log unidentified</div>
+                            <div class="text-xs text-muted-foreground">Just amount — fill details later</div>
+                        </div>
+                    </button>
+                {/if}
                 {#if browseLabel}
                     <a
                         href={browseHref}

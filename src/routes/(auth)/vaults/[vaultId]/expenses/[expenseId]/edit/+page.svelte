@@ -145,6 +145,51 @@
 		}
 	}
 
+	// Template prefill — only meaningful for unidentified expenses (the claim flow).
+	// Preserves the user's existing amount + date (from the bank notification);
+	// fills in category/payment/paidBy/fund/tags from the template's defaults.
+	function applyTemplate(templateId: string) {
+		const tpl = data.templates.find((t) => t.id === templateId);
+		if (!tpl) return;
+
+		if (tpl.defaultCategoryName && !$form.categoryName) {
+			$form.categoryName = tpl.defaultCategoryName;
+		}
+		if (tpl.defaultPaymentType && (!$form.paymentType || $form.paymentType === 'other')) {
+			$form.paymentType = tpl.defaultPaymentType;
+		}
+		// Resolve __creator__ to current session user; otherwise honor the literal.
+		if (tpl.defaultPaidBy && $form.paidBy === null) {
+			const sess = pageState.data as { currentSession?: { user?: { id?: string } } };
+			$form.paidBy =
+				tpl.defaultPaidBy === '__creator__'
+					? sess.currentSession?.user?.id ?? null
+					: tpl.defaultPaidBy;
+		}
+		if (tpl.defaultFundId && !$form.fundId) {
+			$form.fundId = tpl.defaultFundId;
+			if (tpl.defaultFundPaymentMode) {
+				const mode = tpl.defaultFundPaymentMode;
+				if (mode === 'paid_by_fund' || mode === 'pending_reimbursement') {
+					$form.fundPaymentMode = mode;
+				}
+			}
+		}
+		if (tpl.defaultNote && !$form.note?.trim()) {
+			$form.note = tpl.defaultNote;
+		}
+		// Tags: server already parsed defaultTagIds into a string[]. Merge with
+		// existing selection — don't overwrite the user's existing tags.
+		if (Array.isArray(tpl.defaultTagIds) && tpl.defaultTagIds.length > 0) {
+			const next = new Set<string>(selectedTagIds);
+			for (const id of tpl.defaultTagIds) {
+				if (typeof id === 'string') next.add(id);
+			}
+			selectedTagIds = Array.from(next);
+		}
+		toast.success(`Prefilled from "${tpl.name}"`);
+	}
+
 	async function handleCreateTag(name: string): Promise<TagOption> {
 		const response = await ofetch('/api/createTag', {
 			method: 'POST',
@@ -240,6 +285,39 @@
 							<div class="flex-1 h-px bg-border"></div>
 						</div>
 					{/snippet}
+
+					<!-- TEMPLATE PREFILL — only for unidentified expenses (claim flow) -->
+					{#if data.isUnidentified && data.templates.length > 0}
+						<div class="rounded-[var(--radius-md)] border border-amber-300/60 dark:border-amber-700/60 bg-amber-50/40 dark:bg-amber-950/20 p-3 space-y-2">
+							<div class="flex items-center justify-between gap-2">
+								<p class="text-xs font-medium text-amber-900 dark:text-amber-200">
+									Apply a template to prefill the rest
+								</p>
+								<span class="text-[10px] text-muted-foreground">Amount + date stay as logged</span>
+							</div>
+							<div class="flex flex-wrap gap-1.5">
+								{#each data.templates.slice(0, 8) as tpl (tpl.id)}
+									<button
+										type="button"
+										onclick={() => applyTemplate(tpl.id)}
+										class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-input bg-background hover:bg-accent text-xs"
+										title="Apply template defaults"
+									>
+										<span class="text-sm leading-none">{tpl.icon ?? '📝'}</span>
+										<span class="font-medium">{tpl.name}</span>
+									</button>
+								{/each}
+								{#if data.templates.length > 8}
+									<a
+										href="/vaults/{data.vaultId}/templates"
+										class="inline-flex items-center px-2.5 py-1 rounded-full border border-dashed border-input text-xs text-muted-foreground hover:text-foreground hover:bg-accent"
+									>
+										+{data.templates.length - 8} more →
+									</a>
+								{/if}
+							</div>
+						</div>
+					{/if}
 
 					<!-- BASICS — amount + description -->
 					<div class="space-y-3">

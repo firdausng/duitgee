@@ -135,6 +135,10 @@ The API follows RPC (Remote Procedure Call) style with CQRS (Command Query Respo
 - `POST /api/createExpenses` - Create up to 20 expenses in one batch
 - `POST /api/updateExpense` - Update an existing expense
 - `POST /api/deleteExpense` - Soft delete an expense
+- `POST /api/createUnidentifiedExpense` - Quick-log a charge from a bank notification (just amount + date + paidBy). Status flips to `unidentified`. Notifies other vault members.
+- `GET /api/findUnidentifiedDuplicates?vaultId&amount&date` - Look for unidentified expenses with the same amount within ±1 day. Used by the new-expense form to prompt for claiming instead of duplicating.
+- `POST /api/claimUnidentifiedExpense` - Fill in details and flip status to `confirmed`. Updates the row in place. Notifies the original creator if it wasn't this user.
+- `GET /api/getUnidentifiedExpenses?vaultId&limit` - Recent unidentified expenses + count + totals (for the dashboard widget).
 - `GET /api/exportExpenses?vaultId=xxx&...` - Stream all expenses as CSV (free; gated by `expense:export`)
 - `POST /api/previewImportExpenses` - Multipart `(vaultId, file)`; parses + validates a CSV without writing. Returns `{ importToken, totalRows, validRows, errors, newTagNames }`
 - `POST /api/confirmImportExpenses` - JSON `{ vaultId, importToken, skipInvalid, rows }` echoed from preview; persists rows in 50-row batches stamped with `importBatchId`
@@ -150,6 +154,11 @@ The API follows RPC (Remote Procedure Call) style with CQRS (Command Query Respo
 - `GET /api/getFundSpendTrend?vaultId=xxx&start&end` - Per-fund spend trend (sparkline data)
 - `GET /api/getTemplateBreakdown?vaultId=xxx&start&end` - Total per expense template; templates without an expenseTemplateId roll up as "No template"
 - `GET /api/getStatisticsInsights?vaultId=xxx&start&end&refresh=false` - AI-generated period insights (Pro). Cached server-side per `(vaultId, periodStart, periodEnd)`; rate-limited 30/vault/month. Returns `{ headline, bullets[{ title, detail, tone }], generatedAt, cached }`
+
+*Notifications API:*
+- `GET /api/getNotifications?vaultId&limit&unreadOnly` - List notifications visible to the current user in this vault (their own + vault-wide rows). Returns `{ items, unreadCount }`.
+- `POST /api/markNotificationRead` - Mark a single notification as read.
+- `POST /api/markAllNotificationsRead` - Mark every unread notification visible to the current user in this vault as read.
 
 *Expense Templates API:*
 - `GET /api/getExpenseTemplates?vaultId=xxx` - Get all expense templates for a vault
@@ -505,6 +514,40 @@ The expenses module supports CSV export and import. Endpoints live in `src/lib/s
 **No duplicate detection on import** — re-importing the same file twice doubles your data. By design: expenses have no natural unique key, and hash-dedup risks silent loss when the dedup is wrong. Surface this clearly in import UIs.
 
 **Storage:** `expenses.importBatchId` (text, nullable) — null on regular expenses, set on imported ones. Indexed by `(vaultId, importBatchId)` for fast undo.
+
+### Unidentified Expenses
+
+Multi-member vaults have a timing problem: User A sees a bank notification before User B (the actual spender) logs the expense. The "unidentified" workflow gives users a third option besides "guess at details" or "wait" — log just amount + date + paidBy, mark it as a placeholder, and reconcile when the real expense lands.
+
+**Storage.** Single column on `expenses`: `status` text NOT NULL DEFAULT `'confirmed'`. Two values: `'confirmed'` (normal) and `'unidentified'` (placeholder). Composite index `idx_expenses_unidentified` on `(vaultId, status, amount)` makes the duplicate-detection lookup a fast point query. Existing rows defaulted to `'confirmed'` on migration.
+
+**Category.** Unidentified expenses use the system category `'Unidentified'` (in `src/lib/configurations/categories.ts`) with a `circle-help` Lucide icon and a muted color. Statistics handlers pass through unknown category names, so this slots into existing breakdown queries without special-casing — they appear under "Unidentified" in the donut and category list.
+
+**Duplicate detection.** When a user submits a single new expense (multi-row batches skip the check), the form posts to `findUnidentifiedDuplicates` first with the candidate amount + date. Match window is **±1 day, any paidBy** — household credit cards may show up under a different name on the bank notification. If matches exist, a modal prompts: "Claim Sarah's RM 50 from Mar 12?" Claim → `claimUnidentifiedExpense` updates the row in place (preserves `id`, `createdAt`, `createdBy`, flips status to `'confirmed'`, fills category/note). Create new → proceeds with normal `createExpenses`. Never auto-merge — magical when right, painful when wrong.
+
+**UI surfaces.**
+- Dashboard widget (`src/lib/components/home/unidentified/`) — only renders when there are unidentified expenses OR the vault has shared members. Shows the 3 newest with member + relative-time, plus a "Quick log" modal (amount + paidBy) for two-tap creation.
+- Inline `Unidentified` badge on rows in the expenses list (`src/routes/(auth)/vaults/[vaultId]/expenses/+page.svelte`) — amber pill with `?` icon.
+- Notification bell in the layout shows unread fan-out notifications.
+
+**Plan tier.** Free for everyone — workflow feature, not advanced/scaled.
+
+### Notifications
+
+Horizontal in-app notifications table, built to support unidentified-expense events first; budgets, anomalies, reimbursement reminders, and recurring-occurrence alerts will reuse the same surface.
+
+**Storage.** `notifications` table: `id`, `vaultId` (cascade), `userId` (nullable — null = vault-wide), `type` (namespaced like `'expense:unidentified_created'`), `title`, `body`, `linkUrl`, `metadata` (text JSON, no schema enforcement), `readAt`, `createdAt`, `createdBy`. Index `idx_notifications_unread` on `(vaultId, userId, readAt)` powers unread-count queries.
+
+**Helpers.** `src/lib/server/utils/notifications.ts`:
+- `notifyVault({ vaultId, type, title, body, ..., excludeUserId })` — fan-out to all active members except the actor.
+- `notifyUser({ vaultId, userId, type, title, body, ... })` — single-user delivery.
+- Both are **best-effort**: failures are logged but never thrown — callers shouldn't roll back the underlying action because notification delivery wobbled.
+
+**Currently emitted events.**
+- `expense:unidentified_created` — fan-out to vault members when someone logs a quick-log charge.
+- `expense:unidentified_claimed` — direct to the original creator when someone else claims their unidentified entry.
+
+**No email/push delivery in v1.** In-app only. Adding channels later means a new `delivery` column + a sender per channel — the storage shape is forward-compatible.
 
 ### Statistics
 

@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/server/db/schema';
-import { statisticsInsights, vaults } from '$lib/server/db/schema';
-import { and, eq, lt, sql } from 'drizzle-orm';
+import { statisticsInsights, vaults, expenses } from '$lib/server/db/schema';
+import { and, eq, isNull, lt, sql } from 'drizzle-orm';
 import { safeParse } from 'valibot';
 import { getUserVaultRole } from '$lib/server/utils/vaultPermissions';
 import { requireVaultEntitlement } from '$lib/server/utils/entitlements';
@@ -69,6 +69,7 @@ The user is staring at a dashboard with a hero number, category donut, member li
 - Use \`monthlyHistory\` and \`categoryHistory\` aggressively. The current period is the LAST entry. Each \`categoryHistory[].monthly\` is aligned 1:1 with \`monthlyHistory[].month\`.
 - \`anomalies\` lists transactions flagged as outliers vs the user's 90-day baseline. If non-empty, surface at least one — use the \`multiple\` field ("4.2x typical"). Don't speculate about the cause.
 - \`topFunds\` and \`topTemplates\` are most useful when one of them dominates or spikes vs others.
+- \`unidentifiedReminder\` is set when there are unidentified expenses pending review. Mention it AT MOST ONCE if material (e.g. count >= 3 or totalAmount is meaningful) — wording like "3 charges totalling ${summary.currency} 320 are still unidentified — claim them to fill in the picture." Skip entirely if null or trivial.
 - Currency: ${summary.currency}. Format amounts like "${summary.currency} 240" — no decimals unless under 10.
 - Each bullet: a short title (under 8 words) and a detail sentence (under 25 words).
 - Tone: "negative" for unfavorable shifts, "positive" for favorable, "neutral" for descriptive.
@@ -298,8 +299,9 @@ export const getStatisticsInsights = async (
         );
     }
 
-    // 3. Pull dashboard payload, 6-month history, anomalies, vault meta — all in parallel.
-    const [dashboard, history, anomalies, vaultRows] = await Promise.all([
+    // 3. Pull dashboard payload, 6-month history, anomalies, vault meta, and
+    //    unidentified count — all in parallel.
+    const [dashboard, history, anomalies, vaultRows, unidentifiedRows] = await Promise.all([
         getStatisticsDashboard(vaultId, session, env, {
             vaultId,
             start,
@@ -323,8 +325,24 @@ export const getStatisticsInsights = async (
             .from(vaults)
             .where(eq(vaults.id, vaultId))
             .limit(1),
+        client
+            .select({
+                count: sql<number>`COUNT(*)`,
+                totalAmount: sql<number>`COALESCE(SUM(${expenses.amount}), 0)`,
+            })
+            .from(expenses)
+            .where(
+                and(
+                    eq(expenses.vaultId, vaultId),
+                    eq(expenses.status, 'unidentified'),
+                    isNull(expenses.deletedAt),
+                ),
+            ),
     ]);
     const currency = vaultRows[0]?.currency ?? 'USD';
+    const unidentified = unidentifiedRows[0]
+        ? { count: unidentifiedRows[0].count, totalAmount: unidentifiedRows[0].totalAmount }
+        : { count: 0, totalAmount: 0 };
 
     const summary = summarizeDashboardForLlm(
         dashboard,
@@ -332,6 +350,7 @@ export const getStatisticsInsights = async (
         currency,
         history,
         anomalies,
+        unidentified,
     );
 
     // 4. Call AI, validate, ground.
