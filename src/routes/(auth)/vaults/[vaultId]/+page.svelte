@@ -9,7 +9,6 @@
     import {Card, CardContent} from "$lib/components/ui/card";
     import {filterSchema} from "./schemas";
     import type {VaultStatistics} from "./types";
-    import VaultHeader from "./VaultHeader.svelte";
     import InviteForm from "./InviteForm.svelte";
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
     import {Toaster} from "$lib/components/ui/sonner";
@@ -339,10 +338,6 @@
         goto(`/vaults/${vaultId}/expenses/new?${qs.toString()}`);
     }
 
-    function handleEditVault() {
-        goto(`/vaults/${vaultId}/edit`);
-    }
-
     function handleEditExpense(expenseId: string) {
         goto(`/vaults/${vaultId}/expenses/${expenseId}/edit`);
     }
@@ -420,24 +415,6 @@
             alert(errorMessage);
         } finally {
             isInviting = false;
-        }
-    }
-
-    async function handleSetDefaultVault() {
-        try {
-            await ofetch('/api/setDefaultVault', {
-                method: 'POST',
-                body: JSON.stringify({vaultId}),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            // Trigger refetch of vault data to update isDefault status
-            vaultRefetchKey++;
-        } catch (error) {
-            console.error('Failed to set default vault:', error);
-            alert('Failed to set default vault. Please try again.');
         }
     }
 
@@ -519,14 +496,8 @@
         </Card>
     {:else}
         <LoadingOverlay show={isLoadingStats || isLoadingExpenses} />
-        <!-- Vault Header -->
-        <VaultHeader
-                vault={currentVault}
-                onSetDefaultVault={handleSetDefaultVault}
-                onToggleInviteForm={toggleInviteForm}
-                onCreateExpense={handleCreateExpense}
-                onEditVault={handleEditVault}
-        />
+        <!-- Vault title, ★ default-star, Edit, Invite, and "Add expense" all live
+             in <DesktopAppBar> (auth layout) now — page jumps straight to content. -->
 
         <!-- Invite User Form -->
         <InviteForm

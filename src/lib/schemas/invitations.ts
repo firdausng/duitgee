@@ -30,3 +30,10 @@ export const declineInvitationSchema = v.object({
 });
 
 export type DeclineInvitation = v.InferOutput<typeof declineInvitationSchema>;
+
+export const revokeInvitationRequestSchema = v.object({
+    invitationId: v.pipe(v.string(), v.minLength(1, 'Invitation ID is required')),
+    vaultId: v.pipe(v.string(), v.minLength(1, 'Vault ID is required')),
+});
+
+export type RevokeInvitationRequest = v.InferOutput<typeof revokeInvitationRequestSchema>;

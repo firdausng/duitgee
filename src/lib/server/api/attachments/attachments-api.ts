@@ -9,10 +9,12 @@ import {
     downloadAttachmentQuerySchema,
     ATTACHMENT_MAX_SIZE_BYTES,
 } from '$lib/schemas/attachments';
+import { scanAttachmentRequestSchema } from '$lib/schemas/scanAttachment';
 import { uploadAttachment } from '$lib/server/api/attachments/uploadAttachmentHandler';
 import { setExpenseAttachments } from '$lib/server/api/attachments/setExpenseAttachmentsHandler';
 import { deleteAttachment } from '$lib/server/api/attachments/deleteAttachmentHandler';
 import { downloadAttachment } from '$lib/server/api/attachments/downloadAttachmentHandler';
+import { scanAttachment } from '$lib/server/api/attachments/scanAttachmentHandler';
 
 const TAG = ['Attachment'];
 const common = { tags: TAG };
@@ -204,6 +206,41 @@ export const attachmentsApi = new Hono<App.Api>()
                     success: false,
                     error: error instanceof Error ? error.message : 'Failed to download attachment',
                 }, 400);
+            }
+        },
+    )
+    /**
+     * Scan an uploaded image attachment and extract structured fields (amount,
+     * merchant, date, suggested category) using Cloudflare Workers AI.
+     * Pro-only via the `attachment:scan` entitlement. Rate-limited per user
+     * (50/day) and deduped per attachment (24h).
+     */
+    .post(
+        '/scanAttachment',
+        describeRoute({
+            ...common,
+            description: 'Run vision AI on an uploaded image attachment to extract receipt data.',
+            responses: successResponse,
+        }),
+        vValidator('json', scanAttachmentRequestSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+            try {
+                const result = await scanAttachment(session, data, c.env);
+                return c.json({ success: true, data: result });
+            } catch (error) {
+                console.error({ message: 'Error scanning attachment', error });
+                const msg = error instanceof Error ? error.message : 'Failed to scan attachment';
+                // 402 = "plan required", 404 = not found, 429 = rate limited, 400 = validation/other
+                const status = msg.toLowerCase().includes('not found')
+                    ? 404
+                    : msg.toLowerCase().includes('limit reached')
+                      ? 429
+                      : msg.toLowerCase().includes('plan')
+                        ? 402
+                        : 400;
+                return c.json({ success: false, error: msg }, status);
             }
         },
     );

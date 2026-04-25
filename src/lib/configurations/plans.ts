@@ -8,7 +8,8 @@ export type Entitlement =
     | 'recurring:create'
     | 'recurring:create_multiple'
     | 'recurring:custom_interval'
-    | 'recurring:auto_generation';
+    | 'recurring:auto_generation'
+    | 'attachment:scan';
 
 export interface Plan {
     id: string;
@@ -41,6 +42,7 @@ export const PLANS: Plan[] = [
             'recurring:create_multiple',
             'recurring:custom_interval',
             'recurring:auto_generation',
+            'attachment:scan',
         ],
     },
 ];

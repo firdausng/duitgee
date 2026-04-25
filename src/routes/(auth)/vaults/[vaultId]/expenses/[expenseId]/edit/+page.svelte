@@ -7,14 +7,17 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { DateTimePicker } from '$lib/components/ui/date-time-picker';
-	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
+	import { Card, CardContent } from '$lib/components/ui/card';
 	import { CategoryPicker } from '$lib/components/ui/category-picker';
 	import { TagPicker, type TagOption } from '$lib/components/ui/tag-picker';
-	import { AttachmentPicker } from '$lib/components/ui/attachment-picker';
+	import { AttachmentPicker, type ScanApplyPayload } from '$lib/components/ui/attachment-picker';
+	import { hasEntitlement } from '$lib/configurations/plans';
+	import { page as pageState } from '$app/state';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { CalculatorInput } from '$lib/components/ui/calculator-input';
 	import { categoryData } from '$lib/configurations/categories';
 	import { paymentTypes } from '$lib/configurations/paymentTypes';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import { ofetch } from 'ofetch';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import { Toaster } from "$lib/components/ui/sonner";
@@ -106,6 +109,35 @@
 		$form.attachmentIds = selectedAttachmentIds;
 	});
 
+	// Plan-gate: receipt scan is Pro-only. Read planId from the auth layout's vault list
+	// (auto-merged into pageState.data) and check the entitlement client-side.
+	// Server enforces the same check on /api/scanAttachment.
+	const currentVaultRow = $derived(
+		((pageState.data as { vaults?: Array<{ vaults: { id: string; planId?: string | null } }> })
+			.vaults ?? []
+		).find((v) => v.vaults?.id === data.vaultId),
+	);
+	const canScan = $derived(
+		hasEntitlement(currentVaultRow?.vaults?.planId ?? 'plan_free', 'attachment:scan'),
+	);
+
+	// Apply AI-extracted fields. Preserve user-entered values — only fill empty fields
+	// (or `0` amount, since 0 means "user hasn't typed yet" in the calculator input).
+	function applyScanResult(scan: ScanApplyPayload) {
+		if (scan.amount !== null && (!$form.amount || $form.amount === 0)) {
+			$form.amount = scan.amount;
+		}
+		if (scan.merchant && !$form.note?.trim()) {
+			$form.note = scan.merchant;
+		}
+		if (scan.datetime && !$form.date) {
+			$form.date = scan.datetime;
+		}
+		if (scan.suggestedCategory && !$form.categoryName) {
+			$form.categoryName = scan.suggestedCategory;
+		}
+	}
+
 	async function handleCreateTag(name: string): Promise<TagOption> {
 		const response = await ofetch('/api/createTag', {
 			method: 'POST',
@@ -175,13 +207,12 @@
 	<title>Edit Expense - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-8 px-4">
-	<!-- Header -->
-	<div class="mb-6">
-
-		<h1 class="text-2xl font-bold">Edit Expense</h1>
-		<p class="text-sm text-muted-foreground mt-1">
-			Update your expense details or delete it
+<div class="container mx-auto py-6 px-4 max-w-2xl">
+	<!-- Mobile-only page title (desktop has DesktopAppBar with vault name) -->
+	<div class="md:hidden mb-4">
+		<h1 class="text-xl font-bold">Edit expense</h1>
+		<p class="text-sm text-muted-foreground mt-0.5">
+			Update or delete this expense.
 		</p>
 	</div>
 
@@ -190,85 +221,101 @@
 		<Spinner />
 	{:else}
 		<Card>
-			<CardHeader>
-				<CardTitle>Expense Details</CardTitle>
-				<CardDescription>
-					Update the expense information
-				</CardDescription>
-			</CardHeader>
-			<CardContent>
+			<CardContent class="pt-6">
 				<form method="POST" use:enhance class="space-y-6">
 					<!-- Hidden fields -->
 					<input type="hidden" name="id" bind:value={$form.id} />
 					<input type="hidden" name="vaultId" bind:value={$form.vaultId} />
 
-					<!-- Amount -->
-					<div class="space-y-2">
-						<Label for="amount">Amount *</Label>
-						<CalculatorInput
-							id="amount"
-							name="amount"
-							bind:value={$form.amount}
-							disabled={$delayed}
-							class={$errors.amount ? 'border-destructive' : ''}
-							error={!!$errors.amount}
-							nextInputId="note"
-						/>
-						{#if $errors.amount}
-							<p class="text-sm text-destructive">{$errors.amount}</p>
-						{/if}
+					{#snippet sectionHeader(label: string)}
+						<div class="flex items-center gap-2 mb-2">
+							<span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</span>
+							<div class="flex-1 h-px bg-border"></div>
+						</div>
+					{/snippet}
+
+					<!-- BASICS — amount + description -->
+					<div class="space-y-3">
+						{@render sectionHeader('Basics')}
+
+						<div class="space-y-2">
+							<Label for="amount">Amount *</Label>
+							<CalculatorInput
+								id="amount"
+								name="amount"
+								bind:value={$form.amount}
+								disabled={$delayed}
+								class={$errors.amount ? 'border-destructive' : ''}
+								error={!!$errors.amount}
+								nextInputId="note"
+							/>
+							{#if $errors.amount}
+								<p class="text-sm text-destructive">{$errors.amount}</p>
+							{/if}
+						</div>
+
+						<div class="space-y-2">
+							<Label for="note">Description</Label>
+							<Textarea
+								id="note"
+								name="note"
+								bind:value={$form.note}
+								disabled={$delayed}
+								placeholder="What was this expense for?"
+								class={$errors.note ? 'border-destructive' : ''}
+								rows={2}
+							/>
+							{#if $errors.note}
+								<p class="text-sm text-destructive">{$errors.note}</p>
+							{/if}
+						</div>
 					</div>
 
-					<!-- Note -->
-					<div class="space-y-2">
-						<Label for="note">Description</Label>
-						<Textarea
-							id="note"
-							name="note"
-							bind:value={$form.note}
+					<!-- CATEGORIZATION — category + tags -->
+					<div class="space-y-3">
+						{@render sectionHeader('Categorization')}
+
+						<CategoryPicker
+							name="categoryName"
+							label="Category"
+							categories={categoryData.categories}
+							categoryGroups={categoryData.categoryGroups}
+							bind:value={$form.categoryName}
 							disabled={$delayed}
-							placeholder="What was this expense for?"
-							class={$errors.note ? 'border-destructive' : ''}
-							rows={2}
+							error={$errors.categoryName}
+							required={true}
 						/>
-						{#if $errors.note}
-							<p class="text-sm text-destructive">{$errors.note}</p>
-						{/if}
+
+						<TagPicker
+							label="Tags"
+							tags={availableTags}
+							bind:value={selectedTagIds}
+							onCreate={handleCreateTag}
+							disabled={$delayed}
+						/>
 					</div>
 
-					<!-- Category -->
-					<CategoryPicker
-						name="categoryName"
-						label="Category"
-						categories={categoryData.categories}
-						categoryGroups={categoryData.categoryGroups}
-						bind:value={$form.categoryName}
-						disabled={$delayed}
-						error={$errors.categoryName}
-						required={true}
-					/>
+					<!-- RECEIPTS — own section so it's prominent -->
+					<div class="space-y-3">
+						{@render sectionHeader('Receipts')}
 
-					<!-- Tags -->
-					<TagPicker
-						label="Tags"
-						tags={availableTags}
-						bind:value={selectedTagIds}
-						onCreate={handleCreateTag}
-						disabled={$delayed}
-					/>
+						<AttachmentPicker
+							vaultId={data.vaultId}
+							label=""
+							initial={data.expense.attachments ?? []}
+							bind:value={selectedAttachmentIds}
+							disabled={$delayed}
+							{canScan}
+							onScanApply={applyScanResult}
+						/>
+					</div>
 
-					<!-- Attachments / Receipts -->
-					<AttachmentPicker
-						vaultId={data.vaultId}
-						label="Receipts"
-						initial={data.expense.attachments ?? []}
-						bind:value={selectedAttachmentIds}
-						disabled={$delayed}
-					/>
+					<!-- PAYMENT — payment type + paid by -->
+					<div class="space-y-3">
+						{@render sectionHeader('Payment')}
 
-					<!-- Payment Type -->
 					<div class="space-y-2">
-						<Label>Payment Type *</Label>
+						<Label>Payment type *</Label>
 						<input type="hidden" name="paymentType" value={$form.paymentType} />
 						<div class="grid grid-cols-4 gap-2">
 							{#each paymentTypes as pt}
@@ -294,7 +341,7 @@
 
 					<!-- Paid By -->
 					<div class="space-y-2">
-						<Label>Paid By</Label>
+						<Label>Paid by</Label>
 						<input type="hidden" name="paidBy" value={$form.paidBy ?? ''} />
 						<div class="grid grid-cols-3 gap-1">
 							<button
@@ -326,24 +373,31 @@
 							<p class="text-sm text-destructive">{$errors.paidBy}</p>
 						{/if}
 					</div>
-
-					<!-- Date and Time -->
-					<div class="space-y-2">
-						<Label for="date">Date & Time *</Label>
-						<DateTimePicker
-							id="date"
-							name="date"
-							bind:value={$form.date}
-							disabled={$delayed}
-							class={$errors.date ? 'border border-destructive rounded-md' : ''}
-						/>
-						{#if $errors.date}
-							<p class="text-sm text-destructive">{$errors.date}</p>
-						{/if}
 					</div>
 
-					<!-- Fund -->
+					<!-- DATE -->
+					<div class="space-y-3">
+						{@render sectionHeader('Date')}
+
+						<div class="space-y-2">
+							<Label for="date">Date & time *</Label>
+							<DateTimePicker
+								id="date"
+								name="date"
+								bind:value={$form.date}
+								disabled={$delayed}
+								class={$errors.date ? 'border border-destructive rounded-md' : ''}
+							/>
+							{#if $errors.date}
+								<p class="text-sm text-destructive">{$errors.date}</p>
+							{/if}
+						</div>
+					</div>
+
+					<!-- FUND — only renders if vault has any funds -->
 					{#if data.funds && data.funds.length > 0}
+					<div class="space-y-3">
+						{@render sectionHeader('Fund')}
 						<div class="space-y-2">
 							<Label>Fund (optional)</Label>
 							<input type="hidden" name="fundId" value={$form.fundId ?? ''} />
@@ -399,21 +453,22 @@
 												? 'border-primary bg-primary text-primary-foreground'
 												: 'border-input'}"
 									>
-										Pending Reimb.
+										Pending reimb.
 									</button>
 								</div>
 							</div>
 						{/if}
+					</div>
 					{/if}
 
-					<!-- Actions -->
-					<div class="space-y-3 pt-4">
+					<!-- ACTIONS -->
+					<div class="space-y-3 pt-4 border-t">
 						<div class="flex gap-3">
 							<Button type="submit" disabled={$delayed} class="flex-1">
 								{#if $delayed}
 									Updating...
 								{:else}
-									Update Expense
+									Update expense
 								{/if}
 							</Button>
 							<Button type="button" variant="outline" onclick={handleBack} disabled={$delayed}>
@@ -421,11 +476,10 @@
 							</Button>
 						</div>
 
-						<!-- Delete Section -->
 						{#if showDeleteConfirm}
-							<div class="border border-destructive rounded-lg p-4 space-y-3">
+							<div class="border border-destructive rounded-md p-3 space-y-3 bg-destructive/5">
 								<p class="text-sm text-destructive font-medium">
-									Are you sure you want to delete this expense? This action cannot be undone.
+									Delete this expense? This cannot be undone.
 								</p>
 								<div class="flex gap-2">
 									<Button
@@ -435,10 +489,11 @@
 										disabled={isDeleting}
 										class="flex-1"
 									>
+										<Trash2 class="size-4" />
 										{#if isDeleting}
 											Deleting...
 										{:else}
-											Confirm Delete
+											Confirm delete
 										{/if}
 									</Button>
 									<Button
@@ -456,9 +511,10 @@
 								type="button"
 								variant="outline"
 								onclick={handleDelete}
-								class="w-full text-destructive hover:text-destructive"
+								class="w-full text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
 							>
-								Delete Expense
+								<Trash2 class="size-4" />
+								Delete expense
 							</Button>
 						{/if}
 					</div>

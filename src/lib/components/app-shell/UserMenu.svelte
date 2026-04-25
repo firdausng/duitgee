@@ -1,6 +1,10 @@
 <script lang="ts" module>
     export type UserMenuProps = {
-        user: { name?: string | null; email?: string | null } | null;
+        user: {
+            name?: string | null;
+            email?: string | null;
+            image?: string | null;
+        } | null;
         onSettings: () => void;
         onLogout: () => void;
     };
@@ -21,6 +25,17 @@
     const initial = $derived(
         (user?.name?.charAt(0) || user?.email?.charAt(0) || 'U').toUpperCase(),
     );
+
+    // The avatar URL might 404 (provider revoked, account deleted, etc). Track
+    // load failure so we fall back to the initial cleanly without flashing a broken-image icon.
+    let imageFailed = $state(false);
+    $effect(() => {
+        // Reset whenever the URL changes (e.g. after profile update).
+        user?.image;
+        imageFailed = false;
+    });
+
+    const showImage = $derived(!!user?.image && !imageFailed);
 </script>
 
 <DropdownMenu.Root>
@@ -32,11 +47,21 @@
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         )}
     >
-        <div
-            class="size-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-semibold shrink-0"
-        >
-            {initial}
-        </div>
+        {#if showImage}
+            <img
+                src={user!.image as string}
+                alt=""
+                referrerpolicy="no-referrer"
+                onerror={() => (imageFailed = true)}
+                class="size-7 rounded-full object-cover shrink-0 bg-muted"
+            />
+        {:else}
+            <div
+                class="size-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-semibold shrink-0"
+            >
+                {initial}
+            </div>
+        {/if}
         <div class="flex-1 min-w-0">
             <p class="text-sm font-medium truncate">{user?.name || 'User'}</p>
             {#if user?.email}

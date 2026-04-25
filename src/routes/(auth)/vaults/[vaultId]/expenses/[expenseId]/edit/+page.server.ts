@@ -57,6 +57,9 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
 	}));
 
 	const expenseTagIds: string[] = (expenseData.tags ?? []).map((t: { id: string }) => t.id);
+	const expenseAttachmentIds: string[] = (expenseData.attachments ?? []).map(
+		(a: { id: string }) => a.id,
+	);
 
 	// Initialize form with expense data
 	// Note: date conversion to local time must happen on the client side
@@ -73,6 +76,7 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
 			fundId: expenseData.fundId ?? null,
 			fundPaymentMode: expenseData.fundPaymentMode ?? null,
 			tagIds: expenseTagIds,
+			attachmentIds: expenseAttachmentIds,
 		},
 		valibot(updateExpenseRequestSchema)
 	);

@@ -12,13 +12,26 @@ export const load: LayoutServerLoad = async ({ locals, url, platform, cookies })
     // Fetch user's vaults for the navigation chrome. Direct handler call —
     // this layout runs on every authenticated page so a self-fetch here
     // would re-pay the auth middleware + JSON round-trip on every navigation.
-    let vaults: Array<{ vaults: { id: string; name: string; icon: string | null; color: string | null } }> = [];
+    type VaultRow = {
+        vaults: {
+            id: string;
+            name: string;
+            icon: string | null;
+            iconType?: string | null;
+            color: string | null;
+            planId?: string | null;
+        };
+        vaultMembers?: {
+            isDefault?: boolean;
+        } | null;
+    };
+    let vaults: VaultRow[] = [];
     if (locals.currentSession) {
         try {
             // Handler returns { vaults: [...] }; the API endpoint unwraps to data.vaults,
             // and we mirror that unwrap here.
             const result = await getVaults(locals.currentSession, platform.env);
-            vaults = (result.vaults ?? []) as typeof vaults;
+            vaults = (result.vaults ?? []) as VaultRow[];
         } catch (error) {
             console.error('Failed to fetch vaults for navigation:', error);
         }

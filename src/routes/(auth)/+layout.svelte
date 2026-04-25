@@ -1,9 +1,10 @@
 <script lang="ts">
     import { authClientBase } from '$lib/client/auth-client-base';
-    import { goto } from '$app/navigation';
+    import { goto, invalidateAll } from '$app/navigation';
     import { page } from '$app/state';
     import { ofetch } from 'ofetch';
     import { resource } from 'runed';
+    import { toast } from 'svelte-sonner';
 
     import {
         Sidebar,
@@ -11,6 +12,8 @@
         MobileBottomBar,
         type VaultSwitcherVault,
     } from '$lib/components/app-shell';
+    import DesktopAppBar, { type DesktopAppBarVault } from '$lib/components/app-shell/DesktopAppBar.svelte';
+    import { AddExpenseMenu, type AddExpenseMenuTemplate } from '$lib/components/ui/add-expense-menu';
     import type { ExpandableFabTemplate } from '$lib/components/ui/expandable-fab';
 
     import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
@@ -37,6 +40,38 @@
                   .find((v) => v.id === chipVaultId) ?? null
             : null,
     );
+
+    // Richer projection for the desktop header — adds isDefault for the star toggle
+    // and iconType so the IconRenderer can pick the right glyph.
+    const appBarVault = $derived<DesktopAppBarVault | null>(
+        chipVaultId
+            ? data.vaults
+                  .filter((v) => v.vaults.id === chipVaultId)
+                  .map((v) => ({
+                      id: v.vaults.id,
+                      name: v.vaults.name,
+                      icon: v.vaults.icon,
+                      iconType: (v.vaults as { iconType?: string | null }).iconType ?? null,
+                      isDefault: v.vaultMembers?.isDefault ?? false,
+                  }))[0] ?? null
+            : null,
+    );
+
+    async function handleSetDefaultVault() {
+        if (!appBarVault) return;
+        try {
+            await ofetch('/api/setDefaultVault', {
+                method: 'POST',
+                body: { vaultId: appBarVault.id },
+                headers: { 'Content-Type': 'application/json' },
+            });
+            // Refresh the layout's vaults data so the star reflects the new state.
+            await invalidateAll();
+        } catch (error) {
+            console.error('Failed to set default vault:', error);
+            toast.error('Could not set default vault');
+        }
+    }
 
     const vaultsForSwitcher = $derived<VaultSwitcherVault[]>(
         data.vaults.map((v) => ({
@@ -165,6 +200,20 @@
                 {currentPath}
                 {searchParams}
             />
+
+            <DesktopAppBar vault={appBarVault} onSetDefault={handleSetDefaultVault}>
+                {#snippet trailing()}
+                    {#if quickAdd}
+                        <AddExpenseMenu
+                            templates={quickAdd.templates as AddExpenseMenuTemplate[]}
+                            resolveTemplateHref={quickAdd.resolveTemplateHref}
+                            scratchHref={quickAdd.scratchHref}
+                            browseHref={quickAdd.browseHref}
+                            anchor="bottom"
+                        />
+                    {/if}
+                {/snippet}
+            </DesktopAppBar>
 
             <main class="flex-1 overflow-x-hidden bg-background pb-20 md:pb-0">
                 {@render children?.()}

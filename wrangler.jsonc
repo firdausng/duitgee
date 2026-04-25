@@ -54,6 +54,9 @@
       "bucket_name": "duitgee-attachments-dev"
     }
   ],
+  "ai": {
+    "binding": "AI"
+  },
   "vars": {
     "ADMIN_EMAILS": "mail4frenz@gmail.com",
     "BASE_PATH": "http://localhost:5205",
@@ -124,6 +127,9 @@
           "id": "37ba36f23a9e4149a41dc45c20ad98b0"
         }
       ],
+      "ai": {
+        "binding": "AI"
+      },
       "r2_buckets": [
         {
           "binding": "ATTACHMENTS_BUCKET",

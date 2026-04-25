@@ -2,12 +2,14 @@ import {Hono} from 'hono';
 import * as v from "valibot";
 import {describeRoute, resolver} from "hono-openapi";
 import {vValidator} from "@hono/valibot-validator";
-import {createInvitationSchema, acceptInvitationSchema, declineInvitationSchema} from "$lib/schemas/invitations";
+import {createInvitationSchema, acceptInvitationSchema, declineInvitationSchema, revokeInvitationRequestSchema} from "$lib/schemas/invitations";
 import {inviteUserToVault} from "$lib/server/api/invitations/inviteUserToVaultHandler";
 import {acceptVaultInvitation} from "$lib/server/api/invitations/AcceptInvitationToVaultHandler";
 import {getPendingInvitations} from "$lib/server/api/invitations/getPendingInvitationsHandler";
 import {getSentInvitations} from "$lib/server/api/invitations/getSentInvitationsHandler";
+import {getVaultPendingInvitations} from "$lib/server/api/invitations/getVaultPendingInvitationsHandler";
 import {declineVaultInvitation} from "$lib/server/api/invitations/declineInvitationHandler";
+import {revokeInvitation} from "$lib/server/api/invitations/revokeInvitationHandler";
 
 const INVITATION_TAG = ['Invitation'];
 const commonInvitationConfig = {
@@ -93,6 +95,71 @@ export const invitationsApi = new Hono<App.Api>()
                     success: false,
                     error: 'Failed to fetch sent invitations'
                 }, 500);
+            }
+        })
+    // Query: Get pending invitations for a single vault (GET)
+    .get(
+        '/getVaultPendingInvitations',
+        describeRoute({
+            ...commonInvitationConfig,
+            description: 'Get pending invitations for a specific vault, hydrated with invitee email/name',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.object({ success: v.boolean(), data: v.array(v.any()) }))
+                        },
+                    },
+                },
+            },
+        }),
+        vValidator('query', v.object({ vaultId: v.pipe(v.string(), v.minLength(1)) })),
+        async (c) => {
+            const session = c.get('currentSession');
+            const { vaultId } = c.req.valid('query');
+            try {
+                const invitations = await getVaultPendingInvitations(session, vaultId, c.env);
+                return c.json({ success: true, data: invitations });
+            } catch (error) {
+                console.error({ message: 'Error fetching vault pending invitations', error });
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to fetch pending invitations',
+                }, 400);
+            }
+        })
+    // Command: Revoke a pending invitation (POST)
+    .post(
+        '/revokeInvitation',
+        describeRoute({
+            ...commonInvitationConfig,
+            description: 'Cancel a pending invitation. Sets status=revoked and removes the pending member row.',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.object({ success: v.boolean(), data: v.any() }))
+                        },
+                    },
+                },
+            },
+        }),
+        vValidator('json', revokeInvitationRequestSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+            try {
+                const result = await revokeInvitation(session, data, c.env);
+                return c.json({ success: true, data: result });
+            } catch (error) {
+                console.error({ message: 'Error revoking invitation', error });
+                const status = error instanceof Error && error.message.toLowerCase().includes('not found') ? 404 : 400;
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to revoke invitation',
+                }, status);
             }
         })
     // Command: Create invitation (POST)

@@ -1,7 +1,9 @@
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
 import {vaults, vaultMembers} from "$lib/server/db/schema";
-import {and, eq, isNull } from "drizzle-orm";
+import * as authSchema from "$lib/server/db/better-auth-schema";
+import { user as authUser } from "$lib/server/db/better-auth-schema";
+import {and, eq, inArray, isNull } from "drizzle-orm";
 
 export const getVault = async (
     authSession: App.AuthSession,
@@ -44,14 +46,37 @@ export const getVault = async (
     const currentMembership = userMembership.vaultMembers;
 
     // Extract all active members
-    const members = results
+    const baseMembers = results
         .filter(r => r.vaultMembers && r.vaultMembers.status === 'active')
         .map(r => ({
             userId: r.vaultMembers!.userId,
             displayName: r.vaultMembers!.displayName || r.vaultMembers!.userId,
             role: r.vaultMembers!.role,
-            joinedAt: r.vaultMembers!.joinedAt
+            joinedAt: r.vaultMembers!.joinedAt,
         }));
+
+    // Hydrate avatar URLs from the auth DB. Vault member counts are typically
+    // small (<20), so a single IN(...) query is fine. If we ever scale members
+    // past ~80, switch to chunking like getExpensesHandler does.
+    const memberImages = new Map<string, string | null>();
+    if (baseMembers.length > 0) {
+        try {
+            const authClient = drizzle(env.AUTH_DB, { schema: authSchema });
+            const rows = await authClient
+                .select({ id: authUser.id, image: authUser.image })
+                .from(authUser)
+                .where(inArray(authUser.id, baseMembers.map((m) => m.userId)));
+            for (const row of rows) memberImages.set(row.id, row.image ?? null);
+        } catch (err) {
+            // Avatar lookup is non-critical — fall back to initial-letter rendering.
+            console.error('Failed to fetch member avatars:', err);
+        }
+    }
+
+    const members = baseMembers.map((m) => ({
+        ...m,
+        image: memberImages.get(m.userId) ?? null,
+    }));
 
     return {
         vaults: vaultData,

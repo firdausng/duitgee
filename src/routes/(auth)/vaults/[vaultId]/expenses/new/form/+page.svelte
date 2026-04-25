@@ -10,6 +10,8 @@
 	import { ExpenseRow } from '$lib/components/ui/expense-row';
 	import type { ExpenseRowData } from '$lib/components/ui/expense-row/expense-row.svelte';
 	import { TagPicker, type TagOption } from '$lib/components/ui/tag-picker';
+	import { hasEntitlement } from '$lib/configurations/plans';
+	import { page as pageState } from '$app/state';
 	import { paymentTypes } from '$lib/configurations/paymentTypes';
 	import { categoryData } from '$lib/configurations/categories';
 	import { Toaster } from '$lib/components/ui/sonner';
@@ -42,6 +44,16 @@
 	$effect(() => {
 		$form.tagIds = sharedTagIds;
 	});
+
+	// Plan-gate: receipt scan is Pro-only. planId comes from the auth layout's vault list.
+	const currentVaultRow = $derived(
+		((pageState.data as { vaults?: Array<{ vaults: { id: string; planId?: string | null } }> })
+			.vaults ?? []
+		).find((v) => v.vaults?.id === data.vaultId),
+	);
+	const canScan = $derived(
+		hasEntitlement(currentVaultRow?.vaults?.planId ?? 'plan_free', 'attachment:scan'),
+	);
 
 
 	async function handleCreateTag(name: string): Promise<TagOption> {
@@ -302,6 +314,7 @@
 					funds={data.funds}
 					{paymentTypes}
 					allowedCategoryNames={data.template?.categoryNames ?? undefined}
+					{canScan}
 					onremove={() => removeRow(row.id)}
 					onduplicate={() => duplicateRow(row.id)}
 					canDuplicate={rows.length < MAX_ROWS}

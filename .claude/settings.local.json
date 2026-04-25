@@ -62,7 +62,11 @@
       "Bash(grep -E \"^d:\\\\\\\\\\\\\\\\.*\\\\.ts\")",
       "Bash(git stash *)",
       "Bash(grep -n \"TagPicker$\\\\|<TagPicker\" \"D:/projects/duitgee-app/src/routes/\\(auth\\)/vaults/[vaultId]/expenses/[expenseId]/edit/+page.svelte\")",
-      "Bash(grep -n \"</div>\\\\s*$\\\\|{/each}\" \"src/routes/\\(auth\\)/vaults/[vaultId]/expenses/+page.svelte\")"
+      "Bash(grep -n \"</div>\\\\s*$\\\\|{/each}\" \"src/routes/\\(auth\\)/vaults/[vaultId]/expenses/+page.svelte\")",
+      "Bash(grep -B1 -A3 \"vault.*\\\\[vaultId\\\\]\\\\\\\\\\\\\\\\.*page.svelte\\\\|\\\\\\(auth\\\\\\).*\\\\\\\\\\\\+layout\\\\.svelte\\\\|DesktopAppBar\")",
+      "Bash(grep -n \"^</div>$\\\\|^</style>$\\\\|^<style\" \"src/lib/components/ui/attachment-picker/attachment-picker.svelte\")",
+      "Bash(grep -n \"AttachmentPicker$\\\\|<AttachmentPicker\" \"src/lib/components/ui/expense-row/expense-row.svelte\")",
+      "Bash(grep -E \"edit.\\\\\\\\\\\\+page.svelte|new.form.\\\\\\\\\\\\+page.svelte|attachment-picker|expense-row\")"
     ]
   }
 }

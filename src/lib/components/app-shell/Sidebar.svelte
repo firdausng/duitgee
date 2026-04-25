@@ -12,7 +12,7 @@
         currentPath: string;
         searchParams: string;
         badges?: SidebarBadges;
-        user: { name?: string | null; email?: string | null } | null;
+        user: { name?: string | null; email?: string | null; image?: string | null } | null;
         onLogout: () => void;
     };
 </script>

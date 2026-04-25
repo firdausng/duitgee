@@ -5,7 +5,7 @@
 	import { DateTimePicker } from '$lib/components/ui/date-time-picker';
 	import { CategoryPicker } from '$lib/components/ui/category-picker';
 	import { IconRenderer } from '$lib/components/ui/icon-renderer';
-	import { AttachmentPicker } from '$lib/components/ui/attachment-picker';
+	import { AttachmentPicker, type ScanApplyPayload } from '$lib/components/ui/attachment-picker';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { CalculatorInput } from '$lib/components/ui/calculator-input';
 	import { cn } from '$lib/utils';
@@ -68,6 +68,8 @@
 		allowedCategoryNames?: string[];
 		/** Vault scope — required by the AttachmentPicker for upload/delete API calls. */
 		vaultId: string;
+		/** Pro-plan flag — enables the Scan button on receipt chips. */
+		canScan?: boolean;
 		onremove: () => void;
 		onduplicate: () => void;
 	}
@@ -85,9 +87,27 @@
 		paymentTypes,
 		allowedCategoryNames,
 		vaultId,
+		canScan = false,
 		onremove,
 		onduplicate,
 	}: ExpenseRowProps = $props();
+
+	// Apply AI-extracted fields to this row. Preserve existing user input —
+	// only fill empty fields. Mirrors the edit-page behavior.
+	function handleScanApply(scan: ScanApplyPayload) {
+		if (scan.amount !== null && (!row.amount || row.amount === 0)) {
+			row.amount = scan.amount;
+		}
+		if (scan.merchant && !row.note?.trim()) {
+			row.note = scan.merchant;
+		}
+		if (scan.datetime && !row.date) {
+			row.date = scan.datetime;
+		}
+		if (scan.suggestedCategory && !row.categoryName) {
+			row.categoryName = scan.suggestedCategory;
+		}
+	}
 
 	// Local mirror of the row's attachment IDs so AttachmentPicker can bind into
 	// it. Synced back into row.attachmentIds via $effect.
@@ -231,6 +251,8 @@
 		bind:value={rowAttachmentIds}
 		{disabled}
 		maxFiles={5}
+		{canScan}
+		onScanApply={handleScanApply}
 	/>
 
 	<!-- Expand toggle for per-row overrides -->
