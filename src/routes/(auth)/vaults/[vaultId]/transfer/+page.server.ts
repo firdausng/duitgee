@@ -1,8 +1,14 @@
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { transferFundsSchema } from '$lib/schemas/funds';
+import { error } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+import { getFunds } from '$lib/server/api/funds/getFundsHandler';
 
-export const load = async ({ params, url, fetch }) => {
+export const load: PageServerLoad = async ({ params, url, locals, platform }) => {
+    if (platform === undefined) throw new Error('No platform');
+    if (!locals.currentUser) throw error(401, 'Unauthorized');
+
     const vaultId = params.vaultId;
     const fromFundId = url.searchParams.get('fromFundId') ?? '';
 
@@ -17,20 +23,14 @@ export const load = async ({ params, url, fetch }) => {
         })
     );
 
-    let funds: Array<{ id: string; name: string; balance: number; status: string }> = [];
-    try {
-        const response = await fetch(`/api/getFunds?vaultId=${vaultId}`);
-        if (response.ok) {
-            const result = await response.json();
-            if (result.success) {
-                funds = (result.data ?? [])
-                    .map((row: any) => row.fund)
-                    .filter((f: any) => f.status === 'active');
-            }
-        }
-    } catch {
-        // will show empty list
-    }
+    const fundRows = await getFunds(vaultId, locals.currentSession, platform.env).catch((err) => {
+        console.error('Failed to load funds:', err);
+        return [];
+    });
+
+    const funds: Array<{ id: string; name: string; balance: number; status: string }> = (fundRows ?? [])
+        .map((row: any) => row.fund)
+        .filter((f: any) => f.status === 'active');
 
     return { form, vaultId, funds };
 };

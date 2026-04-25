@@ -1,44 +1,41 @@
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
-import {updateVaultRequestSchema} from "$lib/schemas/vaults";
+import { updateVaultRequestSchema } from "$lib/schemas/vaults";
+import { error } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+import { getVault } from '$lib/server/api/vaults/getVaultHandler';
 
-export const load = async ({ params, fetch }) => {
+export const load: PageServerLoad = async ({ params, locals, platform }) => {
+	if (platform === undefined) throw new Error('No platform');
+	if (!locals.currentUser) throw error(401, 'Unauthorized');
+
 	const vaultId = params.vaultId;
 
-    let vaultData;
-    try {
-        const response = await fetch(`/api/getVault?vaultId=${vaultId}`);
-        if (response.ok) {
-            const result = await response.json();
-            if (result.success && result.data) {
-                vaultData = result.data;
-            }
-        }
-    } catch (err) {
-        console.error({
-            message: 'Failed to fetch vault',
-            err
-        });
-    }
+	const vaultData = await getVault(locals.currentSession, vaultId, platform.env).catch((err) => {
+		console.error({ message: 'Failed to load vault', err });
+		return null;
+	});
 
-    const form = await superValidate(
-        {
-            id: vaultData.vaults.id,
-            name: vaultData.vaults.name,
-            description: vaultData.vaults.description,
-            color: vaultData.vaults.color,
-            icon: vaultData.vaults.icon,
-            iconType: vaultData.vaults.iconType,
-            isDefault: vaultData.vaults.isDefault,
-            locale: vaultData.vaults.locale || 'en-US',
-            currency: vaultData.vaults.currency || 'USD',
-        },
-        valibot(updateVaultRequestSchema)
-    );
+	if (!vaultData) throw error(404, 'Vault not found');
+
+	const form = await superValidate(
+		{
+			id: vaultData.vaults.id,
+			name: vaultData.vaults.name,
+			description: vaultData.vaults.description,
+			color: vaultData.vaults.color,
+			icon: vaultData.vaults.icon,
+			iconType: vaultData.vaults.iconType,
+			isDefault: vaultData.vaults.isDefault,
+			locale: vaultData.vaults.locale || 'en-US',
+			currency: vaultData.vaults.currency || 'USD',
+		},
+		valibot(updateVaultRequestSchema)
+	);
 
 	return {
 		form,
 		vaultId,
-        vault: vaultData
+		vault: vaultData,
 	};
 };

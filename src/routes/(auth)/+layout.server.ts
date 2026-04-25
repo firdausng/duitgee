@@ -1,25 +1,27 @@
 import type { LayoutServerLoad } from './$types';
+import { getVaults } from '$lib/server/api/vaults/getVaultsHandler';
 
 const LAST_VAULT_COOKIE = 'lastVaultId';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 90; // 90 days
 
-export const load: LayoutServerLoad = async ({ locals, url, platform, fetch, cookies }) => {
+export const load: LayoutServerLoad = async ({ locals, url, platform, cookies }) => {
     if (platform === undefined) {
         throw new Error('No platform');
     }
 
-    // Fetch user's vaults for the navigation chrome.
+    // Fetch user's vaults for the navigation chrome. Direct handler call —
+    // this layout runs on every authenticated page so a self-fetch here
+    // would re-pay the auth middleware + JSON round-trip on every navigation.
     let vaults: Array<{ vaults: { id: string; name: string; icon: string | null; color: string | null } }> = [];
-    try {
-        const response = await fetch('/api/getVaults');
-        if (response.ok) {
-            const result = await response.json() as { success: boolean; data?: typeof vaults };
-            if (result.success) {
-                vaults = result.data || [];
-            }
+    if (locals.currentSession) {
+        try {
+            // Handler returns { vaults: [...] }; the API endpoint unwraps to data.vaults,
+            // and we mirror that unwrap here.
+            const result = await getVaults(locals.currentSession, platform.env);
+            vaults = (result.vaults ?? []) as typeof vaults;
+        } catch (error) {
+            console.error('Failed to fetch vaults for navigation:', error);
         }
-    } catch (error) {
-        console.error('Failed to fetch vaults for navigation:', error);
     }
 
     // Determine the active vault from the URL, falling back to the last-visited

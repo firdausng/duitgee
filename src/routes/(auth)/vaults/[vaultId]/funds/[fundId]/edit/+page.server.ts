@@ -2,9 +2,18 @@ import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { updateFundSchema } from '$lib/schemas/funds';
 import type { PolicyLike } from '$lib/utils/fund-summary';
+import { error } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+import { getFund } from '$lib/server/api/funds/getFundHandler';
+import { getVault } from '$lib/server/api/vaults/getVaultHandler';
 
-export const load = async ({ params, fetch }) => {
+export const load: PageServerLoad = async ({ params, locals, platform }) => {
+    if (platform === undefined) throw new Error('No platform');
+    if (!locals.currentUser) throw error(401, 'Unauthorized');
+
     const { vaultId, fundId } = params;
+    const session = locals.currentSession;
+    const env = platform.env;
 
     let fundName = '';
     let fundDescription = '';
@@ -31,51 +40,46 @@ export const load = async ({ params, fetch }) => {
     let locale = 'en-US';
     let currency = 'USD';
 
-    try {
-        const response = await fetch(`/api/getFund?vaultId=${vaultId}&id=${fundId}`);
-        if (response.ok) {
-            const result = (await response.json()) as { success: boolean; data: any };
-            if (result.success && result.data) {
-                fundName = result.data.fund.name || '';
-                fundDescription = result.data.fund.description || '';
-                fundColor = result.data.fund.color || '';
-                fundIcon = result.data.fund.icon || '';
-                fundIconType = result.data.fund.iconType || '';
-                carryOverBalance = result.data.policy?.carryOverBalance === 1;
-                carryOverFundId = result.data.policy?.carryOverFundId || '';
-                replenishmentType = result.data.policy?.replenishmentType || 'manual';
+    const [fundData, vaultResult] = await Promise.all([
+        getFund(vaultId, fundId, session, env).catch((err) => {
+            console.error('Failed to load fund:', err);
+            return null;
+        }),
+        getVault(session, vaultId, env).catch((err) => {
+            console.error('Failed to load vault:', err);
+            return null;
+        }),
+    ]);
 
-                fundContext = {
-                    balance: result.data.fund.balance ?? 0,
-                    status: result.data.fund.status ?? 'active',
-                    color: result.data.fund.color ?? null,
-                    icon: result.data.fund.icon ?? null,
-                };
-                activeCycle = result.data.activeCycle
-                    ? {
-                        periodStart: result.data.activeCycle.periodStart,
-                        periodEnd: result.data.activeCycle.periodEnd,
-                    }
-                    : null;
-                policy = result.data.policy ?? null;
-                carryOverFundName = result.data.carryOverFundName ?? null;
+    if (fundData) {
+        fundName = fundData.fund.name || '';
+        fundDescription = fundData.fund.description || '';
+        fundColor = fundData.fund.color || '';
+        fundIcon = fundData.fund.icon || '';
+        fundIconType = fundData.fund.iconType || '';
+        carryOverBalance = (fundData as any).policy?.carryOverBalance === 1;
+        carryOverFundId = (fundData as any).policy?.carryOverFundId || '';
+        replenishmentType = (fundData as any).policy?.replenishmentType || 'manual';
+
+        fundContext = {
+            balance: fundData.fund.balance ?? 0,
+            status: fundData.fund.status ?? 'active',
+            color: fundData.fund.color ?? null,
+            icon: fundData.fund.icon ?? null,
+        };
+        activeCycle = (fundData as any).activeCycle
+            ? {
+                periodStart: (fundData as any).activeCycle.periodStart,
+                periodEnd: (fundData as any).activeCycle.periodEnd,
             }
-        }
-    } catch {
-        // will show empty form
+            : null;
+        policy = (fundData as any).policy ?? null;
+        carryOverFundName = (fundData as any).carryOverFundName ?? null;
     }
 
-    try {
-        const vr = await fetch(`/api/getVault?vaultId=${vaultId}`);
-        if (vr.ok) {
-            const vjson = (await vr.json()) as { success: boolean; data: any };
-            if (vjson.success && vjson.data?.vaults) {
-                locale = vjson.data.vaults.locale || 'en-US';
-                currency = vjson.data.vaults.currency || 'USD';
-            }
-        }
-    } catch {
-        // fall back to defaults
+    if (vaultResult?.vaults) {
+        locale = vaultResult.vaults.locale || 'en-US';
+        currency = vaultResult.vaults.currency || 'USD';
     }
 
     const form = await superValidate(

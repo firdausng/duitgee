@@ -1,24 +1,23 @@
 import type { PageServerLoad } from './$types';
+import { error } from '@sveltejs/kit';
+import { getVault } from '$lib/server/api/vaults/getVaultHandler';
 
-export const load: PageServerLoad = async ({ params, fetch }) => {
+export const load: PageServerLoad = async ({ params, locals, platform }) => {
+	if (platform === undefined) throw new Error('No platform');
+	if (!locals.currentUser) throw error(401, 'Unauthorized');
+
 	const { vaultId } = params;
 
-	// Fetch vault data for locale and currency
 	let vault = null;
 	try {
-		const response = await fetch(`/api/getVault?vaultId=${vaultId}`);
-		if (response.ok) {
-			const result = await response.json();
-			if (result.success && result.data) {
-				vault = result.data.vaults;
-			}
-		}
+		const result = await getVault(locals.currentSession, vaultId, platform.env);
+		vault = result?.vaults ?? null;
 	} catch (err) {
-		console.error('Failed to fetch vault:', err);
+		console.error('Failed to load vault:', err);
 	}
 
 	return {
 		vaultId,
-		vault
+		vault,
 	};
 };

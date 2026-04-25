@@ -1,22 +1,28 @@
-export const load = async ({ fetch }) => {
-	try {
-		// Fetch pending (received) invitations
-		const receivedResponse = await fetch('/api/getPendingInvitations');
-		const receivedResult = await receivedResponse.json();
+import { error } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+import { getPendingInvitations } from '$lib/server/api/invitations/getPendingInvitationsHandler';
+import { getSentInvitations } from '$lib/server/api/invitations/getSentInvitationsHandler';
 
-		// Fetch sent invitations
-		const sentResponse = await fetch('/api/getSentInvitations');
-		const sentResult = await sentResponse.json();
+export const load: PageServerLoad = async ({ locals, platform }) => {
+	if (platform === undefined) throw new Error('No platform');
+	if (!locals.currentSession) throw error(401, 'Unauthorized');
 
-		return {
-			receivedInvitations: receivedResult.success ? receivedResult.data : [],
-			sentInvitations: sentResult.success ? sentResult.data : []
-		};
-	} catch (error) {
-		console.error('Failed to fetch invitations:', error);
-		return {
-			receivedInvitations: [],
-			sentInvitations: []
-		};
-	}
+	const session = locals.currentSession;
+	const env = platform.env;
+
+	const [received, sent] = await Promise.all([
+		getPendingInvitations(session, env).catch((err) => {
+			console.error('Failed to load pending invitations:', err);
+			return [];
+		}),
+		getSentInvitations(session, env).catch((err) => {
+			console.error('Failed to load sent invitations:', err);
+			return [];
+		}),
+	]);
+
+	return {
+		receivedInvitations: received,
+		sentInvitations: sent,
+	};
 };

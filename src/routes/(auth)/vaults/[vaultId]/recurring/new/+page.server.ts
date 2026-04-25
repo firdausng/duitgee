@@ -2,6 +2,11 @@ import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { createRecurringExpenseWithTemplateSchema } from '$lib/schemas/recurringExpenses';
 import { formatDatetimeLocal } from '$lib/utils';
+import { error } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+import { getRecurringExpense } from '$lib/server/api/recurring-expenses/getRecurringExpenseHandler';
+import { getVault } from '$lib/server/api/vaults/getVaultHandler';
+import { getFunds } from '$lib/server/api/funds/getFundsHandler';
 
 type SourceRule = {
     id: string;
@@ -23,25 +28,31 @@ type SourceRule = {
     };
 };
 
-export const load = async ({ params, fetch, url }) => {
+export const load: PageServerLoad = async ({ params, url, locals, platform }) => {
+    if (platform === undefined) throw new Error('No platform');
+    if (!locals.currentUser) throw error(401, 'Unauthorized');
+
     const vaultId = params.vaultId;
     const duplicateFromId = url.searchParams.get('duplicateFrom');
+    const session = locals.currentSession;
+    const env = platform.env;
 
-    // If duplicating, fetch the source rule to seed form defaults.
-    let source: SourceRule | null = null;
-    if (duplicateFromId) {
-        try {
-            const res = await fetch(
-                `/api/getRecurringExpense?vaultId=${vaultId}&id=${duplicateFromId}`,
-            );
-            if (res.ok) {
-                const json = (await res.json()) as { success: boolean; data: SourceRule };
-                if (json.success) source = json.data;
-            }
-        } catch {
-            // fall through — unknown source id produces the blank form
-        }
-    }
+    // All independent reads in parallel via direct handler calls.
+    const [sourceResult, vaultResult, fundRows] = await Promise.all([
+        duplicateFromId
+            ? getRecurringExpense(session, { vaultId, id: duplicateFromId }, env).catch(() => null)
+            : Promise.resolve(null),
+        getVault(session, vaultId, env).catch((err) => {
+            console.error('Failed to load vault:', err);
+            return null;
+        }),
+        getFunds(vaultId, session, env).catch((err) => {
+            console.error('Failed to load funds:', err);
+            return [];
+        }),
+    ]);
+
+    const source = sourceResult as SourceRule | null;
 
     const baseName = source?.name ?? source?.template.name ?? '';
     const defaults = source
@@ -87,31 +98,21 @@ export const load = async ({ params, fetch, url }) => {
         valibot(createRecurringExpenseWithTemplateSchema, { defaults }),
     );
 
-    let members: Array<{ userId: string; displayName: string }> = [];
-    try {
-        const res = await fetch(`/api/getVault?vaultId=${vaultId}`);
-        if (res.ok) {
-            const json = (await res.json()) as { success: boolean; data: { members: typeof members } };
-            if (json.success && json.data) members = json.data.members ?? [];
-        }
-    } catch {
-        // non-critical
-    }
+    const members: Array<{ userId: string; displayName: string }> = (vaultResult?.members ?? []).map((m) => ({
+        userId: m.userId,
+        displayName: m.displayName,
+    }));
 
-    let funds: Array<{ id: string; name: string; icon: string | null; balance: number }> = [];
-    try {
-        const res = await fetch(`/api/getFunds?vaultId=${vaultId}`);
-        if (res.ok) {
-            const json = (await res.json()) as { success: boolean; data: Array<{ fund: { id: string; name: string; icon: string | null; balance: number; status: string } }> };
-            if (json.success) {
-                funds = (json.data ?? [])
-                    .map((row) => row.fund)
-                    .filter((f) => f.status === 'active');
-            }
-        }
-    } catch {
-        // non-critical
-    }
+    const funds: Array<{ id: string; name: string; icon: string | null; balance: number }> = (fundRows ?? [])
+        .map((row: any) => ({
+            id: row.fund.id,
+            name: row.fund.name,
+            icon: row.fund.icon ?? null,
+            balance: row.fund.balance,
+            status: row.fund.status,
+        }))
+        .filter((f) => f.status === 'active')
+        .map(({ status, ...rest }) => rest);
 
     const duplicatingFrom = source
         ? { name: baseName || 'rule', icon: source.template.icon ?? '🔁' }

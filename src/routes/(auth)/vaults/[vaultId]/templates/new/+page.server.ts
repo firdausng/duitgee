@@ -1,9 +1,19 @@
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { createExpenseTemplateSchema } from '$lib/schemas/expenseTemplates';
+import { error } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+import { getVault } from '$lib/server/api/vaults/getVaultHandler';
+import { getFunds } from '$lib/server/api/funds/getFundsHandler';
+import { getTags } from '$lib/server/api/tags/getTagsHandler';
 
-export const load = async ({ params, fetch }) => {
+export const load: PageServerLoad = async ({ params, locals, platform }) => {
+	if (platform === undefined) throw new Error('No platform');
+	if (!locals.currentUser) throw error(401, 'Unauthorized');
+
 	const vaultId = params.vaultId;
+	const session = locals.currentSession;
+	const env = platform.env;
 
 	const form = await superValidate(
 		valibot(createExpenseTemplateSchema, {
@@ -12,52 +22,41 @@ export const load = async ({ params, fetch }) => {
 				name: '',
 				icon: '📝',
 				iconType: 'emoji',
-                defaultPaidBy: '__creator__'
-			}
-		})
+				defaultPaidBy: '__creator__',
+			},
+		}),
 	);
 
-	// Fetch vault data (includes members)
-	let members: Array<{ userId: string; displayName: string }> = [];
-	try {
-		const response = await fetch(`/api/getVault?vaultId=${vaultId}`);
-		if (response.ok) {
-			const result = await response.json();
-			if (result.success && result.data) {
-				members = result.data.members || [];
-			}
-		}
-	} catch (error) {
-		console.error('Failed to fetch vault:', error);
-	}
+	// Fire all three reads in parallel — independent direct handler calls.
+	const [vaultResult, fundRows, tagRows] = await Promise.all([
+		getVault(session, vaultId, env).catch((err) => {
+			console.error('Failed to load vault:', err);
+			return null;
+		}),
+		getFunds(vaultId, session, env).catch((err) => {
+			console.error('Failed to load funds:', err);
+			return [];
+		}),
+		getTags(session, vaultId, env).catch((err) => {
+			console.error('Failed to load tags:', err);
+			return [];
+		}),
+	]);
 
-	// Fetch active funds for fund selector
-	let funds: Array<{ id: string; name: string; balance: number }> = [];
-	try {
-		const response = await fetch(`/api/getFunds?vaultId=${vaultId}`);
-		if (response.ok) {
-			const result = await response.json();
-			if (result.success) {
-				funds = (result.data ?? [])
-					.map((row: any) => row.fund)
-					.filter((f: any) => f.status === 'active');
-			}
-		}
-	} catch {
-		// non-critical
-	}
+	const members: Array<{ userId: string; displayName: string }> = (vaultResult?.members ?? []).map((m) => ({
+		userId: m.userId,
+		displayName: m.displayName,
+	}));
 
-	// Fetch tags for the picker
-	let tags: Array<{ id: string; name: string; color: string | null }> = [];
-	try {
-		const response = await fetch(`/api/getTags?vaultId=${vaultId}`);
-		if (response.ok) {
-			const result: any = await response.json();
-			if (result.success) tags = result.data ?? [];
-		}
-	} catch {
-		// non-critical
-	}
+	const funds: Array<{ id: string; name: string; balance: number }> = (fundRows ?? [])
+		.map((row: any) => row.fund)
+		.filter((f: any) => f.status === 'active');
+
+	const tags: Array<{ id: string; name: string; color: string | null }> = (tagRows ?? []).map((t) => ({
+		id: t.id,
+		name: t.name,
+		color: t.color ?? null,
+	}));
 
 	return {
 		form,

@@ -2,80 +2,82 @@ import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { updateRecurringExpenseWithTemplateSchema } from '$lib/schemas/recurringExpenses';
 import { utcToLocalDatetimeString } from '$lib/utils';
+import { error } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+import { getRecurringExpense } from '$lib/server/api/recurring-expenses/getRecurringExpenseHandler';
+import { getVault } from '$lib/server/api/vaults/getVaultHandler';
+import { getFunds } from '$lib/server/api/funds/getFundsHandler';
 
-export const load = async ({ params, fetch }) => {
-    const { vaultId, id } = params;
-
-    type RuleResponse = {
-        id: string;
-        vaultId: string;
-        templateId: string;
+type RuleResponse = {
+    id: string;
+    vaultId: string;
+    templateId: string;
+    name: string | null;
+    amountOverride: number | null;
+    scheduleUnit: 'day' | 'week' | 'month' | 'year';
+    scheduleInterval: number;
+    anchorDate: string;
+    generationMode: 'auto' | 'queue';
+    status: 'active' | 'paused' | 'ended';
+    endDate: string | null;
+    endAfterCount: number | null;
+    template: {
         name: string | null;
-        amountOverride: number | null;
-        scheduleUnit: 'day' | 'week' | 'month' | 'year';
-        scheduleInterval: number;
-        anchorDate: string;
-        generationMode: 'auto' | 'queue';
-        status: 'active' | 'paused' | 'ended';
-        endDate: string | null;
-        endAfterCount: number | null;
-        template: {
-            name: string | null;
-            icon: string | null;
-            defaultAmount: number | null;
-            defaultCategoryName: string | null;
-            defaultNote: string | null;
-            defaultPaymentType: string | null;
-            defaultPaidBy: string | null;
-            defaultFundId: string | null;
-            defaultFundPaymentMode: string | null;
-        };
-        progress: {
-            paidCount: number;
-            paidAmount: number;
-            pendingCount: number;
-            totalAmount: number | null;
-            finalOccurrenceAt: string | null;
-        };
+        icon: string | null;
+        defaultAmount: number | null;
+        defaultCategoryName: string | null;
+        defaultNote: string | null;
+        defaultPaymentType: string | null;
+        defaultPaidBy: string | null;
+        defaultFundId: string | null;
+        defaultFundPaymentMode: string | null;
     };
+    progress: {
+        paidCount: number;
+        paidAmount: number;
+        pendingCount: number;
+        totalAmount: number | null;
+        finalOccurrenceAt: string | null;
+    };
+};
 
-    let rule: RuleResponse | null = null;
-    try {
-        const res = await fetch(`/api/getRecurringExpense?vaultId=${vaultId}&id=${id}`);
-        if (res.ok) {
-            const json = (await res.json()) as { success: boolean; data: RuleResponse };
-            if (json.success) rule = json.data;
-        }
-    } catch {
-        // fall through — empty form
-    }
+export const load: PageServerLoad = async ({ params, locals, platform }) => {
+    if (platform === undefined) throw new Error('No platform');
+    if (!locals.currentUser) throw error(401, 'Unauthorized');
 
-    let members: Array<{ userId: string; displayName: string }> = [];
-    try {
-        const res = await fetch(`/api/getVault?vaultId=${vaultId}`);
-        if (res.ok) {
-            const json = (await res.json()) as { success: boolean; data: { members: typeof members } };
-            if (json.success && json.data) members = json.data.members ?? [];
-        }
-    } catch {
-        // non-critical
-    }
+    const { vaultId, id } = params;
+    const session = locals.currentSession;
+    const env = platform.env;
 
-    let funds: Array<{ id: string; name: string; icon: string | null; balance: number }> = [];
-    try {
-        const res = await fetch(`/api/getFunds?vaultId=${vaultId}`);
-        if (res.ok) {
-            const json = (await res.json()) as {
-                success: boolean;
-                data: Array<{ fund: { id: string; name: string; icon: string | null; balance: number; status: string } }>;
-            };
-            if (json.success) {
-                funds = (json.data ?? []).map((row) => row.fund).filter((f) => f.status === 'active');
-            }
-        }
-    } catch {
-        // non-critical
-    }
+    const [ruleResult, vaultResult, fundRows] = await Promise.all([
+        getRecurringExpense(session, { vaultId, id }, env).catch(() => null),
+        getVault(session, vaultId, env).catch((err) => {
+            console.error('Failed to load vault:', err);
+            return null;
+        }),
+        getFunds(vaultId, session, env).catch((err) => {
+            console.error('Failed to load funds:', err);
+            return [];
+        }),
+    ]);
+
+    const rule = ruleResult as RuleResponse | null;
+
+    const members: Array<{ userId: string; displayName: string }> = (vaultResult?.members ?? []).map((m) => ({
+        userId: m.userId,
+        displayName: m.displayName,
+    }));
+
+    const funds: Array<{ id: string; name: string; icon: string | null; balance: number }> = (fundRows ?? [])
+        .map((row: any) => ({
+            id: row.fund.id,
+            name: row.fund.name,
+            icon: row.fund.icon ?? null,
+            balance: row.fund.balance,
+            status: row.fund.status,
+        }))
+        .filter((f) => f.status === 'active')
+        .map(({ status, ...rest }) => rest);
 
     const effectiveAmount = rule?.amountOverride ?? rule?.template.defaultAmount ?? 0;
 
