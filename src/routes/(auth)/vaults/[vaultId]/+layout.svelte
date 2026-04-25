@@ -49,11 +49,17 @@
     {@render children?.()}
 </div>
 
+<!--
+  Floating FAB only on desktop. Mobile uses the centered ⊕ in the bottom bar
+  (wired up in (auth)/+layout.svelte) so we don't double up.
+-->
 {#if !isCreateExpensePage}
-    <ExpandableFab
-        {templates}
-        {resolveTemplateHref}
-        {scratchHref}
-        {browseHref}
-    />
+    <div class="hidden md:block">
+        <ExpandableFab
+            {templates}
+            {resolveTemplateHref}
+            {scratchHref}
+            {browseHref}
+        />
+    </div>
 {/if}
