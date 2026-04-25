@@ -1,7 +1,6 @@
-import {admin, anonymous, bearer, organization, type UserWithRole} from "better-auth/plugins";
+import {admin, anonymous, organization, type UserWithRole} from "better-auth/plugins";
 
 export const plugins = [
-    bearer(),
     admin(),
     organization({
         teams: {

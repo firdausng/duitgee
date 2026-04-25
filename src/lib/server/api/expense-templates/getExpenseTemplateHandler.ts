@@ -36,7 +36,7 @@ export const getExpenseTemplate = async (
 		throw new Error('Template not found');
 	}
 
-	// Parse the JSON-encoded defaultTagIds column into a real string[] for clients.
+	// Parse JSON-encoded array columns into real arrays for clients.
 	const row = template[0];
 	let defaultTagIds: string[] = [];
 	if (row.defaultTagIds) {
@@ -47,6 +47,15 @@ export const getExpenseTemplate = async (
 			// ignore malformed JSON
 		}
 	}
+	let categoryNames: string[] = [];
+	if (row.categoryNames) {
+		try {
+			const parsed = JSON.parse(row.categoryNames);
+			if (Array.isArray(parsed)) categoryNames = parsed.filter((c) => typeof c === 'string');
+		} catch {
+			// ignore malformed JSON
+		}
+	}
 
-	return { ...row, defaultTagIds };
+	return { ...row, defaultTagIds, categoryNames };
 };

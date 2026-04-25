@@ -4,8 +4,10 @@
 	import { Label } from '$lib/components/ui/label';
 	import { DateTimePicker } from '$lib/components/ui/date-time-picker';
 	import { CategoryPicker } from '$lib/components/ui/category-picker';
+	import { IconRenderer } from '$lib/components/ui/icon-renderer';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { CalculatorInput } from '$lib/components/ui/calculator-input';
+	import { cn } from '$lib/utils';
 	import { formatDatetimeLocal } from '$lib/utils';
 	import type { PaymentType } from '$lib/configurations/paymentTypes';
 
@@ -59,6 +61,9 @@
 		members: Member[];
 		funds: Fund[];
 		paymentTypes: PaymentType[];
+		/** When provided with 2+ entries, shows a chip row narrowing to those categories.
+		 *  The full category picker stays available below as an escape hatch. */
+		allowedCategoryNames?: string[];
 		onremove: () => void;
 		onduplicate: () => void;
 	}
@@ -74,9 +79,18 @@
 		members,
 		funds,
 		paymentTypes,
+		allowedCategoryNames,
 		onremove,
 		onduplicate,
 	}: ExpenseRowProps = $props();
+
+	// Resolve allowed-category metadata from the static config so we can render icons.
+	const allowedCategoryChips = $derived.by(() => {
+		if (!allowedCategoryNames || allowedCategoryNames.length < 2) return [];
+		return allowedCategoryNames
+			.map((name) => categories.find((c) => c.name === name))
+			.filter((c): c is Category => Boolean(c));
+	});
 
 	function toggleExpanded() {
 		// DateTimePicker has a string-default $bindable, so its value can never be undefined.
@@ -139,6 +153,40 @@
 			<p class="text-sm text-destructive">{row.errors.amount}</p>
 		{/if}
 	</div>
+
+	<!-- Template-narrowed category chips (only when 2+ allowed categories on the source template). -->
+	{#if allowedCategoryChips.length > 1}
+		<div class="space-y-1">
+			<Label>Quick category</Label>
+			<div class="flex flex-wrap gap-1.5">
+				{#each allowedCategoryChips as cat (cat.name)}
+					{@const active = row.categoryName === cat.name}
+					<button
+						type="button"
+						onclick={() => (row.categoryName = cat.name)}
+						{disabled}
+						class={cn(
+							'inline-flex items-center gap-1.5 px-3 h-8 rounded-[var(--radius-sm)] border text-sm transition-colors',
+							active
+								? 'border-primary bg-primary/10 text-primary font-medium'
+								: 'border-border hover:bg-muted text-muted-foreground',
+							'disabled:cursor-not-allowed disabled:opacity-50',
+						)}
+					>
+						{#if cat.icon}
+							<IconRenderer
+								icon={cat.icon}
+								iconType={cat.iconType}
+								size={14}
+								emojiClass="text-sm"
+							/>
+						{/if}
+						<span>{cat.name}</span>
+					</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
 
 	<!-- Category -->
 	<CategoryPicker

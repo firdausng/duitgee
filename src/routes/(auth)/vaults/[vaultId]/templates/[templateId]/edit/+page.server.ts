@@ -68,10 +68,15 @@ export const load = async ({ params, fetch }) => {
 		// non-critical
 	}
 
-	// getExpenseTemplate returns defaultTagIds parsed into string[]
+	// getExpenseTemplate returns defaultTagIds + categoryNames parsed into string[]
 	const templateTagIds: string[] = Array.isArray(templateData.defaultTagIds)
 		? templateData.defaultTagIds
 		: [];
+	const templateCategoryNames: string[] = Array.isArray(templateData.categoryNames)
+		? templateData.categoryNames
+		: templateData.defaultCategoryName
+			? [templateData.defaultCategoryName]
+			: [];
 
 	// Initialize form with template data
 	const form = await superValidate(
@@ -85,6 +90,7 @@ export const load = async ({ params, fetch }) => {
 			defaultNote: templateData.defaultNote,
 			defaultAmount: templateData.defaultAmount,
 			defaultCategoryName: templateData.defaultCategoryName,
+			categoryNames: templateCategoryNames,
 			defaultPaidBy: templateData.defaultPaidBy,
 			defaultFundId: templateData.defaultFundId ?? null,
 			defaultFundPaymentMode: templateData.defaultFundPaymentMode ?? null,

@@ -12,6 +12,8 @@ export const expenseTemplateSchema = v.object({
     defaultNote: v.nullable(v.string()),
     defaultAmount: v.nullable(v.number()),
     defaultCategoryName: v.nullable(v.string()),
+    // JSON-encoded string[] in storage; null = legacy single-cat template
+    categoryNames: v.nullable(v.string()),
     defaultPaymentType: v.nullable(v.string()),
     defaultPaidBy: v.nullable(v.string()),
     usageCount: v.number(),
@@ -48,6 +50,9 @@ export const createExpenseTemplateSchema = v.object({
     defaultFundPaymentMode: v.optional(v.nullable(v.string())),
     // Tags pre-applied to expenses created from this template
     defaultTagIds: v.optional(v.array(v.string())),
+    // Allowed categories for this template. First entry is the default. When
+    // present, defaultCategoryName is kept in sync with categoryNames[0] by the handler.
+    categoryNames: v.optional(v.array(v.string())),
 });
 
 export type CreateExpenseTemplate = v.InferOutput<typeof createExpenseTemplateSchema>;
@@ -75,6 +80,8 @@ export const updateExpenseTemplateSchema = v.object({
     defaultFundPaymentMode: v.optional(v.nullable(v.string())),
     // Tags pre-applied to expenses created from this template (replaces full set)
     defaultTagIds: v.optional(v.array(v.string())),
+    // Allowed categories. First entry is the default. Replaces full set when provided.
+    categoryNames: v.optional(v.array(v.string())),
 });
 
 export type UpdateExpenseTemplate = v.InferOutput<typeof updateExpenseTemplateSchema>;

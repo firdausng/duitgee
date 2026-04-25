@@ -12,13 +12,29 @@ export const updateExpenseTemplate = async (
 	env: Cloudflare.Env
 ) => {
 	const client = drizzle(env.DB, { schema });
-	const { id, vaultId, defaultTagIds, ...updateData } = data;
+	const { id, vaultId, defaultTagIds, categoryNames, ...updateData } = data;
 	// JSON-encode the tag list when provided. undefined leaves the column untouched.
 	const tagIdsValue = defaultTagIds === undefined
 		? undefined
 		: defaultTagIds.length > 0
 			? JSON.stringify(Array.from(new Set(defaultTagIds)))
 			: null;
+
+	// Multi-cat: undefined leaves both columns untouched. When provided:
+	//   - empty array → clear categoryNames (back to legacy single-cat mode)
+	//   - non-empty   → JSON-encode + force defaultCategoryName = first entry
+	let categoryNamesValue: string | null | undefined = undefined;
+	let defaultCategoryNameOverride: string | undefined = undefined;
+	if (categoryNames !== undefined) {
+		const deduped = Array.from(new Set(categoryNames.filter((c) => c && c.length > 0)));
+		if (deduped.length > 0) {
+			categoryNamesValue = JSON.stringify(deduped);
+			defaultCategoryNameOverride = deduped[0];
+		} else {
+			categoryNamesValue = null;
+			// don't override defaultCategoryName when clearing — leave whatever caller passed
+		}
+	}
 
 	// Check if user has permission to edit templates in this vault
 	await requireVaultPermission(session, vaultId, 'canEditExpenses', env);
@@ -45,6 +61,8 @@ export const updateExpenseTemplate = async (
 		.update(expenseTemplates)
 		.set({
 			...updateData,
+			...(defaultCategoryNameOverride !== undefined ? { defaultCategoryName: defaultCategoryNameOverride } : {}),
+			...(categoryNamesValue !== undefined ? { categoryNames: categoryNamesValue } : {}),
 			...(tagIdsValue !== undefined ? { defaultTagIds: tagIdsValue } : {}),
 			...updateAuditFields({ userId: session.user.id })
 		})

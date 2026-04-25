@@ -32,5 +32,28 @@ export const getExpenseTemplates = async (
 		)
 		.orderBy(desc(expenseTemplates.lastUsedAt), desc(expenseTemplates.createdAt));
 
-	return { templates };
+	// Parse JSON-encoded array columns for each template so clients get real arrays.
+	const parsed = templates.map((row) => {
+		let defaultTagIds: string[] = [];
+		if (row.defaultTagIds) {
+			try {
+				const p = JSON.parse(row.defaultTagIds);
+				if (Array.isArray(p)) defaultTagIds = p.filter((id) => typeof id === 'string');
+			} catch {
+				// ignore
+			}
+		}
+		let categoryNames: string[] = [];
+		if (row.categoryNames) {
+			try {
+				const p = JSON.parse(row.categoryNames);
+				if (Array.isArray(p)) categoryNames = p.filter((c) => typeof c === 'string');
+			} catch {
+				// ignore
+			}
+		}
+		return { ...row, defaultTagIds, categoryNames };
+	});
+
+	return { templates: parsed };
 };

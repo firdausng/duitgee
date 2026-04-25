@@ -69,6 +69,11 @@ export const expenseTemplates = sqliteTable('expense_templates', {
     defaultFundId: text('default_fund_id'), // Optional default fund to tag the expense to
     defaultFundPaymentMode: text('default_fund_payment_mode'), // 'paid_by_fund' | 'pending_reimbursement'
     defaultTagIds: text('default_tag_ids'), // JSON array of expenseTags.id; tags pre-applied when creating from this template
+    // Multi-category support: JSON array of category names allowed for this template.
+    // null = legacy single-category template (use defaultCategoryName). When non-empty,
+    // defaultCategoryName is kept in sync with categoryNames[0] so automated flows
+    // (recurring expenses, batch generators) keep working unchanged.
+    categoryNames: text('category_names'),
     // Usage tracking
     usageCount: integer('usage_count').notNull().default(0),
     lastUsedAt: text('last_used_at'),

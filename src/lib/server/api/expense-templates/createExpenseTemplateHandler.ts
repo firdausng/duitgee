@@ -19,11 +19,27 @@ export const createExpenseTemplate = async (
             await requireVaultPermission(session, data.vaultId, 'canCreateExpenses', env);
         }
 
-        const { defaultTagIds, ...rest } = data;
+        const { defaultTagIds, categoryNames, defaultCategoryName, ...rest } = data;
+
+        // Multi-cat support: when categoryNames is provided and non-empty,
+        // store as JSON and force defaultCategoryName = categoryNames[0] so
+        // automated flows (recurring expenses) keep using a single canonical category.
+        const dedupedCategories = categoryNames
+            ? Array.from(new Set(categoryNames.filter((c) => c && c.length > 0)))
+            : [];
+        const categoryNamesJson = dedupedCategories.length > 0
+            ? JSON.stringify(dedupedCategories)
+            : null;
+        const effectiveDefaultCategory = dedupedCategories.length > 0
+            ? dedupedCategories[0]
+            : defaultCategoryName;
+
         const [template] = await client
             .insert(expenseTemplates)
             .values({
                 ...rest,
+                defaultCategoryName: effectiveDefaultCategory,
+                categoryNames: categoryNamesJson,
                 defaultTagIds: defaultTagIds && defaultTagIds.length > 0
                     ? JSON.stringify(Array.from(new Set(defaultTagIds)))
                     : null,

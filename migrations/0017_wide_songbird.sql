@@ -1,0 +1,1 @@
+ALTER TABLE `expense_templates` ADD `category_names` text;

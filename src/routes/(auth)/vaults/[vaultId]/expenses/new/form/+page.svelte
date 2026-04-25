@@ -291,6 +291,7 @@
 					members={data.members}
 					funds={data.funds}
 					{paymentTypes}
+					allowedCategoryNames={data.template?.categoryNames ?? undefined}
 					onremove={() => removeRow(row.id)}
 					onduplicate={() => duplicateRow(row.id)}
 					canDuplicate={rows.length < MAX_ROWS}

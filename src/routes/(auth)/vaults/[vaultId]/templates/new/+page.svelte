@@ -8,7 +8,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
-	import { CategoryPicker } from '$lib/components/ui/category-picker';
+	import { CategoryMultiPicker } from '$lib/components/ui/category-multi-picker';
 	import { IconCombobox } from '$lib/components/ui/icon-combobox';
 	import { TagPicker, type TagOption } from '$lib/components/ui/tag-picker';
 	import { categoryData } from '$lib/configurations/categories';
@@ -85,6 +85,19 @@
 		availableTags = [...availableTags, created];
 		return created;
 	}
+
+	// --- Categories (multi-select; first entry is the default) ---
+	let selectedCategoryNames = $state<string[]>(
+		($form.categoryNames as string[] | undefined)
+			?? ($form.defaultCategoryName ? [$form.defaultCategoryName] : []),
+	);
+
+	$effect(() => {
+		$form.categoryNames = selectedCategoryNames;
+		// Mirror the first category into defaultCategoryName so server-side
+		// validation still passes (it requires non-empty defaultCategoryName).
+		$form.defaultCategoryName = selectedCategoryNames[0] ?? '';
+	});
 </script>
 
 <svelte:head>
@@ -196,13 +209,14 @@
 								{/if}
 							</div>
 
-							<!-- Default Category -->
-							<CategoryPicker
-								name="defaultCategoryName"
-								label="Default Category"
+							<!-- Categories (multi-select; first is the default) -->
+							<CategoryMultiPicker
+								name="categoryNames"
+								label="Categories"
+								hint="Pick one or more. The first is the default for new expenses."
 								categories={categoryData.categories}
 								categoryGroups={categoryData.categoryGroups}
-								bind:value={$form.defaultCategoryName}
+								bind:value={selectedCategoryNames}
 								disabled={$delayed}
 								error={$errors.defaultCategoryName}
 								required={true}
