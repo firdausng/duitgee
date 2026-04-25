@@ -591,6 +591,7 @@
                     limit={10}
                     grouped={groupByDay}
                     onSelect={(e) => handleEditExpense(e.id)}
+                    onDelete={(e) => handleDeleteExpense(e.id)}
                     formatCurrency={vaultFormatters.currency}
                     formatDate={vaultFormatters.date}
                 />

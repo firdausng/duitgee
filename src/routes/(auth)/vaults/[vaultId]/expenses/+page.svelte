@@ -34,6 +34,8 @@
     import X from '@lucide/svelte/icons/x';
     import CalendarDays from '@lucide/svelte/icons/calendar-days';
     import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+    import MoreVertical from '@lucide/svelte/icons/more-vertical';
+    import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 
     const GROUP_BY_DAY_STORAGE_KEY = 'dg:expenses:groupByDay';
 
@@ -462,20 +464,26 @@
 
 {#snippet expenseRow(expense: Expense)}
     {@const isNegative = expense.amount > 0}
-    <div class="group flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors">
-        <!-- Category icon -->
-        <span
-            class="text-xl leading-none shrink-0 select-none"
-            style={expense.category?.color ? `background: ${expense.category.color}15; padding: 6px; border-radius: var(--radius-sm);` : ''}
-            aria-hidden="true"
-        >
-            {expense.category?.icon ?? '📝'}
-        </span>
-
-        <!-- Middle: description + metadata -->
+    <div
+        role="button"
+        tabindex="0"
+        onclick={(e) => {
+            const t = e.target as HTMLElement;
+            if (t.closest('button, [role="menuitem"], [data-no-nav]')) return;
+            handleEditExpense(expense.id);
+        }}
+        onkeydown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleEditExpense(expense.id);
+            }
+        }}
+        class="flex items-start gap-2 px-3 py-2 cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset transition-colors"
+    >
         <div class="flex-1 min-w-0">
-            <!-- Title on its own full-width row -->
+            <!-- Title + inline amount pill -->
             <p class="font-medium break-words">
+                <span class="mr-1.5" aria-hidden="true">{expense.category?.icon ?? '📝'}</span>
                 {expense.note || expense.category?.name || 'Expense'}
                 {#if expense.recurringExpenseId}
                     <RefreshCw
@@ -483,68 +491,54 @@
                         aria-label="From recurring rule"
                     />
                 {/if}
+                <Amount
+                    class="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs align-middle ml-2"
+                    value={isNegative ? -expense.amount : expense.amount}
+                    sign="negative"
+                    showSign={false}
+                    formatted={fmt.currency(expense.amount)}
+                    size="sm"
+                />
             </p>
-            <!-- Meta on left, amount + date stacked on right -->
-            <div class="flex items-start justify-between gap-2 mt-0.5">
-                <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground min-w-0">
-                    {#if expense.category?.name}
-                        <span>{expense.category.name}</span>
-                    {/if}
-                    {#if expense.fundName}
-                        <span class="opacity-50">·</span>
-                        <span title={expense.fundName}>
-                            {expense.fundIcon ?? ''} {expense.fundName}
-                        </span>
-                    {/if}
-                    {#if expense.paidByName}
-                        <span class="opacity-50">·</span>
-                        <span>{expense.paidByName}</span>
-                    {/if}
-                </div>
-                <div class="shrink-0 flex flex-col items-end gap-0.5">
-                    <Amount
-                        value={isNegative ? -expense.amount : expense.amount}
-                        sign="negative"
-                        showSign={false}
-                        formatted={fmt.currency(expense.amount)}
-                        size="sm"
-                    />
-                    <span class="text-xs text-muted-foreground whitespace-nowrap">
-                        {fmt.date(expense.date)}
+            <!-- Meta: category · fund · paidBy · date -->
+            <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground min-w-0 mt-0.5">
+                {#if expense.category?.name}
+                    <span>{expense.category.name}</span>
+                {/if}
+                {#if expense.fundName}
+                    <span class="opacity-50">·</span>
+                    <span title={expense.fundName}>
+                        {expense.fundIcon ?? ''} {expense.fundName}
                     </span>
-                </div>
+                {/if}
+                {#if expense.paidByName}
+                    <span class="opacity-50">·</span>
+                    <span>{expense.paidByName}</span>
+                {/if}
+                <span class="opacity-50">·</span>
+                <span class="whitespace-nowrap">{fmt.date(expense.date)}</span>
             </div>
         </div>
 
-        <!-- Actions (show on hover at md+, always visible on mobile) -->
-        <div class="flex gap-1 shrink-0 opacity-0 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-            <button
-                type="button"
-                onclick={() => handleEditExpense(expense.id)}
-                class="p-1.5 rounded-[var(--radius-sm)] hover:bg-muted text-muted-foreground hover:text-foreground"
-                aria-label="Edit"
-                title="Edit"
+        <DropdownMenu.Root>
+            <DropdownMenu.Trigger
+                class="p-1 rounded-[var(--radius-sm)] hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center shrink-0"
+                aria-label="More actions"
+                title="More"
             >
-                <Pencil class="size-3.5" />
-            </button>
-            <button
-                type="button"
-                onclick={() => handleDeleteExpense(expense.id)}
-                class="p-1.5 rounded-[var(--radius-sm)] hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                aria-label="Delete"
-                title="Delete"
-            >
-                <Trash2 class="size-3.5" />
-            </button>
-        </div>
+                <MoreVertical class="size-4" />
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content align="end" class="min-w-[11rem]">
+                <DropdownMenu.Item onclick={() => handleEditExpense(expense.id)}>
+                    <Pencil class="size-3.5" />
+                    <span>Edit</span>
+                </DropdownMenu.Item>
+                <DropdownMenu.Separator />
+                <DropdownMenu.Item destructive onclick={() => handleDeleteExpense(expense.id)}>
+                    <Trash2 class="size-3.5" />
+                    <span>Delete</span>
+                </DropdownMenu.Item>
+            </DropdownMenu.Content>
+        </DropdownMenu.Root>
     </div>
 {/snippet}
-
-<style>
-    /* Make hover-action buttons visible on touch devices too. */
-    @media (hover: none) {
-        :global(.group .opacity-0) {
-            opacity: 1;
-        }
-    }
-</style>

@@ -27,7 +27,8 @@
       "Bash(grep -n \"funds.\\\\[fundId\\\\].edit\\\\|reimbursements\\\\\\\\\\\\\\\\+page\\\\|FundTransactionList\\\\|fund-policy-line\" /tmp/check3.out)",
       "Bash(grep \"funds.\\\\[fundId\\\\].edit\\\\|reimbursements\\\\\\\\\\\\\\\\+page\\\\|FundTransactionList\\\\|fund-policy-line\" /tmp/check4.out)",
       "Bash(grep -E \"\\(groupExpensesByDay|recent-expenses|expenses\\\\\\\\\\\\\\\\\\\\\\\\+page|vaultId\\\\\\\\]\\\\\\\\\\\\\\\\\\\\\\\\+page\\)\" -B 2 -A 4)",
-      "Bash(find node_modules/.pnpm/bits-ui*/node_modules/bits-ui/dist/bits/calendar/exports.d.ts)"
+      "Bash(find node_modules/.pnpm/bits-ui*/node_modules/bits-ui/dist/bits/calendar/exports.d.ts)",
+      "Bash(grep -A 3 \"recurring\\\\\\\\\\\\\\\\+page\")"
     ]
   }
 }
