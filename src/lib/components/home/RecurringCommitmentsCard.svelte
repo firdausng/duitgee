@@ -25,6 +25,7 @@
         subscriptionSummary,
         installmentSummary,
         topInstallmentsAlmostFinished,
+        remainingAmount,
     } from '$lib/recurring-helpers';
     import ArrowRight from '@lucide/svelte/icons/arrow-right';
     import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
@@ -182,9 +183,12 @@
                             {#each almostFinished as rule (rule.id)}
                                 {@const total = rule.endAfterCount ?? 0}
                                 {@const paid = rule.progress.paidCount}
-                                {@const remaining = Math.max(0, total - paid)}
                                 {@const pct = total > 0 ? Math.min(100, (paid / total) * 100) : 0}
                                 {@const endLabel = formatEndDate(rule.progress.finalOccurrenceAt)}
+                                {@const remaining = remainingAmount(rule)}
+                                {@const remainingLabel = remaining.value > 0
+                                    ? `${remaining.source === 'estimated' ? '~' : ''}${formatCurrency(remaining.value)} left`
+                                    : 'done'}
                                 <li>
                                     <div class="flex items-center gap-2 text-sm">
                                         <span class="text-base leading-none shrink-0" aria-hidden="true">
@@ -193,16 +197,14 @@
                                         <span class="flex-1 min-w-0 truncate">
                                             {rule.name ?? rule.template.name ?? 'Installment'}
                                         </span>
-                                        <span class="text-xs text-muted-foreground tabular-nums whitespace-nowrap shrink-0">
-                                            {paid}/{total}
-                                            {#if remaining === 0}
-                                                · done
-                                            {:else}
-                                                · {remaining} left
-                                            {/if}
+                                        <span class="font-mono tabular-nums text-sm font-medium whitespace-nowrap shrink-0">
+                                            {remainingLabel}
                                         </span>
                                     </div>
                                     <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-[11px] text-muted-foreground tabular-nums shrink-0">
+                                            {paid}/{total}
+                                        </span>
                                         <div class="flex-1 h-1 rounded-full bg-muted overflow-hidden">
                                             <div
                                                 class={cn(

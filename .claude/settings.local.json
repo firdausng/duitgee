@@ -51,7 +51,8 @@
       "Bash(grep -B1 -A4 \"settings\\\\\\\\\\\\\\\\\\\\|onboarding\\\\\\\\\\\\\\\\\\\\|home.\\\\\\\\\\(EmptyVault\\\\\\\\|FirstVault\\\\\\\\|appearance\\\\\\\\|account\\\\\\\\|plan\\\\\\\\|danger\" /tmp/check-phase3.out)",
       "Bash(node -e \"const p=require\\('D:/projects/duitgee-app/node_modules/bits-ui/package.json'\\); console.log\\(p.exports?.['./tooltip'] ? 'has tooltip' : 'check below'\\)\")",
       "Bash(curl -s \"http://localhost:5206/api/getRecurringExpenses?vaultId=kk9qa95zn1g1dhfrvdt5uu52\" -o /dev/null -w \"%{http_code}\")",
-      "Bash(curl -s \"http://localhost:5206/api/getRecurringExpenses?vaultId=kk9qa95zn1g1dhfrvdt5uu52\" -o /tmp/r.json -w \"%{http_code}\")"
+      "Bash(curl -s \"http://localhost:5206/api/getRecurringExpenses?vaultId=kk9qa95zn1g1dhfrvdt5uu52\" -o /tmp/r.json -w \"%{http_code}\")",
+      "Bash(curl -s \"http://localhost:5206/api/getVault?vaultId=kk9qa95zn1g1dhfrvdt5uu52\" -o /dev/null -w \"%{http_code}\")"
     ]
   }
 }
