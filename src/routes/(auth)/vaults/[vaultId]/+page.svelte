@@ -10,16 +10,20 @@
     import {filterSchema} from "./schemas";
     import type {VaultStatistics} from "./types";
     import VaultHeader from "./VaultHeader.svelte";
-    import ExpenseFilters from "./ExpenseFilters.svelte";
     import InviteForm from "./InviteForm.svelte";
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
     import {Toaster} from "$lib/components/ui/sonner";
     import {toast} from "svelte-sonner";
-    import {localDatetimeToUtcIso, getDateRange, type DateFilter} from "$lib/utils";
+    import {localDatetimeToUtcIso, getDateRange, getPriorDateRange, type DateFilter} from "$lib/utils";
     import {createVaultFormatters} from "$lib/vaultFormatting";
     import {page} from "$app/state";
     import { RecentExpenses } from "$lib/components/ui/recent-expenses";
     import { EmptyState } from "$lib/components/ui/empty-state";
+    import {
+        SpendHeroCard,
+        PendingActionsCard,
+        CategoryBreakdownCard,
+    } from "$lib/components/home";
     import ArrowRight from "@lucide/svelte/icons/arrow-right";
     import ExternalLink from "@lucide/svelte/icons/external-link";
     import Receipt from "@lucide/svelte/icons/receipt";
@@ -30,7 +34,8 @@
 
     const GROUP_BY_DAY_STORAGE_KEY = 'dg:expenses:groupByDay';
 
-    let {vaultId} = page.params
+    // Required route param — SvelteKit guarantees it but the generated type stays loose.
+    const vaultId = page.params.vaultId as string;
 
     const params = useSearchParams(filterSchema);
 
@@ -123,6 +128,74 @@
         }
     );
 
+    // Resource for the prior period — drives the SpendHeroCard delta caption.
+    // Only fetched when there's a meaningful comparison (skip 'all').
+    const priorStatsResource = resource(
+        () => {
+            if (filterType === 'custom') {
+                return [vaultId, filterType, params.startDate, params.endDate, refetchKey, selectedFundId] as const;
+            }
+            return [vaultId, filterType, refetchKey, selectedFundId] as const;
+        },
+        async (deps) => {
+            if (filterType === 'all') return null;
+            const range = getPriorDateRange(
+                filterType,
+                filterType === 'custom' && params.startDate
+                    ? localDatetimeToUtcIso(params.startDate)
+                    : undefined,
+                filterType === 'custom' && params.endDate
+                    ? localDatetimeToUtcIso(params.endDate)
+                    : undefined,
+            );
+            if (!range.startDate || !range.endDate) return null;
+            const urlParams = new URLSearchParams({ vaultId: deps[0], ...range });
+            if (selectedFundId) urlParams.append('fundId', selectedFundId);
+            const response = await ofetch<{ success: boolean; data: VaultStatistics }>(
+                `/api/getVaultStatistics?${urlParams.toString()}`,
+            );
+            return response.data;
+        },
+        { debounce: 300 },
+    );
+
+    // Pending recurring count — for the PendingActionsCard.
+    const pendingRecurringResource = resource(
+        () => [vaultId, refetchKey] as const,
+        async ([id]) => {
+            try {
+                const res = await ofetch<{ success: boolean; data: unknown[] }>(
+                    `/api/getPendingOccurrences?vaultId=${id}`,
+                );
+                return (res.data ?? []).length;
+            } catch {
+                return 0;
+            }
+        },
+    );
+
+    // Pending reimbursements (Pro only — gracefully no-op for free).
+    type ReimbRow = { expense: { amount: number } };
+    const pendingReimbursementsResource = resource(
+        () => [vaultId, refetchKey] as const,
+        async ([id]) => {
+            try {
+                const res = await ofetch<{ success: boolean; data: ReimbRow[] }>(
+                    `/api/getVaultPendingReimbursements?vaultId=${id}`,
+                );
+                const items = res.data ?? [];
+                // pending_reimbursement transactions have amount 0; the gross total comes from the linked expense.
+                return {
+                    count: items.length,
+                    total: items.reduce((sum, r) => sum + (r.expense?.amount ?? 0), 0),
+                };
+            } catch {
+                // 403 (no entitlement) or any other error → treat as empty.
+                return { count: 0, total: 0 };
+            }
+        },
+    );
+
     // Resource for expenses - auto-refetches when filter changes
     const expensesResource = resource(
         () => {
@@ -157,7 +230,12 @@
     // Derive data from resources
     const currentVault = $derived(vaultResource.current);
     const statistics = $derived(statisticsResource.current || null);
+    const priorStats = $derived(priorStatsResource.current || null);
     const expenses = $derived(expensesResource.current || []);
+    const pendingRecurringCount = $derived(pendingRecurringResource.current ?? 0);
+    const pendingReimbursements = $derived(
+        pendingReimbursementsResource.current ?? { count: 0, total: 0 },
+    );
     const isLoadingVault = $derived(vaultResource.loading);
     const isLoadingStats = $derived(statisticsResource.loading);
     const isLoadingExpenses = $derived(expensesResource.loading);
@@ -391,16 +469,29 @@
                 onCancel={toggleInviteForm}
         />
 
-        <!-- Expense Filters -->
-        <ExpenseFilters
-                filterType={filterType}
-                startDate={params.startDate}
-                endDate={params.endDate}
+        <!-- Spend hero — period selector + big amount + delta vs prior period -->
+        <div class="mb-3">
+            <SpendHeroCard
+                {filterType}
+                currentAmount={statistics?.total.amount ?? 0}
+                currentCount={statistics?.total.count ?? 0}
+                priorAmount={priorStats?.total.amount ?? null}
+                loading={isLoadingStats}
                 onFilterChange={(filter) => { params.filter = filter; }}
-                onApplyCustomFilter={() => {}}
-                onStartDateChange={(value) => params.startDate = value}
-                onEndDateChange={(value) => params.endDate = value}
-        />
+                formatCurrency={vaultFormatters.currency}
+            />
+        </div>
+
+        <!-- Pending actions — recurring approvals + cross-fund reimbursements (conditional) -->
+        <div class="mb-3">
+            <PendingActionsCard
+                {vaultId}
+                {pendingRecurringCount}
+                pendingReimbursementsCount={pendingReimbursements.count}
+                pendingReimbursementsTotal={pendingReimbursements.total}
+                formatCurrency={vaultFormatters.currency}
+            />
+        </div>
 
         <!-- Funds section -->
         {#if fundsResource.loading}
@@ -503,6 +594,17 @@
                 </button>
             </div>
         {/if}
+
+        <!-- Category breakdown — top 5 categories for the current period -->
+        <div class="mt-6">
+            <CategoryBreakdownCard
+                {vaultId}
+                categories={statistics?.byCategory ?? []}
+                loading={isLoadingStats}
+                formatCurrency={vaultFormatters.currency}
+                currentSearch={page.url.search}
+            />
+        </div>
 
         <!-- Recent activity -->
         <div class="mt-6">

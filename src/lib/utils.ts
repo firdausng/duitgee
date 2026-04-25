@@ -203,6 +203,151 @@ export function getDateRange(
 }
 
 /**
+ * Calculates the *prior* period for a given DateFilter, used for vs-last-period
+ * comparisons in dashboard cards.
+ *
+ * - today → yesterday
+ * - yesterday → day before yesterday
+ * - week → previous calendar week (Sun–Sat)
+ * - month → previous calendar month
+ * - year → previous calendar year
+ * - last7 / last30 / last90 → the N days immediately before the current window
+ * - custom → same duration immediately before the start date (only when both bounds are set)
+ * - all → returns {} (no comparison possible)
+ *
+ * For 'custom', dates are expected to be ISO strings (UTC).
+ */
+export function getPriorDateRange(
+    dateFilter: DateFilter,
+    startDate?: string,
+    endDate?: string,
+): { startDate?: string; endDate?: string } {
+    const now = new Date();
+
+    switch (dateFilter) {
+        case 'all':
+            return {};
+
+        case 'today': {
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
+            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
+            return { startDate: start.toISOString(), endDate: end.toISOString() };
+        }
+
+        case 'yesterday': {
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2, 0, 0, 0);
+            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2, 23, 59, 59, 999);
+            return { startDate: start.toISOString(), endDate: end.toISOString() };
+        }
+
+        case 'week': {
+            const dayOfWeek = now.getDay();
+            const thisWeekStart = new Date(now);
+            thisWeekStart.setDate(now.getDate() - dayOfWeek);
+            const start = new Date(thisWeekStart);
+            start.setDate(thisWeekStart.getDate() - 7);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            end.setHours(23, 59, 59, 999);
+            return { startDate: start.toISOString(), endDate: end.toISOString() };
+        }
+
+        case 'month': {
+            const start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
+            const end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+            return { startDate: start.toISOString(), endDate: end.toISOString() };
+        }
+
+        case 'year': {
+            const start = new Date(now.getFullYear() - 1, 0, 1, 0, 0, 0);
+            const end = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
+            return { startDate: start.toISOString(), endDate: end.toISOString() };
+        }
+
+        case 'last7':
+        case 'last30':
+        case 'last90': {
+            const days = dateFilter === 'last7' ? 7 : dateFilter === 'last30' ? 30 : 90;
+            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days, 23, 59, 59, 999);
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days * 2 - 1), 0, 0, 0);
+            return { startDate: start.toISOString(), endDate: end.toISOString() };
+        }
+
+        case 'custom': {
+            if (!startDate || !endDate) return {};
+            const startMs = new Date(startDate).getTime();
+            const endMs = new Date(endDate).getTime();
+            const duration = endMs - startMs;
+            if (!Number.isFinite(duration) || duration <= 0) return {};
+            const priorEnd = new Date(startMs - 1);
+            const priorStart = new Date(startMs - duration - 1);
+            return { startDate: priorStart.toISOString(), endDate: priorEnd.toISOString() };
+        }
+
+        default:
+            return {};
+    }
+}
+
+/**
+ * Human-readable label for the current period (e.g. "April 2026", "This week", "Today").
+ */
+export function periodLabel(dateFilter: DateFilter): string {
+    const now = new Date();
+    switch (dateFilter) {
+        case 'today':
+            return 'Today';
+        case 'yesterday':
+            return 'Yesterday';
+        case 'week':
+            return 'This week';
+        case 'month':
+            return now.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+        case 'year':
+            return String(now.getFullYear());
+        case 'last7':
+            return 'Last 7 days';
+        case 'last30':
+            return 'Last 30 days';
+        case 'last90':
+            return 'Last 90 days';
+        case 'custom':
+            return 'Custom range';
+        case 'all':
+        default:
+            return 'All time';
+    }
+}
+
+/** Human-readable label for the *prior* period — used in delta captions. */
+export function priorPeriodLabel(dateFilter: DateFilter): string {
+    switch (dateFilter) {
+        case 'today':
+            return 'yesterday';
+        case 'yesterday':
+            return 'the day before';
+        case 'week':
+            return 'last week';
+        case 'month':
+            return 'last month';
+        case 'year':
+            return 'last year';
+        case 'last7':
+            return 'the prior 7 days';
+        case 'last30':
+            return 'the prior 30 days';
+        case 'last90':
+            return 'the prior 90 days';
+        case 'custom':
+            return 'the prior range';
+        case 'all':
+        default:
+            return '';
+    }
+}
+
+/**
  * Converts CalendarDate range to ISO date strings for API calls
  * Used with @internationalized/date CalendarDate objects
  *
