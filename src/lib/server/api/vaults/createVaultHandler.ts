@@ -2,11 +2,12 @@ import {drizzle} from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
 import {createId} from "@paralleldrive/cuid2";
 import type {CreateVault} from "$lib/schemas/vaults";
-import {vaultMembers, vaults} from "$lib/server/db/schema";
+import {expenseTags, vaultMembers, vaults} from "$lib/server/db/schema";
 import {formatISO} from "date-fns";
 import {UTCDate} from "@date-fns/utc";
 import {initialAuditFields} from "$lib/server/utils/audit";
 import {eq, and} from "drizzle-orm";
+import {DEFAULT_VAULT_TAGS} from "$lib/configurations/defaultTags";
 
 export const createVault = async (
     session: App.AuthSession,
@@ -71,6 +72,21 @@ export const createVault = async (
             joinedAt: formatISO(new UTCDate()),
         })
         .returning();
+
+    // Seed the WHO/WHY starter tag set. Marked isSystem=true but renameable/deletable.
+    if (DEFAULT_VAULT_TAGS.length > 0) {
+        await client
+            .insert(expenseTags)
+            .values(
+                DEFAULT_VAULT_TAGS.map((t) => ({
+                    vaultId: newVault.id,
+                    name: t.name,
+                    color: t.color,
+                    isSystem: true,
+                    ...initialAuditFields({ userId: session.user.id }),
+                })),
+            );
+    }
 
     return {
         vault: newVault,
