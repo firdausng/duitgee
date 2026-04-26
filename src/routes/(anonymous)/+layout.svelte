@@ -10,11 +10,9 @@
 	<header class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
 		<div class="container mx-auto flex h-14 max-w-screen-2xl items-center justify-between px-4">
 			<div class="flex items-center gap-6">
-				<a href="/" class="flex items-center gap-3">
-					<div class="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-xl">
-						<img src="/favicon.svg" alt="DuitGee" class="w-8 h-8" />
-					</div>
-					<h1 class="text-2xl font-bold text-primary">DuitGee</h1>
+				<a href="/" class="flex items-center gap-2.5">
+					<img src="/favicon.svg" alt="" class="w-7 h-7" />
+					<h1 class="text-xl font-semibold tracking-tight text-foreground">DuitGee</h1>
 				</a>
 			</div>
 			<div class="flex items-center gap-2">
