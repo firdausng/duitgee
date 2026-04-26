@@ -82,7 +82,9 @@
       "Bash(grep -B1 -A4 \"expenses/\\\\[expenseId\\\\]/edit\\\\|expenses\\\\\\\\\\\\\\\\\\\\[expenseId\\\\\\\\\\\\\\\\\\\\]\\\\\\\\\\\\\\\\edit\")",
       "Bash(grep -B1 -A4 \"expense\\\\\\\\\\\\\\\\|template\\\\|status\")",
       "Bash(grep -v \"members\\\\|funds\\\\|recurring\\\\|templates/.*edit\\\\|templates/new\\\\|vaults/new\\\\|vaults\\\\\\\\\\\\\\\\new\\\\|+layout\\\\|page.svelte.spec\\\\|better-auth\\\\|hooks\\\\|VaultStatistics\\\\|calendar\\\\|edit\\\\\\\\\\\\\\\\+page.svelte\\\\|funds\\\\\\\\\\\\\\\\\\\\[fundId\\\\\\\\\\\\\\\\\\\\]\")",
-      "Bash(grep -A4 \"expenses\\\\\\\\\\\\\\\\\\\\[expenseId\\\\\\\\\\\\\\\\\\\\]\\\\\\\\\\\\\\\\edit\\\\\\\\\\\\\\\\+page.svelte\\\\\\\\\\\\\\\\\\\\[39m:184\")"
+      "Bash(grep -A4 \"expenses\\\\\\\\\\\\\\\\\\\\[expenseId\\\\\\\\\\\\\\\\\\\\]\\\\\\\\\\\\\\\\edit\\\\\\\\\\\\\\\\+page.svelte\\\\\\\\\\\\\\\\\\\\[39m:184\")",
+      "mcp__playwright__browser_close",
+      "Bash(kill be8qofsjt *)"
     ]
   }
 }

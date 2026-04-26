@@ -46,13 +46,7 @@
     <title>DuitGee — collaborative expense tracking that spots the gaps</title>
     <meta
         name="description"
-        content="A collaborative expense tracker for couples (works solo too). Less friction with your partner, clearer view of where the money goes, and the gaps you'd otherwise miss."
-    />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..900,0..100&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet"
+        content="A collaborative expense tracker for families (works solo too). Less friction with your partner, clearer view of where the money goes, and the gaps you'd otherwise miss."
     />
 </svelte:head>
 
@@ -626,6 +620,22 @@
         --teal-soft:    oklch(0.92  0.03  175);
         --clay:         oklch(0.62  0.13  45);   /* burnt clay */
         --gold:         oklch(0.78  0.13  82);   /* warm amber */
+
+        /* Surface tokens — elevated card backgrounds (lifted above paper) */
+        --surface:      oklch(1 0 0);
+        --surface-2:    oklch(0.95 0.01 70);
+        --surface-3:    oklch(0.99 0 0);
+        --surface-warm: oklch(0.97 0.05 80);
+
+        /* Spotlight tokens — deep contrast section (.dg-final, .dg-tier--pro).
+           Stay dark in both modes so the section reads as a spotlight. */
+        --spotlight:        oklch(0.21 0.02 50);
+        --spotlight-fg:     oklch(0.972 0.012 75);
+        --spotlight-fg-2:   oklch(0.85 0.012 60);
+        --spotlight-rule:   oklch(0.40 0.02 50);
+        --spotlight-rule-2: oklch(0.30 0.02 50);
+        --spotlight-meta:   oklch(0.65 0.012 60);
+
         --shadow-sm:    0 1px 2px oklch(0.20 0.02 50 / 0.05),
                         0 2px 6px oklch(0.20 0.02 50 / 0.04);
         --shadow-md:    0 4px 14px oklch(0.20 0.02 50 / 0.07),
@@ -640,6 +650,42 @@
         -webkit-font-smoothing: antialiased;
         text-rendering: optimizeLegibility;
         overflow-x: hidden;
+    }
+
+    /* Dark mode — overrides the warm-bone palette with a deep espresso scheme.
+       Surface/spotlight tokens shift so cards stay lifted above the page bg
+       and the spotlight section stays visually deeper than the surrounding page. */
+    :global(.dark) .dg-landing {
+        --paper:        oklch(0.16  0.012 60);
+        --paper-2:      oklch(0.20  0.018 55);
+        --ink:          oklch(0.94  0.012 75);
+        --ink-2:        oklch(0.76  0.014 70);
+        --ink-3:        oklch(0.55  0.014 65);
+        --rule:         oklch(0.28  0.014 55);
+        --rule-2:       oklch(0.36  0.014 55);
+        --teal:         oklch(0.74  0.09  175);
+        --teal-soft:    oklch(0.30  0.04  175);
+        --clay:         oklch(0.74  0.12  45);
+        --gold:         oklch(0.78  0.13  82);
+
+        --surface:      oklch(0.22 0.018 55);
+        --surface-2:    oklch(0.25 0.018 55);
+        --surface-3:    oklch(0.21 0.014 55);
+        --surface-warm: oklch(0.26 0.04  70);
+
+        --spotlight:        oklch(0.10 0.012 55);
+        --spotlight-fg:     oklch(0.94 0.012 75);
+        --spotlight-fg-2:   oklch(0.78 0.014 70);
+        --spotlight-rule:   oklch(0.22 0.014 55);
+        --spotlight-rule-2: oklch(0.18 0.014 55);
+        --spotlight-meta:   oklch(0.55 0.014 65);
+
+        --shadow-sm:    0 1px 2px oklch(0 0 0 / 0.45),
+                        0 2px 6px oklch(0 0 0 / 0.35);
+        --shadow-md:    0 4px 14px oklch(0 0 0 / 0.50),
+                        0 12px 30px oklch(0 0 0 / 0.40);
+        --shadow-lg:    0 8px 24px oklch(0 0 0 / 0.55),
+                        0 24px 60px oklch(0 0 0 / 0.45);
     }
 
     /* tasteful subtle paper texture */
@@ -785,8 +831,8 @@
         box-shadow: var(--shadow-lg);
     }
     :global(.dg-cta--invert) {
-        background: oklch(0.97 0.012 75) !important;
-        color: oklch(0.21 0.02 50) !important;
+        background: var(--spotlight-fg) !important;
+        color: var(--spotlight) !important;
     }
 
     .dg-cta-row {
@@ -833,7 +879,7 @@
     }
     .dg-mock {
         position: relative;
-        background: oklch(1 0 0);
+        background: var(--surface);
         border: 1px solid var(--rule);
         border-radius: 1.25rem;
         padding: 1.4rem 1.4rem 1.5rem;
@@ -929,7 +975,7 @@
         border-top: 1px dashed var(--rule);
     }
     .dg-mock__row--alert {
-        background: oklch(0.97 0.05 80);
+        background: var(--surface-warm);
         border-radius: 0.7rem;
         padding: 0.7rem 0.8rem;
         margin: 0 -0.4rem 0.5rem;
@@ -944,7 +990,7 @@
         font-family: 'Fraunces', serif;
         font-weight: 700;
         font-size: 1rem;
-        color: var(--ink);
+        color: var(--spotlight);
         flex-shrink: 0;
     }
     .dg-mock__icon--fund { background: var(--teal); color: var(--paper); }
@@ -1098,7 +1144,7 @@
         margin: 0;
     }
     .dg-frame {
-        background: oklch(1 0 0);
+        background: var(--surface);
         border: 1px solid var(--rule);
         border-radius: 1rem;
         padding: 1.3rem 1.2rem;
@@ -1131,8 +1177,8 @@
         margin: 0.5rem 0 0;
         line-height: 1.4;
     }
-    .dg-frame--phone { background: oklch(0.95 0.01 70); border-color: var(--rule-2); }
-    .dg-frame--quick { background: oklch(0.99 0 0); border-style: dashed; }
+    .dg-frame--phone { background: var(--surface-2); border-color: var(--rule-2); }
+    .dg-frame--quick { background: var(--surface-3); border-style: dashed; }
     .dg-frame__quick-label {
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.7rem;
@@ -1166,7 +1212,7 @@
         border-radius: 999px;
         cursor: pointer;
     }
-    .dg-frame--claim { background: oklch(0.96 0.04 80); }
+    .dg-frame--claim { background: var(--surface-warm); }
     .dg-frame__claim-row {
         display: flex;
         gap: 0.5rem;
@@ -1202,7 +1248,7 @@
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.85rem;
         color: var(--clay);
-        background: oklch(0.95 0.05 80);
+        background: var(--surface-warm);
         padding: 0.1rem 0.45rem;
         border-radius: 0.3rem;
     }
@@ -1230,7 +1276,7 @@
     }
     .dg-mini-mock {
         margin-top: 1.5rem;
-        background: oklch(1 0 0);
+        background: var(--surface);
         border: 1px solid var(--rule);
         border-radius: 0.85rem;
         padding: 1rem 1.1rem;
@@ -1251,7 +1297,7 @@
         font-weight: 600;
         font-size: 0.85rem;
         margin-left: -0.4rem;
-        border: 2px solid oklch(1 0 0);
+        border: 2px solid var(--surface);
         color: var(--ink);
     }
     .dg-avatars span:first-child { margin-left: 0; }
@@ -1315,7 +1361,7 @@
         gap: 1.1rem;
     }
     .dg-fund {
-        background: oklch(1 0 0);
+        background: var(--surface);
         border: 1px solid var(--rule);
         border-radius: 1rem;
         padding: 1.2rem 1.3rem;
@@ -1423,16 +1469,16 @@
         .dg-tiers { grid-template-columns: 1fr 1fr; gap: 1.8rem; }
     }
     .dg-tier {
-        background: oklch(1 0 0);
+        background: var(--surface);
         border: 1px solid var(--rule);
         border-radius: 1.1rem;
         padding: 1.8rem;
         box-shadow: var(--shadow-sm);
     }
     .dg-tier--pro {
-        background: var(--ink);
-        color: var(--paper);
-        border-color: var(--ink);
+        background: var(--spotlight);
+        color: var(--spotlight-fg);
+        border-color: var(--spotlight);
     }
     .dg-tier header {
         display: flex;
@@ -1442,7 +1488,7 @@
         padding-bottom: 1.2rem;
         border-bottom: 1px solid var(--rule);
     }
-    .dg-tier--pro header { border-bottom-color: oklch(0.40 0.02 50); }
+    .dg-tier--pro header { border-bottom-color: var(--spotlight-rule); }
     .dg-tier__name {
         font-family: 'Fraunces', serif;
         font-variation-settings: 'opsz' 96, 'SOFT' 40, 'wght' 500;
@@ -1464,14 +1510,14 @@
         letter-spacing: 0.06em;
         margin-left: 0.3rem;
     }
-    .dg-tier--pro .dg-tier__price span { color: oklch(0.65 0.012 60); }
+    .dg-tier--pro .dg-tier__price span { color: var(--spotlight-meta); }
     .dg-tier__lead {
         font-family: 'Fraunces', serif;
         font-style: italic;
         font-variation-settings: 'opsz' 24, 'SOFT' 60;
         font-size: 0.95rem;
         margin: 0 0 1rem 0;
-        color: oklch(0.85 0.012 60);
+        color: var(--spotlight-fg-2);
     }
     .dg-tier ul {
         list-style: none;
@@ -1486,7 +1532,7 @@
         color: inherit;
         border-bottom: 1px solid var(--rule);
     }
-    .dg-tier--pro li { border-bottom-color: oklch(0.30 0.02 50); }
+    .dg-tier--pro li { border-bottom-color: var(--spotlight-rule-2); }
     .dg-tier li:last-child { border-bottom: none; }
     .dg-tier li::before {
         content: "";
@@ -1516,18 +1562,18 @@
         font-family: 'Fraunces', serif !important;
         font-variation-settings: 'opsz' 96, 'SOFT' 40, 'wght' 460 !important;
         font-size: clamp(1.1rem, 1.8vw, 1.35rem) !important;
-        color: oklch(0.21 0.02 50) !important;
+        color: var(--ink) !important;
         padding: 1.4rem 0.5rem 1.4rem 0 !important;
         text-align: left !important;
         gap: 0.5rem !important;
     }
     :global(.dg-faq__list [data-state="open"] button) {
-        color: oklch(0.36 0.05 175) !important;
+        color: var(--teal) !important;
     }
     :global(.dg-faq__list p) {
         font-size: 0.98rem;
         line-height: 1.65;
-        color: oklch(0.42 0.018 55);
+        color: var(--ink-2);
         max-width: 44rem;
         padding: 0.2rem 0 1.2rem;
         margin: 0;
@@ -1541,7 +1587,7 @@
     .dg-faq__num {
         font-family: 'JetBrains Mono', monospace !important;
         font-size: 0.72rem !important;
-        color: oklch(0.36 0.05 175);
+        color: var(--teal);
         letter-spacing: 0.14em;
         font-weight: 500;
         font-variation-settings: normal !important;
@@ -1551,8 +1597,8 @@
 
     /* ---------- Final CTA ---------- */
     .dg-final {
-        background: var(--ink);
-        color: var(--paper);
+        background: var(--spotlight);
+        color: var(--spotlight-fg);
         padding: clamp(4rem, 8vw, 7rem) clamp(1.25rem, 4vw, 3rem);
         text-align: center;
         position: relative;
@@ -1573,7 +1619,7 @@
         font-size: 0.72rem;
         text-transform: uppercase;
         letter-spacing: 0.18em;
-        color: oklch(0.70 0.01 60);
+        color: var(--spotlight-meta);
         margin: 0 0 1.5rem;
     }
     .dg-final__h {
@@ -1583,19 +1629,19 @@
         line-height: 1.05;
         letter-spacing: -0.02em;
         margin: 0 0 2.4rem;
-        color: var(--paper);
+        color: var(--spotlight-fg);
     }
     .dg-final__h em {
         font-style: italic;
         font-variation-settings: 'opsz' 144, 'SOFT' 100, 'wght' 360;
-        color: oklch(0.78 0.13 82);
+        color: var(--gold);
     }
     .dg-final__small {
         margin-top: 1.6rem;
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.78rem;
         letter-spacing: 0.04em;
-        color: oklch(0.65 0.012 60);
+        color: var(--spotlight-meta);
     }
 
     /* ---------- Footer ---------- */

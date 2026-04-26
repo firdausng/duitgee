@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-DuitGee is a **collaborative expense tracker for couples (works solo too)** built on SvelteKit + Cloudflare Workers. Two value props drive every feature: **reduce misunderstanding and friction** between partners managing shared money, and **spot gaps in spending behavior** (creeping installments, dining-out drift, forgotten subscriptions).
+DuitGee is a **collaborative expense tracker for families (works solo too)** built on SvelteKit + Cloudflare Workers. Two value props drive every feature: **reduce misunderstanding and friction** between household members managing shared money, and **spot gaps in spending behavior** (creeping installments, dining-out drift, forgotten subscriptions).
 
 Stack: SvelteKit on Cloudflare Workers; dual D1 databases (Better Auth on `duitgee-auth`, app data on `duitgee`); R2 for attachments; Workers AI for receipt scan + period insights.
 
