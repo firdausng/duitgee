@@ -2,7 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-DuitGee is a SvelteKit app for expense tracking and vault management, deployed on Cloudflare Workers. Dual-database: Better Auth on `duitgee-auth`, application data on `duitgee` (both Cloudflare D1).
+DuitGee is a **collaborative expense tracker for couples (works solo too)** built on SvelteKit + Cloudflare Workers. Two value props drive every feature: **reduce misunderstanding and friction** between partners managing shared money, and **spot gaps in spending behavior** (creeping installments, dining-out drift, forgotten subscriptions).
+
+Stack: SvelteKit on Cloudflare Workers; dual D1 databases (Better Auth on `duitgee-auth`, app data on `duitgee`); R2 for attachments; Workers AI for receipt scan + period insights.
+
+**Read [`docs/internal/product.md`](docs/internal/product.md) before suggesting features or writing user-facing copy.** It captures the purpose, the two value props, who DuitGee is for (and isn't), and the hard product rules that derive from those.
 
 ## Hard rules
 
