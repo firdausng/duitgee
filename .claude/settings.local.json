@@ -98,7 +98,9 @@
       "Bash(awk '/anonymous.*\\\\+page\\\\.svelte:74:42/{flag=1; next} flag && /^$/{flag=0} flag')",
       "Bash(kill btjlaq9e1 *)",
       "Bash(grep -E \"\\\\.\\(png|jpg|jpeg\\)$\")",
-      "Bash(kill b7x5mrr36 *)"
+      "Bash(kill b7x5mrr36 *)",
+      "mcp__playwright__browser_fill_form",
+      "Bash(kill bauysi4r2 *)"
     ]
   }
 }

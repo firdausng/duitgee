@@ -90,14 +90,13 @@
     <!-- Brand + collapse toggle -->
     <div
         class={cn(
-            'flex items-center h-14 px-3 border-b shrink-0',
+            'dg-sb__brand flex items-center h-14 px-3 border-b shrink-0',
             collapsed ? 'justify-center' : 'justify-between',
         )}
     >
         {#if !collapsed}
             <a href="/vaults" class="flex items-center gap-2 min-w-0">
-                <img src="/favicon.svg" alt="" class="size-6" />
-                <span class="font-semibold text-sm">DuitGee</span>
+                <span class="dg-sb__wordmark">duitgee</span>
             </a>
         {/if}
         <button
@@ -158,12 +157,13 @@
 
     <!-- Nav sections -->
     <nav class={cn('flex-1 overflow-y-auto py-3', collapsed ? 'px-2' : 'px-3')}>
+        {#if !collapsed}
+            <p class="dg-sb__eyebrow">— The household —</p>
+        {/if}
         {#each VAULT_NAV as section (section.id)}
             <div class={cn(section.id !== 'primary' && 'mt-4')}>
                 {#if !collapsed && section.label}
-                    <p class="px-2 mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {section.label}
-                    </p>
+                    <p class="dg-sb__eyebrow dg-sb__eyebrow--sub">— {section.label} —</p>
                 {/if}
                 <ul class="space-y-0.5">
                     {#each section.items as item (item.id)}
@@ -183,29 +183,23 @@
                                 aria-disabled={disabled || undefined}
                                 title={collapsed ? item.label : undefined}
                                 class={cn(
-                                    'group flex items-center gap-3 rounded-md text-sm font-medium transition-colors',
+                                    'dg-sb__item group flex items-center gap-3 text-sm transition-colors',
                                     collapsed
                                         ? 'justify-center size-10 mx-auto'
-                                        : 'px-2 py-1.5',
-                                    active
-                                        ? 'bg-accent text-accent-foreground'
-                                        : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
+                                        : 'px-2.5 py-1.5',
+                                    active && 'is-active',
                                     disabled && 'opacity-40 pointer-events-none',
                                 )}
                             >
                                 <Icon class="size-4 shrink-0" />
                                 {#if !collapsed}
-                                    <span class="flex-1 truncate">{item.label}</span>
+                                    <span class="dg-sb__label flex-1 truncate">{item.label}</span>
                                     {#if badgeValue > 0}
-                                        <span
-                                            class="inline-flex items-center justify-center min-w-[1.25rem] h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold"
-                                        >
-                                            {badgeValue}
-                                        </span>
+                                        <span class="dg-sb__badge">{badgeValue}</span>
                                     {/if}
                                 {:else if badgeValue > 0}
                                     <span
-                                        class="absolute size-2 rounded-full bg-primary translate-x-3 -translate-y-3"
+                                        class="absolute size-2 bg-primary translate-x-3 -translate-y-3"
                                         aria-hidden="true"
                                     ></span>
                                 {/if}
@@ -234,3 +228,74 @@
         {/if}
     </div>
 </aside>
+
+<style>
+    /* Almanac sidebar — Direction B. Tokens come from .dg-almanac on (auth) layout. */
+
+    .dg-sb__brand {
+        background: var(--almanac-paper-2);
+    }
+
+    .dg-sb__wordmark {
+        font-family: 'Fraunces', Georgia, serif;
+        font-style: italic;
+        font-variation-settings: 'opsz' 144, 'SOFT' 80, 'wght' 460;
+        font-size: 1.4rem;
+        letter-spacing: -0.012em;
+        color: var(--almanac-oxblood);
+        line-height: 1;
+    }
+
+    .dg-sb__eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.62rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: var(--almanac-ink-3);
+        padding: 0 0.3rem;
+        margin: 0 0 0.6rem;
+    }
+    .dg-sb__eyebrow--sub {
+        margin-top: 0.2rem;
+        color: var(--almanac-gold);
+    }
+
+    .dg-sb__item {
+        font-family: 'Newsreader', serif;
+        font-size: 0.95rem;
+        color: var(--almanac-ink-2);
+        text-decoration: none;
+        position: relative;
+    }
+    .dg-sb__item:hover {
+        color: var(--almanac-ink);
+        background: var(--almanac-paper-2);
+    }
+    .dg-sb__item.is-active {
+        background: var(--almanac-ink);
+        color: var(--almanac-paper);
+    }
+    .dg-sb__item.is-active .dg-sb__label {
+        font-style: italic;
+    }
+
+    .dg-sb__label {
+        font-family: 'Newsreader', serif;
+    }
+
+    .dg-sb__badge {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.6rem;
+        font-weight: 600;
+        background: var(--almanac-oxblood);
+        color: var(--almanac-paper);
+        padding: 0 0.4rem;
+        min-width: 1.1rem;
+        height: 1rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: 0;
+    }
+</style>

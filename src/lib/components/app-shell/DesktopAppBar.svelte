@@ -52,8 +52,9 @@
                             class="shrink-0"
                         />
                     {/if}
-                    <span class="font-semibold truncate" title={vault.name}>{vault.name}</span>
+                    <span class="dg-appbar__title truncate" title={vault.name}>{vault.name}</span>
                 </span>
+                <span class="dg-appbar__chip">Vol. V &middot; No. 11</span>
 
                 {#if onSetDefault}
                     <button
@@ -111,3 +112,25 @@
         </div>
     </div>
 </header>
+
+<style>
+    .dg-appbar__title {
+        font-family: 'Fraunces', Georgia, serif;
+        font-style: italic;
+        font-variation-settings: 'opsz' 144, 'SOFT' 60, 'wght' 460;
+        font-size: 1.25rem;
+        letter-spacing: -0.012em;
+        color: var(--almanac-ink);
+    }
+    .dg-appbar__chip {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.65rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        color: var(--almanac-ink-3);
+        margin-left: 0.6rem;
+        padding-left: 0.7rem;
+        border-left: 1px solid var(--almanac-rule-soft);
+    }
+</style>

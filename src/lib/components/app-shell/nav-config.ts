@@ -30,12 +30,16 @@ export type NavSection = {
     items: NavItem[];
 };
 
+// Editorial labels — Direction B (Family Almanac).
+// Per design: Home → Ledger, Expenses → Chronicle, Members → Family.
+// Calendar reframes as Almanac to match the magazine vocabulary.
+// Page titles inside the routes stay functional.
 export const VAULT_NAV: NavSection[] = [
     {
         id: 'primary',
         items: [
-            { id: 'home', label: 'Home', icon: House, path: '', exact: true },
-            { id: 'expenses', label: 'Expenses', icon: Receipt, path: 'expenses' },
+            { id: 'home', label: 'Ledger', icon: House, path: '', exact: true },
+            { id: 'expenses', label: 'Chronicle', icon: Receipt, path: 'expenses' },
             { id: 'funds', label: 'Funds', icon: Wallet, path: 'funds' },
         ],
     },
@@ -53,7 +57,7 @@ export const VAULT_NAV: NavSection[] = [
             },
             { id: 'templates', label: 'Templates', icon: FileText, path: 'templates' },
             { id: 'tags', label: 'Tags', icon: Tag, path: 'tags' },
-            { id: 'members', label: 'Members', icon: Users, path: 'members' },
+            { id: 'members', label: 'Family', icon: Users, path: 'members' },
             {
                 id: 'reimbursements',
                 label: 'Reimbursements',
@@ -61,15 +65,15 @@ export const VAULT_NAV: NavSection[] = [
                 path: 'reimbursements',
             },
             { id: 'transfer', label: 'Transfer', icon: ArrowLeftRight, path: 'transfer' },
-            { id: 'calendar', label: 'Calendar', icon: Calendar, path: 'calendar' },
+            { id: 'calendar', label: 'Almanac', icon: Calendar, path: 'calendar' },
         ],
     },
 ];
 
 /** 3 of 4 destinations on the mobile bottom bar (4th slot is the centered Quick Add ⊕). */
 export const MOBILE_BOTTOM_PRIMARY: NavItem[] = [
-    { id: 'home', label: 'Home', icon: House, path: '', exact: true },
-    { id: 'expenses', label: 'Expenses', icon: Receipt, path: 'expenses' },
+    { id: 'home', label: 'Ledger', icon: House, path: '', exact: true },
+    { id: 'expenses', label: 'Chronicle', icon: Receipt, path: 'expenses' },
     { id: 'funds', label: 'Funds', icon: Wallet, path: 'funds' },
 ];
 

@@ -159,7 +159,16 @@
     }
 </script>
 
-<div class="min-h-screen bg-background flex flex-col">
+<svelte:head>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..900,0..100&family=Newsreader:opsz,wght,ital@6..72,300..700,0..1&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet"
+    />
+</svelte:head>
+
+<div class="dg-almanac min-h-screen bg-background flex flex-col">
     {#if data.isImpersonating}
         <div class="sticky top-0 z-[60] w-full bg-amber-500/90 text-amber-950 text-sm">
             <div class="container mx-auto flex h-9 max-w-screen-2xl items-center justify-between gap-4 px-4">
