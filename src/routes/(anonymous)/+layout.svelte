@@ -5,10 +5,11 @@
 
     let { children, data } = $props();
 
-    const editorialRoutes = ["/", "/privacy", "/terms"];
-    let isEditorial = $derived(editorialRoutes.includes(page.url.pathname));
-    // Phase A: almanac applies only to landing. Phase B will extend to /privacy and /terms.
-    let isAlmanac = $derived(page.url.pathname === "/");
+    // All anonymous routes are editorial / almanac-themed.
+    const almanacRoutes = ["/", "/privacy", "/terms", "/login", "/register", "/forgot-password"];
+    let isAlmanac = $derived(almanacRoutes.includes(page.url.pathname));
+    // The editorial layout header (magazine-style) is used everywhere almanac is.
+    let isEditorial = $derived(isAlmanac);
 </script>
 
 <svelte:head>

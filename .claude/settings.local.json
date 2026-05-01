@@ -97,7 +97,8 @@
       "Read(//d/tmp/**)",
       "Bash(awk '/anonymous.*\\\\+page\\\\.svelte:74:42/{flag=1; next} flag && /^$/{flag=0} flag')",
       "Bash(kill btjlaq9e1 *)",
-      "Bash(grep -E \"\\\\.\\(png|jpg|jpeg\\)$\")"
+      "Bash(grep -E \"\\\\.\\(png|jpg|jpeg\\)$\")",
+      "Bash(kill b7x5mrr36 *)"
     ]
   }
 }
