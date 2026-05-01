@@ -1,12 +1,12 @@
 <script lang="ts">
     import type { Snippet } from "svelte";
-    import type { HTMLAttributes } from "svelte/elements";
     import { cn } from "$lib/utils.js";
 
-    type Props = HTMLAttributes<HTMLSpanElement> & {
+    type Props = {
         children?: Snippet;
         tone?: "oxblood" | "ink" | "muted" | "gold";
         class?: string;
+        [key: string]: unknown;
     };
 
     let { children, tone = "oxblood", class: className, ...rest }: Props = $props();

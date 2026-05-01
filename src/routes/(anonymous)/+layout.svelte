@@ -7,6 +7,8 @@
 
     const editorialRoutes = ["/", "/privacy", "/terms"];
     let isEditorial = $derived(editorialRoutes.includes(page.url.pathname));
+    // Phase A: almanac applies only to landing. Phase B will extend to /privacy and /terms.
+    let isAlmanac = $derived(page.url.pathname === "/");
 </script>
 
 <svelte:head>
@@ -18,7 +20,7 @@
     />
 </svelte:head>
 
-<div class="min-h-screen bg-background">
+<div class="min-h-screen bg-background" class:dg-almanac={isAlmanac}>
     {#if isEditorial}
         <header class="dg-header dg-header--editorial">
             <div class="dg-header__inner">
@@ -68,36 +70,31 @@
 </div>
 
 <style>
-    /* Wordmark — Fraunces in both modes for brand consistency */
+    /* Wordmark — italic Fraunces in oxblood, almanac-style.
+       Used in both editorial and default header for brand consistency. */
     .dg-wordmark {
         font-family: 'Fraunces', Georgia, serif;
-        font-variation-settings: 'opsz' 48, 'SOFT' 30, 'wght' 460;
-        font-size: 1.55rem;
-        letter-spacing: -0.018em;
-        color: oklch(0.21 0.02 50);
+        font-style: italic;
+        font-variation-settings: 'opsz' 144, 'SOFT' 80, 'wght' 460;
+        font-size: 1.6rem;
+        letter-spacing: -0.012em;
+        color: var(--almanac-oxblood);
         text-decoration: none;
         line-height: 1;
     }
-    :global(.dark) .dg-wordmark {
-        color: oklch(0.94 0.012 75);
-    }
     .dg-wordmark--default {
-        font-size: 1.35rem;
+        font-size: 1.4rem;
     }
 
-    /* Editorial header — sits flush against the warm-bone landing.
-       No backdrop blur; a single hairline rule below. */
+    /* Editorial header — sits flush against the almanac body.
+       Hairline ink rule below (almanac signature), no blur. */
     .dg-header--editorial {
         position: sticky;
         top: 0;
         z-index: 50;
         width: 100%;
-        background: oklch(0.972 0.012 75);
-        border-bottom: 1px solid oklch(0.88 0.012 70);
-    }
-    :global(.dark) .dg-header--editorial {
-        background: oklch(0.16 0.012 60);
-        border-bottom-color: oklch(0.28 0.014 55);
+        background: var(--almanac-paper);
+        border-bottom: 1px solid var(--almanac-ink);
     }
     .dg-header__inner {
         max-width: 86rem;
@@ -114,21 +111,21 @@
         gap: 0.6rem;
     }
 
-    /* Editorial CTA pill — matches the hero CTA tone */
+    /* Editorial CTA — oxblood square button, almanac signature */
     :global(.dg-header__cta) {
-        background: oklch(0.21 0.02 50) !important;
-        color: oklch(0.972 0.012 75) !important;
-        border: none !important;
-        border-radius: 999px !important;
+        background: var(--almanac-oxblood) !important;
+        color: var(--almanac-paper) !important;
+        border: 1px solid var(--almanac-oxblood) !important;
+        border-radius: 0 !important;
         font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
         font-weight: 600 !important;
-        letter-spacing: -0.005em !important;
-        padding: 0.5rem 1.05rem !important;
+        letter-spacing: 0.005em !important;
+        padding: 0.5rem 1.1rem !important;
         height: auto !important;
-        font-size: 0.88rem !important;
+        font-size: 0.85rem !important;
+        box-shadow: none !important;
     }
-    :global(.dark) :global(.dg-header__cta) {
-        background: oklch(0.94 0.012 75) !important;
-        color: oklch(0.16 0.012 60) !important;
+    :global(.dg-header__cta:hover) {
+        opacity: 0.92 !important;
     }
 </style>

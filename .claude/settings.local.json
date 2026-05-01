@@ -94,7 +94,10 @@
       "Bash(tar -xzf /tmp/duitgee-design/design.tgz -C /tmp/duitgee-design)",
       "Bash(mkdir -p \"D:/tmp/dg-design\")",
       "Bash(cp -r /tmp/dg-design/* \"D:/tmp/dg-design/\")",
-      "Read(//d/tmp/**)"
+      "Read(//d/tmp/**)",
+      "Bash(awk '/anonymous.*\\\\+page\\\\.svelte:74:42/{flag=1; next} flag && /^$/{flag=0} flag')",
+      "Bash(kill btjlaq9e1 *)",
+      "Bash(grep -E \"\\\\.\\(png|jpg|jpeg\\)$\")"
     ]
   }
 }

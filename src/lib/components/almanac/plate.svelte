@@ -1,13 +1,14 @@
 <script lang="ts">
     import type { Snippet } from "svelte";
-    import type { HTMLAttributes } from "svelte/elements";
     import { cn } from "$lib/utils.js";
 
-    type Props = HTMLAttributes<HTMLElement> & {
+    type Props = {
         children?: Snippet;
         variant?: "default" | "inset" | "inverted";
         as?: "div" | "section" | "article" | "aside" | "figure";
         class?: string;
+        // Pass-through for arbitrary HTML attrs (style, id, role, data-*, aria-*).
+        [key: string]: unknown;
     };
 
     let {

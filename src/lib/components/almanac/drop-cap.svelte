@@ -6,12 +6,13 @@
         children?: Snippet;
         class?: string;
         as?: "p" | "div";
+        [key: string]: unknown;
     };
 
-    let { children, class: className, as = "p" }: Props = $props();
+    let { children, class: className, as = "p", ...rest }: Props = $props();
 </script>
 
-<svelte:element this={as} class={cn("almanac-drop-cap", className)}>
+<svelte:element this={as} class={cn("almanac-drop-cap", className)} {...rest}>
     {@render children?.()}
 </svelte:element>
 

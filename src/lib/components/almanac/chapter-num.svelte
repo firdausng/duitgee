@@ -1,11 +1,11 @@
 <script lang="ts">
     import type { Snippet } from "svelte";
-    import type { HTMLAttributes } from "svelte/elements";
     import { cn } from "$lib/utils.js";
 
-    type Props = HTMLAttributes<HTMLSpanElement> & {
+    type Props = {
         children?: Snippet;
         class?: string;
+        [key: string]: unknown;
     };
 
     let { children, class: className, ...rest }: Props = $props();

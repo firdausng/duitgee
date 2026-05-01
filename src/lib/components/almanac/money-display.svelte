@@ -8,6 +8,7 @@
         color?: string;
         class?: string;
         signed?: boolean;
+        [key: string]: unknown;
     };
 
     let {
@@ -17,6 +18,7 @@
         color = "inherit",
         class: className,
         signed = false,
+        ...rest
     }: Props = $props();
 
     const formatted = $derived(
@@ -34,6 +36,7 @@
 <span
     class={cn("almanac-money", className)}
     style="font-size: {size}px; color: {color};"
+    {...rest}
 >
     {#if sign}<span class="almanac-money__sign">{sign}</span>{/if}<span
         class="almanac-money__cur">{currency}</span
