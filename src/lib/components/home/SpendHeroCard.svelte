@@ -54,44 +54,31 @@
     });
 </script>
 
-<section class="rounded-[var(--radius-md)] border bg-card p-4 sm:p-5">
-    <!-- Period chips -->
-    <div class="flex items-center gap-1 mb-3 -mx-1 overflow-x-auto scrollbar-hide">
+<section class="dg-spend border bg-card p-4 sm:p-5">
+    <!-- Period chips — mono uppercase, square, oxblood active -->
+    <div class="dg-spend__tabs">
         {#each tabs as tab (tab.id)}
             {@const active = filterType === tab.id}
             <button
                 type="button"
                 onclick={() => onFilterChange(tab.id)}
-                class={cn(
-                    'shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-colors',
-                    active
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-muted',
-                )}
+                class={cn('dg-spend__tab', active && 'is-active')}
             >
                 {tab.label}
             </button>
         {/each}
         {#if filterType === 'custom' || filterType === 'all' || filterType === 'yesterday' || filterType === 'last7' || filterType === 'last30' || filterType === 'last90'}
-            <span class="shrink-0 ml-1 px-2.5 py-1 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
-                {period}
-            </span>
+            <span class="dg-spend__tab dg-spend__tab--passive">{period}</span>
         {/if}
     </div>
 
-    <!-- Period label -->
-    <p class="text-xs text-muted-foreground mb-1">
-        {period}{currentCount > 0 ? ` · ${currentCount} ${currentCount === 1 ? 'expense' : 'expenses'}` : ''}
+    <!-- Period eyebrow -->
+    <p class="dg-spend__eyebrow">
+        — {period}{currentCount > 0 ? ` · ${currentCount} ${currentCount === 1 ? 'entry' : 'entries'}` : ''} —
     </p>
 
-    <!-- Big amount -->
-    <p
-        class={cn(
-            'font-mono tabular-nums leading-none tracking-tight',
-            'text-3xl sm:text-4xl font-bold',
-            loading && 'opacity-40',
-        )}
-    >
+    <!-- Big amount in oxblood Fraunces tnum -->
+    <p class={cn('dg-spend__amount', loading && 'opacity-40')}>
         {formatCurrency(currentAmount)}
     </p>
 
@@ -129,6 +116,69 @@
             {/if}
         </div>
     {:else if filterType !== 'all'}
-        <p class="mt-2.5 text-xs text-muted-foreground">Calculating comparison…</p>
+        <p class="mt-2.5 text-xs text-muted-foreground italic">Calculating comparison…</p>
     {/if}
 </section>
+
+<style>
+    /* Almanac SpendHeroCard polish — paper plate, mono pills, italic Fraunces amount */
+
+    .dg-spend {
+        border-color: var(--almanac-ink);
+    }
+
+    .dg-spend__tabs {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-bottom: 0.85rem;
+        overflow-x: auto;
+    }
+    .dg-spend__tabs::-webkit-scrollbar { display: none; }
+
+    .dg-spend__tab {
+        flex-shrink: 0;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--almanac-ink-3);
+        background: transparent;
+        border: 1px solid transparent;
+        padding: 0.3rem 0.7rem;
+        cursor: pointer;
+        transition: color 150ms;
+    }
+    .dg-spend__tab:hover { color: var(--almanac-ink); }
+    .dg-spend__tab.is-active {
+        background: var(--almanac-oxblood);
+        color: var(--almanac-paper);
+        border-color: var(--almanac-oxblood);
+    }
+    .dg-spend__tab--passive {
+        background: var(--almanac-paper-2);
+        color: var(--almanac-ink-2);
+        border-color: var(--almanac-rule-soft);
+    }
+
+    .dg-spend__eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: var(--almanac-ink-3);
+        margin: 0 0 0.5rem;
+    }
+
+    .dg-spend__amount {
+        font-family: 'Fraunces', Georgia, serif;
+        font-variation-settings: 'opsz' 144, 'SOFT' 30, 'wght' 380;
+        font-feature-settings: 'tnum';
+        font-size: clamp(2rem, 5vw, 2.8rem);
+        line-height: 1;
+        letter-spacing: -0.02em;
+        color: var(--almanac-oxblood);
+        margin: 0;
+    }
+</style>

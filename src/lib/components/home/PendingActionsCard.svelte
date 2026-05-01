@@ -25,11 +25,9 @@
 </script>
 
 {#if hasAny}
-    <section class="rounded-[var(--radius-md)] border bg-card overflow-hidden">
-        <div class="px-3 sm:px-4 py-2 border-b">
-            <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Needs your attention
-            </p>
+    <section class="dg-pend border bg-card overflow-hidden">
+        <div class="dg-pend__head">
+            <p class="dg-pend__eyebrow">— Needs your attention —</p>
         </div>
         <ul class="divide-y">
             {#if pendingRecurringCount > 0}
@@ -82,3 +80,21 @@
         </ul>
     </section>
 {/if}
+
+<style>
+    .dg-pend { border-color: var(--almanac-ink); }
+    .dg-pend__head {
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid var(--almanac-ink);
+        background: var(--almanac-paper-2);
+    }
+    .dg-pend__eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: var(--almanac-oxblood);
+        margin: 0;
+    }
+</style>

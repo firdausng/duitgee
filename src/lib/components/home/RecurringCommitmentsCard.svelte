@@ -80,34 +80,22 @@
 </script>
 
 {#if hasContent}
-    <section class="rounded-[var(--radius-md)] border bg-card overflow-hidden">
-        <div class="px-3 sm:px-4 py-2.5 border-b flex items-center justify-between gap-2">
+    <section class="dg-rec border bg-card overflow-hidden">
+        <div class="dg-rec__head">
             <div class="flex items-center gap-2 min-w-0">
                 <RotateCcw class="size-4 text-muted-foreground shrink-0" />
-                <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Recurring commitments
-                </p>
+                <p class="dg-rec__eyebrow">— Recurring commitments —</p>
             </div>
-            <a
-                href="/vaults/{vaultId}/recurring"
-                class="text-xs font-medium text-primary hover:underline flex items-center gap-0.5 shrink-0"
-            >
-                View all
-                <ArrowRight class="size-3" />
+            <a href="/vaults/{vaultId}/recurring" class="dg-rec__link">
+                View all <ArrowRight class="size-3" />
             </a>
         </div>
 
         <div class="p-3 sm:p-4 space-y-3">
-            <!-- Headline -->
+            <!-- Headline — italic Fraunces oxblood total /mo -->
             <div>
-                <p
-                    class={cn(
-                        'font-mono tabular-nums leading-none tracking-tight',
-                        'text-2xl sm:text-3xl font-bold',
-                        loading && 'opacity-40',
-                    )}
-                >
-                    {formatCurrency(totalMonthly)}<span class="text-base text-muted-foreground font-normal">/mo</span>
+                <p class={cn('dg-rec__total', loading && 'opacity-40')}>
+                    {formatCurrency(totalMonthly)}<span class="dg-rec__period">/mo</span>
                 </p>
                 <p class="text-xs text-muted-foreground mt-1.5">
                     {#if subs.active > 0}
@@ -231,3 +219,56 @@
         </div>
     </section>
 {/if}
+
+<style>
+    .dg-rec { border-color: var(--almanac-ink); }
+    .dg-rec__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding: 0.55rem 1rem;
+        border-bottom: 1px solid var(--almanac-ink);
+        background: var(--almanac-paper-2);
+    }
+    .dg-rec__eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: var(--almanac-ink-2);
+        margin: 0;
+    }
+    .dg-rec__link {
+        font-family: 'Newsreader', serif;
+        font-style: italic;
+        font-size: 0.82rem;
+        color: var(--almanac-oxblood);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        flex-shrink: 0;
+    }
+    .dg-rec__total {
+        font-family: 'Fraunces', Georgia, serif;
+        font-variation-settings: 'opsz' 144, 'SOFT' 30, 'wght' 380;
+        font-feature-settings: 'tnum';
+        font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+        line-height: 1;
+        letter-spacing: -0.02em;
+        color: var(--almanac-oxblood);
+        margin: 0;
+    }
+    .dg-rec__period {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.42em;
+        font-weight: 500;
+        color: var(--almanac-ink-3);
+        margin-left: 0.2em;
+        letter-spacing: 0;
+        vertical-align: 0.5em;
+    }
+</style>
