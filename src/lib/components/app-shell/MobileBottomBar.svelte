@@ -61,7 +61,7 @@
 </script>
 
 <nav
-    class="md:hidden fixed bottom-0 inset-x-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+    class="dg-mbb md:hidden fixed bottom-0 inset-x-0 z-40"
     style="padding-bottom: env(safe-area-inset-bottom);"
     aria-label="Vault sections"
 >
@@ -81,36 +81,27 @@
                 aria-current={active ? 'page' : undefined}
                 aria-disabled={disabled || undefined}
                 class={cn(
-                    'flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors relative',
-                    active ? 'text-primary' : 'text-muted-foreground',
+                    'dg-mbb__item',
+                    active && 'is-active',
                     disabled && 'opacity-40 pointer-events-none',
                 )}
             >
-                <Icon class={cn('size-5', active && 'fill-primary/10')} />
-                <span>{item.label}</span>
+                <Icon class="size-5" />
+                <span class="dg-mbb__label">{item.label}</span>
                 {#if badgeValue > 0}
-                    <span
-                        class="absolute top-1.5 right-[calc(50%-1.25rem)] inline-flex items-center justify-center min-w-[1rem] h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold"
-                    >
-                        {badgeValue}
-                    </span>
+                    <span class="dg-mbb__badge">{badgeValue}</span>
                 {/if}
             </a>
         {/each}
 
-        <!-- Center Quick Add -->
+        <!-- Center Quick Add — oxblood square FAB -->
         <div class="flex items-center justify-center">
             <button
                 type="button"
                 aria-label="Add expense"
                 disabled={!quickAdd}
                 onclick={() => (quickAddOpen = true)}
-                class={cn(
-                    'inline-flex items-center justify-center size-12 rounded-full',
-                    'bg-primary text-primary-foreground shadow-md',
-                    'transition-all hover:scale-105 active:scale-95',
-                    'disabled:opacity-30 disabled:pointer-events-none',
-                )}
+                class="dg-mbb__fab"
             >
                 <Plus class="size-6" />
             </button>
@@ -131,19 +122,15 @@
                 aria-current={active ? 'page' : undefined}
                 aria-disabled={disabled || undefined}
                 class={cn(
-                    'flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors relative',
-                    active ? 'text-primary' : 'text-muted-foreground',
+                    'dg-mbb__item',
+                    active && 'is-active',
                     disabled && 'opacity-40 pointer-events-none',
                 )}
             >
-                <Icon class={cn('size-5', active && 'fill-primary/10')} />
-                <span>{item.label}</span>
+                <Icon class="size-5" />
+                <span class="dg-mbb__label">{item.label}</span>
                 {#if badgeValue > 0}
-                    <span
-                        class="absolute top-1.5 right-[calc(50%-1.25rem)] inline-flex items-center justify-center min-w-[1rem] h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold"
-                    >
-                        {badgeValue}
-                    </span>
+                    <span class="dg-mbb__badge">{badgeValue}</span>
                 {/if}
             </a>
         {/each}
@@ -153,16 +140,86 @@
             type="button"
             onclick={() => (moreOpen = true)}
             aria-label="More sections"
-            class={cn(
-                'flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors',
-                moreActive ? 'text-primary' : 'text-muted-foreground',
-            )}
+            class={cn('dg-mbb__item dg-mbb__more', moreActive && 'is-active')}
         >
             <MenuIcon class="size-5" />
-            <span>More</span>
+            <span class="dg-mbb__label">More</span>
         </button>
     </div>
 </nav>
+
+<style>
+    /* Almanac mobile bottom bar — paper-2 surface, hairline ink top, mono labels */
+    .dg-mbb {
+        background: var(--almanac-paper-2);
+        border-top: 1px solid var(--almanac-ink);
+    }
+    .dg-mbb__item {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.2rem;
+        color: var(--almanac-ink-3);
+        background: none;
+        border: none;
+        font-family: 'JetBrains Mono', monospace;
+        cursor: pointer;
+        text-decoration: none;
+        transition: color 150ms;
+    }
+    .dg-mbb__item:hover { color: var(--almanac-ink); }
+    .dg-mbb__item.is-active { color: var(--almanac-oxblood); }
+    .dg-mbb__label {
+        font-size: 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        font-weight: 500;
+    }
+    .dg-mbb__item.is-active .dg-mbb__label {
+        font-family: 'Fraunces', serif;
+        font-style: italic;
+        font-variation-settings: 'opsz' 24, 'SOFT' 80, 'wght' 460;
+        text-transform: none;
+        letter-spacing: -0.005em;
+        font-size: 0.78rem;
+    }
+
+    .dg-mbb__badge {
+        position: absolute;
+        top: 0.4rem;
+        right: calc(50% - 1.2rem);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.55rem;
+        font-weight: 600;
+        background: var(--almanac-oxblood);
+        color: var(--almanac-paper);
+        padding: 0 0.3rem;
+        min-width: 0.95rem;
+        height: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: 0;
+    }
+
+    .dg-mbb__fab {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 3rem;
+        height: 3rem;
+        background: var(--almanac-oxblood);
+        color: var(--almanac-paper);
+        border: 1px solid var(--almanac-oxblood);
+        cursor: pointer;
+        margin-top: -0.5rem;
+        transition: opacity 150ms;
+    }
+    .dg-mbb__fab:hover { opacity: 0.92; }
+    .dg-mbb__fab:disabled { opacity: 0.3; pointer-events: none; }
+</style>
 
 <MobileMoreSheet
     open={moreOpen}

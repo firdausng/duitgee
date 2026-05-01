@@ -233,6 +233,16 @@
 
     --ring:               var(--almanac-oxblood);
 
+    /* Chart palette — almanac accents (oxblood, forest, gold, clay, etc.).
+       Charts and donut/sparkline components pick these up via --color-chart-N. */
+    --chart-1: var(--almanac-oxblood);
+    --chart-2: var(--almanac-forest);
+    --chart-3: var(--almanac-gold);
+    --chart-4: oklch(0.55 0.13 45);   /* clay */
+    --chart-5: oklch(0.45 0.05 200);  /* deep peacock — accent serif */
+    --chart-6: oklch(0.45 0.05 280);  /* dusk plum */
+    --chart-neutral: var(--almanac-ink-3);
+
     /* Square-cornered everywhere per design decision */
     --radius:    0;
     --radius-sm: 0;

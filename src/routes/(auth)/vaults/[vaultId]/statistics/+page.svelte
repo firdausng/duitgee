@@ -9,6 +9,7 @@
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
     import { DateRangeFilter } from '$lib/components/ui/date-range-filter';
     import { TrendChart, StackedAreaChart, CategoryDonut, Sparkline } from '$lib/components/ui/charts';
+    import { Eyebrow, ChapterNum, Rule, MoneyDisplay } from '$lib/components/almanac';
     import PeriodInsights from '$lib/components/statistics/period-insights.svelte';
     import { hasEntitlement } from '$lib/configurations/plans';
     import { Amount } from '$lib/components/ui/amount';
@@ -69,6 +70,36 @@
     }
 
     const range = $derived(dateRangeFromFilter());
+
+    // Editorial period label — used by the almanac masthead.
+    // Derived from filterType so the headline reads naturally:
+    //   month  → "October" (full month name)
+    //   year   → "2026"
+    //   week / today / yesterday → relative phrase
+    //   last7 / last30 / last90  → "Last N days"
+    //   custom → start–end range
+    function getPeriodLabel(): string {
+        const locale = vault?.locale || 'en-US';
+        const start = range.start ? new Date(range.start) : new Date();
+        switch (filterType) {
+            case 'today': return 'today';
+            case 'yesterday': return 'yesterday';
+            case 'week': return 'this week';
+            case 'month':
+                return start.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+            case 'year':
+                return start.toLocaleDateString(locale, { year: 'numeric' });
+            case 'last7': return 'the last 7 days';
+            case 'last30': return 'the last 30 days';
+            case 'last90': return 'the last 90 days';
+            case 'custom': {
+                const end = range.end ? new Date(range.end) : new Date();
+                return `${start.toLocaleDateString(locale, { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString(locale, { month: 'short', day: 'numeric' })}`;
+            }
+            default: return '';
+        }
+    }
+    const periodLabel = $derived(getPeriodLabel());
 
     const vaultResource = resource(
         () => [vaultId] as const,
@@ -311,14 +342,16 @@
     <title>Statistics - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-4 md:py-8 px-4 space-y-6">
-    <!-- Header strip -->
-    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
-        <div>
-            <p class="text-xs text-muted-foreground uppercase tracking-wide">{vault?.name ?? ''}</p>
-            <h1 class="text-2xl md:text-3xl font-bold">Statistics</h1>
+<div class="dg-stats container mx-auto py-4 md:py-8 px-4">
+    <!-- Almanac masthead — Chapter V · The Monthly Chronicle -->
+    <header class="dg-stats-mast">
+        <div class="dg-stats-mast__title-col">
+            <Eyebrow tone="oxblood">— Chapter V &middot; The Monthly Chronicle —</Eyebrow>
+            <h1 class="dg-stats-mast__title">
+                <em>{periodLabel}</em>, in figures &amp; footnotes.
+            </h1>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="dg-stats-mast__filter-col">
             <DateRangeFilter
                 value={filterType}
                 startDate={params.startDate}
@@ -327,7 +360,7 @@
             />
             <Button
                 type="button"
-                variant={showCompare ? 'default' : 'outline'}
+                variant={showCompare ? 'almanac-ox' : 'almanac-ghost'}
                 size="sm"
                 onclick={toggleCompare}
                 aria-pressed={showCompare}
@@ -335,7 +368,9 @@
                 Compare
             </Button>
         </div>
-    </div>
+    </header>
+    <Rule variant="double" />
+    <div class="space-y-6 pt-4">
 
     <!-- Period Insights (AI) -->
     <PeriodInsights
@@ -345,36 +380,37 @@
         canUseAi={canUseAiInsights}
     />
 
-    <!-- Spend Hero -->
+    <!-- Spend Hero — almanac plate with mono eyebrow + huge MoneyDisplay -->
     <Card>
         <CardContent class="pt-6">
-            <div class="flex flex-col gap-1">
-                <p class="text-xs text-muted-foreground uppercase tracking-wide">Total spend</p>
-                <div class="flex items-baseline gap-3">
-                    <Amount
-                        value={currentTotal}
-                        sign="neutral"
-                        size="hero"
-                        locale={vault?.locale || 'en-US'}
-                        currency={vault?.currency || 'USD'}
-                    />
-                    {#if deltaPct !== null}
-                        <span
-                            class="inline-flex items-center gap-1 text-sm font-mono {deltaPct > 0 ? 'text-destructive' : 'text-emerald-600'}"
-                        >
+            <div class="dg-stats-hero">
+                <div class="dg-stats-hero__amount">
+                    <Eyebrow tone="muted">Total spend</Eyebrow>
+                    <div class="dg-stats-hero__big">
+                        <MoneyDisplay
+                            amount={currentTotal}
+                            currency={vault?.currency || 'USD'}
+                            size={48}
+                            color="var(--almanac-oxblood)"
+                        />
+                    </div>
+                </div>
+                {#if deltaPct !== null}
+                    <div class="dg-stats-hero__delta">
+                        <span class="dg-stats-hero__delta-pill {deltaPct > 0 ? 'is-up' : 'is-down'}">
                             {#if deltaPct > 0}
                                 <TrendingUp class="size-3.5" />
                             {:else}
                                 <TrendingDown class="size-3.5" />
                             {/if}
                             {Math.abs(deltaPct).toFixed(1)}%
-                            <span class="text-muted-foreground font-normal">vs prev</span>
                         </span>
-                    {/if}
-                </div>
+                        <span class="dg-stats-hero__delta-meta"><em>vs previous period</em></span>
+                    </div>
+                {/if}
                 {#if previousTotal !== null}
-                    <p class="text-xs text-muted-foreground">
-                        Previous period: <span class="font-mono">{fmt.currency(previousTotal)}</span>
+                    <p class="dg-stats-hero__prev">
+                        <em>Previous:</em> <span class="font-mono">{fmt.currency(previousTotal)}</span>
                     </p>
                 {/if}
             </div>
@@ -623,4 +659,97 @@
             </CardContent>
         </Card>
     </div>
+    </div>
 </div>
+
+<style>
+    /* Almanac statistics — masthead + section markers.
+       Charts and per-card content inherit almanac palette via shadcn cascade. */
+
+    .dg-stats-mast {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.4rem;
+        align-items: end;
+        margin-bottom: 0.4rem;
+    }
+    @media (min-width: 880px) {
+        .dg-stats-mast {
+            grid-template-columns: 1.4fr auto;
+            gap: 1.6rem;
+        }
+    }
+    .dg-stats-mast__title-col { min-width: 0; }
+    .dg-stats-mast__title {
+        font-family: 'Fraunces', Georgia, serif;
+        font-variation-settings: 'opsz' 144, 'SOFT' 50, 'wght' 400;
+        font-size: clamp(2rem, 4vw, 2.8rem);
+        line-height: 1.05;
+        letter-spacing: -0.018em;
+        color: var(--almanac-ink);
+        margin: 0.4rem 0 0;
+    }
+    .dg-stats-mast__title em {
+        font-style: italic;
+        font-variation-settings: 'opsz' 144, 'SOFT' 100, 'wght' 380;
+        color: var(--almanac-oxblood);
+    }
+    .dg-stats-mast__filter-col {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    /* All CardTitles inside statistics — italic Fraunces, almanac voice.
+       CardTitle renders as <h3>; targeting that with !important to override
+       shadcn's built-in `font-semibold tracking-tight` utility classes. */
+    .dg-stats :global(h3) {
+        font-family: 'Fraunces', Georgia, serif !important;
+        font-variation-settings: 'opsz' 96, 'SOFT' 60, 'wght' 380 !important;
+        font-style: italic !important;
+        font-size: 1.3rem !important;
+        font-weight: 400 !important;
+        letter-spacing: -0.014em !important;
+        color: var(--almanac-ink) !important;
+    }
+
+    /* Spend hero */
+    .dg-stats-hero { display: flex; flex-direction: column; gap: 0.4rem; }
+    .dg-stats-hero__big { margin-top: 0.4rem; }
+    .dg-stats-hero__delta {
+        display: flex;
+        align-items: baseline;
+        gap: 0.6rem;
+        margin-top: 0.4rem;
+    }
+    .dg-stats-hero__delta-pill {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.78rem;
+        font-weight: 600;
+        font-feature-settings: 'tnum';
+        padding: 0.15rem 0.5rem;
+        border: 1px solid currentColor;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    .dg-stats-hero__delta-pill.is-up { color: var(--almanac-oxblood); }
+    .dg-stats-hero__delta-pill.is-down { color: var(--almanac-forest); }
+    .dg-stats-hero__delta-meta {
+        font-family: 'Newsreader', serif;
+        font-style: italic;
+        font-size: 0.85rem;
+        color: var(--almanac-ink-3);
+    }
+    .dg-stats-hero__prev {
+        font-family: 'Newsreader', serif;
+        font-size: 0.85rem;
+        color: var(--almanac-ink-3);
+        margin: 0.2rem 0 0;
+    }
+    .dg-stats-hero__prev em {
+        font-style: italic;
+        color: var(--almanac-ink-2);
+    }
+</style>
