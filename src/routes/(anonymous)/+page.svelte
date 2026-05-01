@@ -46,7 +46,6 @@
         return { destroy: () => io.disconnect() };
     }
 
-    const year = new Date().getFullYear();
 </script>
 
 <svelte:head>
@@ -581,29 +580,6 @@
         </div>
     </section>
 
-    <!-- ============ FOOTER ============ -->
-    <footer class="dg-footer">
-        <Rule variant="ornament">⁂</Rule>
-        <div class="dg-footer__inner">
-            <div class="dg-footer__brand">
-                <span class="dg-footer__mark">duitgee</span>
-                <span class="dg-footer__year">Vol. V &middot; &copy; {year}</span>
-            </div>
-            <nav>
-                <a href="/features">Features</a>
-                <a href="/pricing">Pricing</a>
-                <a href="/use-cases">Use cases</a>
-                <a href="/alternative-to">Comparisons</a>
-                <a href="/roadmap">Roadmap</a>
-                <a href="/about">About</a>
-                <a href="/contact">Contact</a>
-                <a href="/status">Status</a>
-                <a href="/privacy">Privacy</a>
-                <a href="/terms">Terms</a>
-                <a href="/login">Sign in</a>
-            </nav>
-        </div>
-    </footer>
 </div>
 
 <style>
@@ -1313,46 +1289,4 @@
         color: var(--almanac-ink) !important;
     }
 
-    /* ---------- Footer ---------- */
-    .dg-footer {
-        max-width: 86rem;
-        margin: 0 auto;
-        padding: 1rem clamp(1.25rem, 4vw, 4rem) 2.5rem;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.78rem;
-        color: var(--almanac-ink-3);
-        letter-spacing: 0.04em;
-    }
-    .dg-footer__inner {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1.5rem;
-        flex-wrap: wrap;
-    }
-    .dg-footer__brand {
-        display: flex;
-        align-items: baseline;
-        gap: 1rem;
-    }
-    .dg-footer__mark {
-        font-family: 'Fraunces', serif;
-        font-style: italic;
-        font-variation-settings: 'opsz' 144, 'SOFT' 80, 'wght' 460;
-        font-size: 1.1rem;
-        color: var(--almanac-oxblood);
-        letter-spacing: -0.012em;
-    }
-    .dg-footer__year {
-        text-transform: uppercase;
-    }
-    .dg-footer nav {
-        display: flex;
-        gap: 1.6rem;
-    }
-    .dg-footer a {
-        color: var(--almanac-ink-2);
-        text-decoration: none;
-    }
-    .dg-footer a:hover { color: var(--almanac-oxblood); }
 </style>
