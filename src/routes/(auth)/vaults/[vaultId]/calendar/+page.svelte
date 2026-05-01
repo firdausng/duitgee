@@ -11,6 +11,7 @@
     import { IconRenderer } from "$lib/components/ui/icon-renderer";
     import { LoadingOverlay } from "$lib/components/ui/loading-overlay";
     import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "$lib/components/ui/accordion";
+    import { Eyebrow, Rule } from "$lib/components/almanac";
     import type { Expense } from "../types";
     import type { VaultWithMember } from "$lib/schemas/read/vaultWithMember";
     import { format, parseISO } from "date-fns";
@@ -196,11 +197,14 @@
     {:else}
         <LoadingOverlay show={isLoadingExpenses} />
 
-        <!-- Header -->
-<!--        <div class="mb-6">-->
-<!--            <h1 class="text-3xl font-bold">Calendar</h1>-->
-<!--            <p class="text-muted-foreground mt-1">Select a date range to view expenses</p>-->
-<!--        </div>-->
+        <!-- Almanac masthead -->
+        <header class="mb-2">
+            <Eyebrow tone="muted">— The household almanac —</Eyebrow>
+            <h1 class="dg-page-title">The <em>almanac</em>.</h1>
+            <p class="dg-page-sub">A month of entries, day by day.</p>
+        </header>
+        <Rule variant="double" />
+        <div class="mb-4"></div>
 
         <!-- Calendar -->
         <Accordion type="multiple" class="mb-6">

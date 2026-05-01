@@ -9,6 +9,7 @@
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
     import { CalculatorInput } from '$lib/components/ui/calculator-input';
     import { Toaster } from '$lib/components/ui/sonner';
+    import { Eyebrow, Rule } from '$lib/components/almanac';
     import { toast } from 'svelte-sonner';
     import { ofetch } from 'ofetch';
 
@@ -65,9 +66,13 @@
 </svelte:head>
 
 <div class="container mx-auto py-6 px-4">
-    <div class="flex items-center gap-3 mb-6">
-        <h1 class="text-2xl font-bold">Transfer Between Funds</h1>
-    </div>
+    <header class="mb-2">
+        <Eyebrow tone="muted">Plate § Transfer</Eyebrow>
+        <h1 class="dg-page-title">Move <em>between funds</em>.</h1>
+        <p class="dg-page-sub">Shift balance from one wallet to another.</p>
+    </header>
+    <Rule variant="double" />
+    <div class="mb-6"></div>
 
     <Card>
         <CardHeader>

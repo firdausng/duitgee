@@ -7,6 +7,7 @@
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
     import { Checkbox } from '$lib/components/ui/checkbox';
     import { Toaster } from '$lib/components/ui/sonner';
+    import { Eyebrow, Rule } from '$lib/components/almanac';
     import { toast } from 'svelte-sonner';
     import X from '@lucide/svelte/icons/x';
 
@@ -153,9 +154,13 @@
 </svelte:head>
 
 <div class="container mx-auto py-6 px-4">
-    <div class="flex items-center gap-3 mb-6">
-        <h1 class="text-2xl font-bold flex-1">Vault Reimbursements</h1>
-    </div>
+    <header class="mb-2">
+        <Eyebrow tone="muted">— The household ledger —</Eyebrow>
+        <h1 class="dg-page-title">Pending <em>reimbursements</em>.</h1>
+        <p class="dg-page-sub">Settle to refund the source fund.</p>
+    </header>
+    <Rule variant="double" />
+    <div class="mb-6"></div>
 
     {#if fundIdParam}
         <div class="mb-4 flex items-center gap-2 rounded-[var(--radius-md)] border bg-muted/40 px-3 py-2 text-sm">

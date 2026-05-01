@@ -69,13 +69,12 @@
     ]);
 </script>
 
-<section class="rounded-[var(--radius-md)] border border-primary/30 bg-primary/[0.04] overflow-hidden">
-    <div class="flex items-start justify-between gap-3 px-4 py-3 border-b border-primary/20">
+<section class="dg-evc border bg-card overflow-hidden">
+    <div class="dg-evc__head flex items-start justify-between gap-3">
         <div>
-            <h2 class="text-base font-semibold">Welcome — let's get this vault going</h2>
-            <p class="text-xs text-muted-foreground mt-0.5">
-                Three quick steps to make this vault useful. Skip any you don't need.
-            </p>
+            <p class="dg-evc__eyebrow">— Volume I · No. 01 —</p>
+            <h2 class="dg-evc__title"><em>Welcome.</em> Let's open this chronicle.</h2>
+            <p class="dg-evc__sub">Three quick steps to make this vault useful. Skip any you don't need.</p>
         </div>
         <button
             type="button"
@@ -126,3 +125,41 @@
         {/each}
     </ul>
 </section>
+
+<style>
+    .dg-evc { border-color: var(--almanac-ink); }
+    .dg-evc__head {
+        background: var(--almanac-paper-2);
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid var(--almanac-ink);
+    }
+    .dg-evc__eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.65rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: var(--almanac-gold);
+        margin: 0 0 0.3rem;
+    }
+    .dg-evc__title {
+        font-family: 'Fraunces', Georgia, serif;
+        font-variation-settings: 'opsz' 96, 'SOFT' 60, 'wght' 400;
+        font-size: 1.3rem;
+        line-height: 1.1;
+        letter-spacing: -0.012em;
+        color: var(--almanac-ink);
+        margin: 0;
+    }
+    .dg-evc__title em {
+        font-style: italic;
+        color: var(--almanac-oxblood);
+    }
+    .dg-evc__sub {
+        font-family: 'Newsreader', serif;
+        font-style: italic;
+        font-size: 0.92rem;
+        color: var(--almanac-ink-2);
+        margin: 0.3rem 0 0;
+    }
+</style>

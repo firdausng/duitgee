@@ -4,6 +4,7 @@
     import { Input } from '$lib/components/ui/input';
     import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
     import { Toaster } from '$lib/components/ui/sonner';
+    import { Eyebrow, Rule } from '$lib/components/almanac';
     import { toast } from 'svelte-sonner';
     import { ofetch } from 'ofetch';
     import Plus from '@lucide/svelte/icons/plus';
@@ -145,12 +146,17 @@
 <Toaster />
 
 <div class="container mx-auto py-2 px-4 max-w-2xl">
-    <div class="flex items-center gap-2 mb-4">
+    <header class="mb-2 flex items-end gap-2">
         <Button variant="ghost" size="sm" onclick={handleBack} aria-label="Back">
             <ArrowLeft class="size-4" />
         </Button>
-        <h1 class="text-xl font-semibold">Tags</h1>
-    </div>
+        <div>
+            <Eyebrow tone="muted">— Vault catalog —</Eyebrow>
+            <h1 class="dg-page-title">The <em>tags</em>.</h1>
+        </div>
+    </header>
+    <Rule variant="double" />
+    <div class="mb-4"></div>
 
     <Card class="mb-4">
         <CardHeader>

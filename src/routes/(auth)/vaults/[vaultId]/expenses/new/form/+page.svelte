@@ -6,6 +6,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import { Eyebrow, Rule } from '$lib/components/almanac';
 	import { DateTimePicker } from '$lib/components/ui/date-time-picker';
 	import { ExpenseRow } from '$lib/components/ui/expense-row';
 	import type { ExpenseRowData } from '$lib/components/ui/expense-row/expense-row.svelte';
@@ -394,24 +395,22 @@
 
 <div class="relative min-h-screen flex flex-col">
 	<div class="container mx-auto py-6 px-4 flex-1 pb-28">
-		<!-- Header -->
-		<div class="mb-4">
-			<h1 class="text-2xl font-bold">
+		<!-- Almanac masthead -->
+		<header class="mb-2">
+			<Eyebrow tone="muted">— New entry —</Eyebrow>
+			<h1 class="dg-page-title">
 				{#if data.template}
-					Expenses from
-					<span class="text-primary">
-						<a href="/vaults/{data.vaultId}/templates/{data.template.id}/edit"
-							>{data.template.icon} {data.template.name}</a
-						>
-					</span>
+					From <em><a href="/vaults/{data.vaultId}/templates/{data.template.id}/edit">{data.template.icon} {data.template.name}</a></em>
 				{:else}
-					New expense
+					A new <em>entry</em>.
 				{/if}
 			</h1>
 			{#if data.template?.description}
-				<p class="text-sm text-muted-foreground mt-1">{data.template.description}</p>
+				<p class="dg-page-sub">{data.template.description}</p>
 			{/if}
-		</div>
+		</header>
+		<Rule variant="double" />
+		<div class="mb-4"></div>
 
 		<!-- Expense Items (primary content) -->
 		<div class="space-y-3 mb-4">

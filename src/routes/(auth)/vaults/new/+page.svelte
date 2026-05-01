@@ -8,6 +8,7 @@
     import { Input } from "$lib/components/ui/input";
     import { Label } from "$lib/components/ui/label";
     import { IconCombobox } from '$lib/components/ui/icon-combobox';
+    import { Eyebrow, Rule } from "$lib/components/almanac";
     import {createVaultSchema} from "$lib/schemas/vaults";
     import { iconData } from '$lib/configurations/icons';
     import { Toaster } from "$lib/components/ui/sonner";
@@ -95,11 +96,14 @@
 <Toaster />
 
 <div class="container mx-auto py-8 px-4">
-	<!-- Header -->
-	<div class="mb-8">
-		<h1 class="text-3xl font-bold tracking-tight">Create New Vault</h1>
-		<p class="text-muted-foreground mt-1">Set up a new vault to organize your expenses</p>
-	</div>
+	<!-- Almanac masthead -->
+	<header class="mb-2">
+		<Eyebrow tone="muted">Vol. V &middot; New entry</Eyebrow>
+		<h1 class="dg-page-title">Open a new <em>vault</em>.</h1>
+		<p class="dg-page-sub">Begin a new chronicle for the household.</p>
+	</header>
+	<Rule variant="double" />
+	<div class="mb-6"></div>
 
 	<!-- Form -->
 	<form method="POST" use:enhance>

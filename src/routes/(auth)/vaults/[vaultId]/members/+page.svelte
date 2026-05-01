@@ -5,6 +5,7 @@
     import { Separator } from '$lib/components/ui/separator';
     import { toast } from 'svelte-sonner';
     import { Toaster } from '$lib/components/ui/sonner';
+    import { Eyebrow, Rule } from '$lib/components/almanac';
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
     import InviteForm from '../InviteForm.svelte';
     import type { VaultRole } from '$lib/server/utils/vaultPermissions';
@@ -250,12 +251,14 @@
 <Toaster />
 
 <div class="container mx-auto py-4 sm:py-8 px-4 max-w-3xl">
-    <!-- Mobile-only header (desktop has DesktopAppBar with vault name + invite icon) -->
-    <div class="md:hidden mb-4">
-        <h1 class="text-xl font-bold">Members</h1>
-        <p class="text-muted-foreground text-sm mt-0.5">
-            Manage who has access to this vault.
-        </p>
+    <!-- Almanac masthead (desktop also gets this in addition to the app-bar vault title) -->
+    <header class="mb-2">
+        <Eyebrow tone="muted">— The household —</Eyebrow>
+        <h1 class="dg-page-title">The <em>family</em>.</h1>
+        <p class="dg-page-sub">Who reads this chronicle alongside you.</p>
+    </header>
+    <Rule variant="double" />
+    <div class="md:hidden mb-4 mt-4">
         <div class="flex flex-col gap-2 mt-3">
             {#if data.permissions.canManageMembers}
                 <Button onclick={toggleInviteForm} class="w-full">

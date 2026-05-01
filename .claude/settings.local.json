@@ -100,7 +100,11 @@
       "Bash(grep -E \"\\\\.\\(png|jpg|jpeg\\)$\")",
       "Bash(kill b7x5mrr36 *)",
       "mcp__playwright__browser_fill_form",
-      "Bash(kill bauysi4r2 *)"
+      "Bash(kill bauysi4r2 *)",
+      "Bash(grep -B 0 -A 3 -E \"\\(EmptyVaultChecklist|CategoryBreakdownCard|expenses\\\\\\\\\\\\\\\\|recurring\\\\\\\\\\\\\\\\\\)\")",
+      "Bash(awk '/^d:/{file=$0} /Error/{print file\"\\\\t\"$0}' /tmp/check5.txt)",
+      "Bash(awk 'BEGIN{n=0} { *)",
+      "Bash(grep -E \"<div$|<div\\\\\\\\s*$\" \"D:/projects/duitgee-app/src/routes/\\(auth\\)/vaults/[vaultId]/recurring/+page.svelte\")"
     ]
   }
 }

@@ -6,6 +6,7 @@
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
 	import { createVaultFormatters } from "$lib/vaultFormatting";
 	import { EmptyState } from "$lib/components/ui/empty-state";
+	import { Eyebrow, Rule } from "$lib/components/almanac";
 	import FileText from "@lucide/svelte/icons/file-text";
 	import Plus from "@lucide/svelte/icons/plus";
 
@@ -76,15 +77,14 @@
 </svelte:head>
 
 <div class="container mx-auto py-8 px-4">
-	<!-- Header -->
-	<div class="mb-6">
-		<div class="flex items-center justify-between">
-			<div>
-				<h1 class="text-2xl font-bold">Expense Templates</h1>
-				<p class="text-sm text-muted-foreground mt-1">
-					Manage your expense templates
-				</p>
-			</div>
+	<!-- Almanac masthead -->
+	<div class="mb-2">
+		<div class="flex items-end justify-between gap-3">
+			<header>
+				<Eyebrow tone="muted">— Vault catalog —</Eyebrow>
+				<h1 class="dg-page-title">The <em>templates</em>.</h1>
+				<p class="dg-page-sub">Pre-filled entries for the things you log most.</p>
+			</header>
 			<Button onclick={handleCreateTemplate}>
 				<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
 					<path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
@@ -92,6 +92,7 @@
 				New Template
 			</Button>
 		</div>
+		<Rule variant="double" />
 	</div>
 
 	{#if isLoading}

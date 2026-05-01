@@ -12,6 +12,7 @@
     import { EmptyState } from '$lib/components/ui/empty-state';
     import { FilterPill, AddFilterPopover } from '$lib/components/ui/filter-pill';
     import { DateRangeFilter } from '$lib/components/ui/date-range-filter';
+    import { Eyebrow, Rule } from '$lib/components/almanac';
     import { localDatetimeToUtcIso, getDateRange, type DateFilter } from '$lib/utils';
     import { createVaultFormatters } from '$lib/vaultFormatting';
     import { groupExpensesByDay } from '$lib/utils/groupExpensesByDay';
@@ -341,16 +342,17 @@
     <title>Expenses - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-4 md:py-8 px-4 space-y-4">
-    <!-- Header -->
-    <div class="flex items-center justify-between gap-3">
-        <div>
-            <h1 class="text-2xl md:text-3xl font-bold">Expenses</h1>
-            <p class="text-xs md:text-sm text-muted-foreground mt-1">
+<div class="container mx-auto py-4 md:py-8 px-4 [&>*+*]:mt-4">
+    <!-- Almanac masthead -->
+    <div class="flex items-end justify-between gap-3 mb-2">
+        <header>
+            <Eyebrow tone="muted">— The household chronicle —</Eyebrow>
+            <h1 class="dg-page-title">The <em>chronicle</em>.</h1>
+            <p class="dg-page-sub">
                 {visibleExpenses.length.toLocaleString()} {visibleExpenses.length === 1 ? 'entry' : 'entries'}
-                · <span class="font-mono">{fmt.currency(visibleTotal)}</span>
+                · <span class="font-mono not-italic">{fmt.currency(visibleTotal)}</span>
             </p>
-        </div>
+        </header>
         <div class="flex items-center gap-2">
             <DropdownMenu.Root>
                 <DropdownMenu.Trigger
@@ -376,6 +378,7 @@
             </Button>
         </div>
     </div>
+    <Rule variant="double" />
 
     <!-- Search + add filter + date pills + clear -->
     <div class="flex flex-col md:flex-row md:items-center gap-2">

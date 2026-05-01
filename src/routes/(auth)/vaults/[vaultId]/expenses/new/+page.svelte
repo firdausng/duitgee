@@ -12,6 +12,7 @@
     import Loader2 from '@lucide/svelte/icons/loader-2';
     import { createVaultFormatters } from '$lib/vaultFormatting';
     import { QuickLogModal } from '$lib/components/unidentified';
+    import { Eyebrow, Rule } from '$lib/components/almanac';
 
     const vaultId = page.params.vaultId as string;
 
@@ -91,13 +92,15 @@
             <Loader2 class="size-8 animate-spin text-muted-foreground" />
         </div>
     {:else}
-        <div class="flex items-center justify-between mb-4 gap-3 flex-wrap">
-            <div>
-                <h1 class="text-xl font-semibold">Pick a template</h1>
-                <p class="text-xs text-muted-foreground">
-                    Or <button type="button" onclick={handleSkip} class="text-primary hover:underline">start from scratch</button> to enter manually.
-                </p>
-            </div>
+        <header class="mb-2">
+            <Eyebrow tone="muted">— New entry —</Eyebrow>
+            <h1 class="dg-page-title">Pick a <em>template</em>.</h1>
+            <p class="dg-page-sub">
+                Or <button type="button" onclick={handleSkip} class="dg-page-sub__link">start from scratch</button> to enter manually.
+            </p>
+        </header>
+        <Rule variant="double" />
+        <div class="flex items-center justify-end mb-4 gap-3 flex-wrap">
             <Button variant="outline" onclick={handleCreateTemplate} size="sm">
                 <Plus class="size-4" />
                 New Template

@@ -11,6 +11,7 @@
 	import { CategoryMultiPicker } from '$lib/components/ui/category-multi-picker';
 	import { IconCombobox } from '$lib/components/ui/icon-combobox';
 	import { TagPicker, type TagOption } from '$lib/components/ui/tag-picker';
+	import { Eyebrow, Rule } from '$lib/components/almanac';
 	import { categoryData } from '$lib/configurations/categories';
 	import { paymentTypes } from '$lib/configurations/paymentTypes';
 	import { iconData } from '$lib/configurations/icons';
@@ -104,10 +105,17 @@
 	<title>New Template - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-2 px-4">
+<div class="container mx-auto py-6 px-4">
 	{#if isLoading}
 		<Spinner />
 	{:else}
+		<header class="mb-2">
+			<Eyebrow tone="muted">Plate § New template</Eyebrow>
+			<h1 class="dg-page-title">A new <em>template</em>.</h1>
+			<p class="dg-page-sub">Pre-fill the fields you log most often.</p>
+		</header>
+		<Rule variant="double" />
+		<div class="mb-6"></div>
 		<Card>
 			<CardHeader>
 				<CardTitle>Template Details</CardTitle>

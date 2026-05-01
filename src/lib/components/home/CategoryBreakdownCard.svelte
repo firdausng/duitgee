@@ -57,23 +57,16 @@
     }
 </script>
 
-<section class="space-y-2">
-    <div class="flex items-center justify-between px-1">
-        <div class="flex items-center gap-2 min-w-0">
-            <h2 class="text-sm font-semibold text-muted-foreground">Where it went</h2>
+<section class="dg-cb space-y-2">
+    <div class="flex items-end justify-between px-1 gap-2">
+        <div class="min-w-0">
+            <p class="dg-cb__eyebrow">— Where it went —</p>
             {#if total > 0}
-                <span class="text-xs text-muted-foreground whitespace-nowrap">
-                    · <span class="font-mono">{formatCurrency(total)}</span>
-                </span>
+                <p class="dg-cb__total"><em>{formatCurrency(total)}</em> across the period</p>
             {/if}
         </div>
-        <button
-            type="button"
-            onclick={viewAll}
-            class="text-xs font-medium text-primary hover:underline flex items-center gap-0.5"
-        >
-            View all
-            <ArrowRight class="size-3" />
+        <button type="button" onclick={viewAll} class="dg-cb__link">
+            View all <ArrowRight class="size-3" />
         </button>
     </div>
 
@@ -99,3 +92,44 @@
         />
     {/if}
 </section>
+
+<style>
+    .dg-cb__eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: var(--almanac-ink-3);
+        margin: 0;
+    }
+    .dg-cb__total {
+        font-family: 'Newsreader', serif;
+        font-style: italic;
+        font-size: 0.85rem;
+        color: var(--almanac-ink-2);
+        margin: 0.2rem 0 0;
+    }
+    .dg-cb__total em {
+        font-family: 'JetBrains Mono', monospace;
+        font-style: normal;
+        color: var(--almanac-oxblood);
+        font-feature-settings: 'tnum';
+    }
+    .dg-cb__link {
+        font-family: 'Newsreader', serif;
+        font-style: italic;
+        font-size: 0.85rem;
+        color: var(--almanac-oxblood);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        flex-shrink: 0;
+        padding: 0;
+    }
+</style>

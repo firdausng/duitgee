@@ -9,6 +9,7 @@
     import { EmptyState } from '$lib/components/ui/empty-state';
     import { Amount } from '$lib/components/ui/amount';
     import { Toaster } from '$lib/components/ui/sonner';
+    import { Eyebrow, Rule } from '$lib/components/almanac';
     import { toast } from 'svelte-sonner';
     import { createVaultFormatters } from '$lib/vaultFormatting';
     import {
@@ -548,12 +549,13 @@
     <title>Recurring - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-6 px-4 space-y-6">
-    <div class="flex items-center gap-2">
-        <div class="flex-1">
-            <h1 class="text-2xl font-bold">Recurring</h1>
-            <p class="text-xs text-muted-foreground mt-0.5">Rules that generate expenses on a schedule.</p>
-        </div>
+<div class="container mx-auto py-6 px-4 [&>*+*]:mt-6">
+    <div class="flex items-end gap-2 mb-2">
+        <header class="flex-1">
+            <Eyebrow tone="muted">— The household ledger —</Eyebrow>
+            <h1 class="dg-page-title">The <em>recurring</em> rules.</h1>
+            <p class="dg-page-sub">Rules that generate expenses on a schedule.</p>
+        </header>
         <div class="flex flex-col items-end gap-1">
             <Button
                 size="sm"
@@ -575,6 +577,7 @@
             {/if}
         </div>
     </div>
+    <Rule variant="double" />
 
     <!-- Commitment summary -->
     {#if allRules.length > 0}

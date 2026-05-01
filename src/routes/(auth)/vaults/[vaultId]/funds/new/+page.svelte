@@ -11,6 +11,7 @@
     import { CheckboxRow } from '$lib/components/ui/checkbox-row';
     import { IconCombobox } from '$lib/components/ui/icon-combobox';
     import { iconData } from '$lib/configurations/icons';
+    import { Eyebrow, Rule } from '$lib/components/almanac';
     import { Toaster } from '$lib/components/ui/sonner';
     import { toast } from 'svelte-sonner';
     import { ofetch } from 'ofetch';
@@ -103,9 +104,13 @@
 </svelte:head>
 
 <div class="container mx-auto py-6 px-4">
-    <div class="flex items-center gap-3 mb-6">
-        <h1 class="text-2xl font-bold">New Fund</h1>
-    </div>
+    <header class="mb-2">
+        <Eyebrow tone="muted">Plate § New fund</Eyebrow>
+        <h1 class="dg-page-title">Open a new <em>fund</em>.</h1>
+        <p class="dg-page-sub">Name a wallet for the household to draw from.</p>
+    </header>
+    <Rule variant="double" />
+    <div class="mb-6"></div>
 
     <Card>
         <CardHeader>

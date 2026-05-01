@@ -10,6 +10,7 @@
     import { Label } from '$lib/components/ui/label';
     import { Textarea } from '$lib/components/ui/textarea';
     import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
+    import { Eyebrow, Rule } from '$lib/components/almanac';
     import { CategoryPicker } from '$lib/components/ui/category-picker';
     import { IconCombobox } from '$lib/components/ui/icon-combobox';
     import { Toaster } from '$lib/components/ui/sonner';
@@ -195,9 +196,13 @@
 </svelte:head>
 
 <div class="container mx-auto py-6 px-4">
-    <div class="flex items-center gap-3 mb-6">
-        <h1 class="text-2xl font-bold">New Recurring Rule</h1>
-    </div>
+    <header class="mb-2">
+        <Eyebrow tone="muted">Plate § New rule</Eyebrow>
+        <h1 class="dg-page-title">A new <em>recurring</em> rule.</h1>
+        <p class="dg-page-sub">Schedule a charge that repeats on its own cadence.</p>
+    </header>
+    <Rule variant="double" />
+    <div class="mb-6"></div>
 
     {#if data.duplicatingFrom}
         <div class="mb-4 rounded-[var(--radius-md)] border border-dashed bg-muted/30 p-3 flex items-start gap-2">
