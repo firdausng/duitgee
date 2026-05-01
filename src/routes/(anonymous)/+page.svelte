@@ -590,6 +590,14 @@
                 <span class="dg-footer__year">Vol. V &middot; &copy; {year}</span>
             </div>
             <nav>
+                <a href="/features">Features</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/use-cases">Use cases</a>
+                <a href="/alternative-to">Comparisons</a>
+                <a href="/roadmap">Roadmap</a>
+                <a href="/about">About</a>
+                <a href="/contact">Contact</a>
+                <a href="/status">Status</a>
                 <a href="/privacy">Privacy</a>
                 <a href="/terms">Terms</a>
                 <a href="/login">Sign in</a>

@@ -8,6 +8,8 @@ Stack: SvelteKit on Cloudflare Workers; dual D1 databases (Better Auth on `duitg
 
 **Read [`docs/internal/product.md`](docs/internal/product.md) before suggesting features or writing user-facing copy.** It captures the purpose, the two value props, who DuitGee is for (and isn't), and the hard product rules that derive from those.
 
+**The visual system is Family Almanac (Direction B).** Read [`docs/internal/almanac-redesign-2026-05-01/README.md`](docs/internal/almanac-redesign-2026-05-01/README.md) before adding pages, components, or styling. Tokens (`--almanac-*`) and the `.dg-almanac` body class drive the entire app via shadcn cascade; six editorial primitives (`Eyebrow`, `ChapterNum`, `Rule`, `DropCap`, `Plate`, `MoneyDisplay`) handle flourishes shadcn can't. The previous `design-principles.md` is superseded.
+
 ## Hard rules
 
 - **Never run DB migrations yourself.** Generate them with `pnpm run db:generate`, then stop and tell the user. Do not run `db:push`, `db:migrate`, or `wrangler d1 migrations apply`.
@@ -20,6 +22,7 @@ Stack: SvelteKit on Cloudflare Workers; dual D1 databases (Better Auth on `duitg
 - **Audit fields use string user IDs, no FK constraints** (microservice-friendly). Use helpers in `src/lib/server/utils/audit.ts`.
 - **Notification helpers are best-effort** — never roll back the underlying action because notification delivery failed.
 - **API: action-oriented RPC naming** (`getX`, `createX`, `deleteX`). GET for queries, POST for commands.
+- **Save ad-hoc Playwright screenshots to `.playwright-mcp/`** — never the project root. The folder is gitignored at `.gitignore:35`; root-level PNGs leak into `git status` and clutter the tree. Pass an explicit `filename` (e.g. `.playwright-mcp/pricing-viewport.png`) to `browser_take_screenshot` rather than letting it default.
 - **Always confirm with the user before destructive ops.** Never force-push to main, never `--no-verify`, etc.
 
 ## Common commands
@@ -85,6 +88,7 @@ Read the relevant doc(s) before working on a task that touches that area — don
 - **Adding an API endpoint**: schema in `src/lib/schemas/[feature].ts`, handler in `src/lib/server/api/[module]/[action]Handler.ts`, route in `*-api.ts`, mount in `src/lib/server/api/index.ts`. Full tutorial in `api.md`.
 - **Adding a form**: schema in `src/lib/schemas/`, server `+page.server.ts` with `superValidate()`, client `+page.svelte` with `superForm()` + `valibotClient()`. Full tutorial in `frontend.md`.
 - **Adding a UI component**: `src/lib/components/ui/[name]/`, follow shadcn-svelte patterns. Template in `frontend.md`.
+- **Adding a public/marketing page**: live at `src/routes/(anonymous)/[path]/+page.svelte`. Always Almanac-styled — currency-neutral copy (`$`, "the local cafe"), italic Fraunces / oxblood / square corners, no shadcn drift. The `(anonymous)/+layout.svelte` whitelist needs the path in `almanacRoutes` (single page) or a prefix added to `almanacPrefixes` (whole section). For competitor comparisons reuse `$lib/components/marketing/ComparisonPage.svelte`; for audience pages reuse `UseCasePage.svelte`. Existing public pages: `/`, `/about`, `/features`, `/pricing`, `/contact`, `/roadmap`, `/status`, `/alternative-to{,/splitwise,/ynab,/money-lover,/spreadsheets}`, `/use-cases{,/couples,/families,/housemates,/solo}`, plus auth/legal.
 - **Schema change**: edit `src/lib/server/db/schema.ts`, run `pnpm run db:generate`, **stop**, hand off to the user.
 - **Auth change**: edit `src/lib/server/better-auth/options.ts`, regenerate auth schema, generate migration, **stop**.
 

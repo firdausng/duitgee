@@ -6,8 +6,25 @@
     let { children, data } = $props();
 
     // All anonymous routes are editorial / almanac-themed.
-    const almanacRoutes = ["/", "/privacy", "/terms", "/login", "/register", "/forgot-password"];
-    let isAlmanac = $derived(almanacRoutes.includes(page.url.pathname));
+    const almanacRoutes = [
+        "/",
+        "/about",
+        "/features",
+        "/pricing",
+        "/contact",
+        "/roadmap",
+        "/status",
+        "/privacy",
+        "/terms",
+        "/login",
+        "/register",
+        "/forgot-password",
+    ];
+    const almanacPrefixes = ["/alternative-to", "/use-cases"];
+    let isAlmanac = $derived(
+        almanacRoutes.includes(page.url.pathname) ||
+            almanacPrefixes.some((p) => page.url.pathname.startsWith(p))
+    );
     // The editorial layout header (magazine-style) is used everywhere almanac is.
     let isEditorial = $derived(isAlmanac);
 </script>
