@@ -5,6 +5,7 @@
     import { resource } from 'runed';
     import { Button } from '$lib/components/ui/button';
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+    import { Eyebrow, ChapterNum, Rule, MoneyDisplay } from '$lib/components/almanac';
     import { Toaster } from '$lib/components/ui/sonner';
     import { toast } from 'svelte-sonner';
     import FundTransactionList from '$lib/components/fund-activity/FundTransactionList.svelte';
@@ -45,6 +46,7 @@
             })
             : createVaultFormatters({ locale: 'en-US', currency: 'USD' }),
     );
+    const vaultCurrency = $derived(vaultResource.current?.vaults.currency || 'USD');
 
     const fundResource = resource(
         () => [vaultId, fundId, refetchKey] as const,
@@ -203,13 +205,6 @@
 </svelte:head>
 
 <div class="container mx-auto py-6 px-4">
-        <div class="flex items-start justify-between gap-2 mb-6">
-        <h1 class="text-2xl font-bold min-w-0">{fund?.name ?? 'Fund'}</h1>
-        {#if fund?.status !== 'archived'}
-            <Button variant="outline" size="sm" onclick={handleEdit} class="shrink-0">Edit</Button>
-        {/if}
-    </div>
-
     {#if isLoading}
         <div class="flex justify-center py-16">
             <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
@@ -222,27 +217,40 @@
             </CardContent>
         </Card>
     {:else}
-        <!-- Fund identity strip (icon + description + archived badge) -->
-        <div
-            class="rounded-[var(--radius-md)] border bg-card px-4 py-3 mb-4 flex items-center gap-3"
-            style={fund.color ? `border-left: 4px solid ${fund.color}` : ''}
-        >
-            {#if fund.icon}
-                <span class="text-2xl leading-none shrink-0">{fund.icon}</span>
-            {/if}
-            <div class="min-w-0 flex-1">
+        <!-- Almanac masthead — Plate § N · Fund name + Remaining MoneyDisplay -->
+        <header class="dg-fund-mast">
+            <div class="dg-fund-mast__title-col">
+                <ChapterNum>Plate § Fund</ChapterNum>
+                <h1 class="dg-fund-mast__title">
+                    {#if fund.icon}<span class="dg-fund-mast__icon">{fund.icon}</span>{/if}
+                    <em>{fund.name}</em>
+                </h1>
                 {#if fund.description}
-                    <p class="text-sm text-muted-foreground truncate">{fund.description}</p>
+                    <p class="dg-fund-mast__sub">{fund.description}</p>
                 {:else}
-                    <p class="text-sm text-muted-foreground">No description.</p>
+                    <p class="dg-fund-mast__sub dg-fund-mast__sub--muted">No description.</p>
+                {/if}
+                {#if fund.status === 'archived'}
+                    <span class="dg-fund-mast__archived">— Archived —</span>
                 {/if}
             </div>
-            {#if fund.status === 'archived'}
-                <span class="shrink-0 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-                    Archived
-                </span>
-            {/if}
-        </div>
+            <div class="dg-fund-mast__amount-col">
+                <Eyebrow tone="muted">Remaining</Eyebrow>
+                <div class="dg-fund-mast__amount">
+                    <MoneyDisplay
+                        amount={fund.balance ?? 0}
+                        currency={vaultCurrency}
+                        size={48}
+                        color="var(--almanac-oxblood)"
+                    />
+                </div>
+                {#if fund.status !== 'archived'}
+                    <button type="button" onclick={handleEdit} class="dg-fund-mast__edit">Adjust →</button>
+                {/if}
+            </div>
+        </header>
+        <Rule variant="double" />
+        <div class="mb-4"></div>
 
         <!-- Budget hero (progress + spent/budget + breakdown disclosure) -->
         <div class="mb-3">
@@ -269,11 +277,13 @@
         {/if}
 
         <!-- Category breakdown -->
+        <div class="dg-fund-section">
+            <ChapterNum>Plate § Categories</ChapterNum>
+            <h2 class="dg-fund-section__title"><em>Where the money went</em></h2>
+            <Rule />
+        </div>
         <Card class="mb-4">
-            <CardHeader class="pb-2">
-                <CardTitle class="text-base">Where the money went</CardTitle>
-            </CardHeader>
-            <CardContent class="px-2 pb-2">
+            <CardContent class="px-2 pb-2 pt-2">
                 {#if cycleExpensesResource.loading}
                     <div class="flex justify-center py-6">
                         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
@@ -291,19 +301,18 @@
         </Card>
 
         <!-- Recent Activity -->
-        <Card class="mb-4">
-            <CardHeader class="pb-2">
-                <div class="flex items-center justify-between">
-                    <CardTitle class="text-base">Recent Activity</CardTitle>
-                    <button
-                        onclick={handleActivity}
-                        class="text-xs text-muted-foreground hover:text-primary transition-colors"
-                    >
-                        View all →
-                    </button>
+        <div class="dg-fund-section">
+            <div class="flex items-baseline justify-between gap-2">
+                <div>
+                    <ChapterNum>Plate § Chronicle</ChapterNum>
+                    <h2 class="dg-fund-section__title"><em>Recent activity</em></h2>
                 </div>
-            </CardHeader>
-            <CardContent class="px-4 pb-3">
+                <button onclick={handleActivity} class="dg-fund-section__link">View all &rarr;</button>
+            </div>
+            <Rule />
+        </div>
+        <Card class="mb-4">
+            <CardContent class="px-4 pb-3 pt-2">
                 {#if recentActivityResource.loading}
                     <div class="flex justify-center py-4">
                         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
@@ -438,3 +447,115 @@
 {/if}
 
 <Toaster />
+
+<style>
+    /* Almanac fund detail — masthead + section headers.
+       Sub-components inherit the almanac palette via shadcn cascade. */
+
+    .dg-fund-mast {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.2rem;
+        margin-bottom: 0.4rem;
+        align-items: start;
+    }
+    @media (min-width: 720px) {
+        .dg-fund-mast { grid-template-columns: 1.4fr 1fr; }
+    }
+    .dg-fund-mast__title-col { min-width: 0; }
+    .dg-fund-mast__title {
+        font-family: 'Fraunces', Georgia, serif;
+        font-variation-settings: 'opsz' 144, 'SOFT' 50, 'wght' 400;
+        font-size: clamp(2rem, 4vw, 2.8rem);
+        line-height: 1.05;
+        letter-spacing: -0.018em;
+        color: var(--almanac-ink);
+        margin: 0.4rem 0 0.4rem;
+        display: flex;
+        align-items: baseline;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+    }
+    .dg-fund-mast__title em {
+        font-style: italic;
+        font-variation-settings: 'opsz' 144, 'SOFT' 100, 'wght' 380;
+        color: var(--almanac-oxblood);
+    }
+    .dg-fund-mast__icon {
+        font-style: normal;
+        font-size: 0.85em;
+        line-height: 1;
+    }
+    .dg-fund-mast__sub {
+        font-family: 'Newsreader', serif;
+        font-style: italic;
+        font-size: 1rem;
+        color: var(--almanac-ink-2);
+        margin: 0;
+    }
+    .dg-fund-mast__sub--muted { color: var(--almanac-ink-3); }
+    .dg-fund-mast__archived {
+        display: inline-block;
+        margin-top: 0.6rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: var(--almanac-ink-3);
+        border: 1px solid var(--almanac-rule-soft);
+        padding: 0.2rem 0.6rem;
+    }
+    .dg-fund-mast__amount-col {
+        text-align: right;
+    }
+    @media (max-width: 719px) {
+        .dg-fund-mast__amount-col { text-align: left; }
+    }
+    .dg-fund-mast__amount {
+        margin-top: 0.4rem;
+    }
+    .dg-fund-mast__edit {
+        margin-top: 0.6rem;
+        font-family: 'Newsreader', serif;
+        font-style: italic;
+        font-size: 0.9rem;
+        color: var(--almanac-ink-2);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+    }
+    .dg-fund-mast__edit:hover { color: var(--almanac-oxblood); }
+
+    .dg-fund-section {
+        margin: 1.4rem 0 0.6rem;
+    }
+    .dg-fund-section__title {
+        font-family: 'Fraunces', Georgia, serif;
+        font-variation-settings: 'opsz' 96, 'SOFT' 60, 'wght' 380;
+        font-size: 1.4rem;
+        line-height: 1.1;
+        letter-spacing: -0.014em;
+        margin: 0.3rem 0 0;
+        color: var(--almanac-ink);
+    }
+    .dg-fund-section__title em {
+        font-style: italic;
+        color: var(--almanac-ink);
+    }
+    .dg-fund-section__link {
+        font-family: 'Newsreader', serif;
+        font-style: italic;
+        font-size: 0.85rem;
+        color: var(--almanac-ink-2);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+    .dg-fund-section__link:hover { color: var(--almanac-oxblood); }
+</style>
