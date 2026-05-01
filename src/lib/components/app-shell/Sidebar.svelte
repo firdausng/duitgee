@@ -267,14 +267,17 @@
         color: var(--almanac-ink-2);
         text-decoration: none;
         position: relative;
+        border-left: 2px solid transparent;
+        padding-left: calc(0.625rem - 2px);
     }
     .dg-sb__item:hover {
         color: var(--almanac-ink);
-        background: var(--almanac-paper-2);
+        background: color-mix(in oklch, var(--almanac-oxblood) 8%, transparent);
     }
     .dg-sb__item.is-active {
-        background: var(--almanac-ink);
-        color: var(--almanac-paper);
+        background: color-mix(in oklch, var(--almanac-oxblood) 14%, transparent);
+        color: var(--almanac-oxblood);
+        border-left-color: var(--almanac-oxblood);
     }
     .dg-sb__item.is-active .dg-sb__label {
         font-style: italic;

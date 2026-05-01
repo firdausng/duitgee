@@ -13,6 +13,7 @@
     import { CategoryPicker } from '$lib/components/ui/category-picker';
     import { IconCombobox } from '$lib/components/ui/icon-combobox';
     import { DateTimePicker } from '$lib/components/ui/date-time-picker';
+    import { Eyebrow, Rule } from '$lib/components/almanac';
     import { Toaster } from '$lib/components/ui/sonner';
     import { toast } from 'svelte-sonner';
     import { categoryData } from '$lib/configurations/categories';
@@ -208,9 +209,12 @@
 </svelte:head>
 
 <div class="container mx-auto py-6 px-4">
-    <div class="flex items-center gap-3 mb-6">
-        <h1 class="text-2xl font-bold">Edit Recurring Rule</h1>
-    </div>
+    <header class="mb-2">
+        <Eyebrow tone="muted">Plate § Edit rule</Eyebrow>
+        <h1 class="dg-page-title">Edit a <em>recurring</em> rule.</h1>
+    </header>
+    <Rule variant="double" />
+    <div class="mb-6"></div>
 
     {#if !data.rule}
         <Card>

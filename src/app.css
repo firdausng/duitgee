@@ -227,8 +227,13 @@
     --primary-foreground: var(--almanac-paper);
     --primary-hover:      var(--almanac-oxblood);
 
-    --accent:             var(--almanac-forest);
-    --accent-foreground:  var(--almanac-paper);
+    /* --accent is shadcn's hover/highlight surface (used by 49 places via
+       hover:bg-accent / data-[highlighted]:bg-accent). In almanac it's a
+       translucent oxblood wash — visible against the cream card surface
+       without overwhelming it. Forest remains available via --almanac-forest
+       for explicit editorial accents (chart series, positive deltas). */
+    --accent:             color-mix(in oklch, var(--almanac-oxblood) 8%, transparent);
+    --accent-foreground:  var(--almanac-ink);
     --accent-strong:      var(--almanac-gold);
 
     --ring:               var(--almanac-oxblood);
@@ -370,26 +375,24 @@
 }
 
 /* ============================================================
-   GDPR Cookie Consent Banner (unchanged from before)
+   GDPR Cookie Consent Banner — almanac-themed
    ============================================================ */
 .cookieConsentWrapper {
     position: fixed;
     bottom: 1rem;
     right: 1rem;
     z-index: 9999;
-    font-family: var(--font-sans);
-    /* Compact corner banner instead of full-width overlay */
+    font-family: 'Newsreader', serif;
     max-width: calc(100vw - 2rem);
     width: 380px;
 }
 
 .cookieConsent {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+    background: var(--almanac-card);
+    border: 1px solid var(--almanac-ink);
+    border-radius: 0;
     padding: 1rem;
-    box-shadow: var(--shadow-md);
-    backdrop-filter: blur(8px);
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -406,23 +409,27 @@
 }
 
 .cookieConsent__Title {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--foreground);
+    font-family: 'Fraunces', Georgia, serif;
+    font-style: italic;
+    font-variation-settings: 'opsz' 96, 'SOFT' 60, 'wght' 460;
+    font-size: 1rem;
+    color: var(--almanac-ink);
     margin: 0;
 }
 
 .cookieConsent__Description {
-    font-size: 0.75rem;
-    color: var(--muted-foreground);
-    line-height: 1.45;
+    font-family: 'Newsreader', serif;
+    font-size: 0.82rem;
+    color: var(--almanac-ink-2);
+    line-height: 1.55;
     margin: 0;
 }
 
 .cookieConsent__Description a {
-    color: var(--primary);
+    color: var(--almanac-oxblood);
     text-decoration: underline;
-    font-weight: 500;
+    text-underline-offset: 3px;
+    font-style: italic;
     transition: opacity var(--duration-fast);
 }
 
@@ -441,33 +448,32 @@
     align-items: center;
     justify-content: center;
     white-space: nowrap;
-    border-radius: var(--radius-sm);
+    border-radius: 0;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 0.75rem;
-    font-weight: 500;
-    padding: 0.375rem 0.75rem;
+    font-weight: 600;
+    padding: 0.4rem 0.8rem;
     transition: all var(--duration-fast);
     cursor: pointer;
-    border: 1px solid var(--border);
+    border: 1px solid var(--almanac-ink);
     background: transparent;
-    color: var(--foreground);
-    font-family: inherit;
+    color: var(--almanac-ink);
 }
 
 .cookieConsent__Button:hover {
-    background: var(--accent);
-    color: var(--accent-foreground);
+    background: var(--almanac-paper-2);
 }
 
 .cookieConsent__Button--Accept {
-    background: var(--primary);
-    color: var(--primary-foreground);
-    border-color: var(--primary);
+    background: var(--almanac-oxblood);
+    color: var(--almanac-paper);
+    border-color: var(--almanac-oxblood);
 }
 
 .cookieConsent__Button--Accept:hover {
-    opacity: 0.9;
-    background: var(--primary-hover);
-    color: var(--primary-foreground);
+    opacity: 0.92;
+    background: var(--almanac-oxblood);
+    color: var(--almanac-paper);
 }
 
 .cookieConsentOperations {
@@ -483,28 +489,28 @@
 }
 
 .cookieConsentOperations__List {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+    background: var(--almanac-card);
+    border: 1px solid var(--almanac-ink);
+    border-radius: 0;
     padding: 2rem;
     max-width: 500px;
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: var(--shadow-md);
+    box-shadow: none;
 }
 
 .cookieConsentOperations__Item {
     padding: 1rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--background);
+    border: 1px solid var(--almanac-rule-soft);
+    border-radius: 0;
+    background: var(--almanac-paper);
     margin-bottom: 1rem;
     transition: border-color var(--duration-fast);
 }
 
 .cookieConsentOperations__Item:hover {
-    border-color: var(--primary);
+    border-color: var(--almanac-oxblood);
 }
 
 .cookieConsentOperations__Item:last-child {
@@ -538,23 +544,27 @@
 }
 
 .cookieConsentOperations__ItemTitle {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--foreground);
+    font-family: 'Fraunces', Georgia, serif;
+    font-style: italic;
+    font-size: 1rem;
+    color: var(--almanac-ink);
     margin: 0 0 0.25rem 0;
 }
 
 .cookieConsentOperations__ItemDescription {
-    font-size: 0.8125rem;
-    color: var(--muted-foreground);
-    line-height: 1.4;
+    font-family: 'Newsreader', serif;
+    font-size: 0.85rem;
+    color: var(--almanac-ink-2);
+    line-height: 1.5;
     margin: 0;
 }
 
 .cookieConsentOperations h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--foreground);
+    font-family: 'Fraunces', Georgia, serif;
+    font-style: italic;
+    font-variation-settings: 'opsz' 144, 'SOFT' 60, 'wght' 400;
+    font-size: 1.4rem;
+    color: var(--almanac-ink);
     margin: 0 0 1rem 0;
 }
 
@@ -570,13 +580,13 @@
     bottom: 1rem;
     left: 1rem;
     z-index: 9998;
-    background: var(--primary);
-    color: var(--primary-foreground);
-    border: none;
-    border-radius: 9999px;
+    background: var(--almanac-oxblood);
+    color: var(--almanac-paper);
+    border: 1px solid var(--almanac-oxblood);
+    border-radius: 0;
     padding: 0.75rem;
     cursor: pointer;
-    box-shadow: var(--shadow-md);
+    box-shadow: none;
     transition: all var(--duration-fast);
     width: 3rem;
     height: 3rem;

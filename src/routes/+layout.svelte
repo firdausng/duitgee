@@ -5,8 +5,18 @@
 	import favicon from '$lib/assets/favicon.svg';
     import { ModeWatcher } from "mode-watcher";
 	import {browser, dev} from "$app/environment";
-	
+	import { onMount } from "svelte";
+
 	let { children, data } = $props();
+
+	// Apply .dg-almanac to <body> so portal-rendered overlays (DropdownMenu,
+	// Tooltip, Sheet, Toast, Cookie banner) inherit the almanac token palette
+	// and square corners. Body is outside Svelte's component DOM tree so we
+	// add the class imperatively on mount.
+	onMount(() => {
+		document.body.classList.add('dg-almanac');
+		return () => document.body.classList.remove('dg-almanac');
+	});
 
 	function initAnalytics () {
 		if (browser && !dev) {

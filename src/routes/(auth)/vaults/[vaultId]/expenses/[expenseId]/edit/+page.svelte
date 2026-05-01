@@ -11,6 +11,7 @@
 	import { CategoryPicker } from '$lib/components/ui/category-picker';
 	import { TagPicker, type TagOption } from '$lib/components/ui/tag-picker';
 	import { AttachmentPicker, type ScanApplyPayload } from '$lib/components/ui/attachment-picker';
+	import { Eyebrow, Rule } from '$lib/components/almanac';
 	import { hasEntitlement } from '$lib/configurations/plans';
 	import { getAttachmentLimitPerExpense } from '$lib/schemas/attachments';
 	import { page as pageState } from '$app/state';
@@ -260,13 +261,13 @@
 </svelte:head>
 
 <div class="container mx-auto py-6 px-4 max-w-2xl">
-	<!-- Mobile-only page title (desktop has DesktopAppBar with vault name) -->
-	<div class="md:hidden mb-4">
-		<h1 class="text-xl font-bold">Edit expense</h1>
-		<p class="text-sm text-muted-foreground mt-0.5">
-			Update or delete this expense.
-		</p>
-	</div>
+	<header class="mb-2">
+		<Eyebrow tone="muted">Plate § Edit entry</Eyebrow>
+		<h1 class="dg-page-title">Edit an <em>entry</em>.</h1>
+		<p class="dg-page-sub">Update or delete this entry.</p>
+	</header>
+	<Rule variant="double" />
+	<div class="mb-4"></div>
 
 	<!-- Expense Form -->
 	{#if isLoading || isDeleting}

@@ -7,6 +7,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
 	import { IconCombobox } from '$lib/components/ui/icon-combobox';
+	import { Eyebrow, Rule } from '$lib/components/almanac';
 	import { ofetch } from 'ofetch';
 	import { Spinner } from '$lib/components/ui/spinner';
     import {updateVaultRequestSchema} from "$lib/schemas/vaults";
@@ -117,10 +118,15 @@
 </svelte:head>
 
 <div class="container mx-auto py-8 px-4">
-	<!-- Expense Form -->
 	{#if isLoading || isDeleting}
 		<Spinner />
 	{:else}
+		<header class="mb-2">
+			<Eyebrow tone="muted">Plate § Edit vault</Eyebrow>
+			<h1 class="dg-page-title">Edit a <em>vault</em>.</h1>
+		</header>
+		<Rule variant="double" />
+		<div class="mb-6"></div>
 		<Card>
 			<CardHeader>
 				<CardTitle>Vault Details</CardTitle>

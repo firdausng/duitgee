@@ -2,6 +2,7 @@
     import { page } from '$app/state';
     import { cn } from '$lib/utils';
     import { SETTINGS_SECTIONS } from './settings-nav';
+    import { Eyebrow, Rule } from '$lib/components/almanac';
     import ChevronRight from '@lucide/svelte/icons/chevron-right';
 
     let { children } = $props();
@@ -17,10 +18,13 @@
 </svelte:head>
 
 <div class="container mx-auto py-6 px-4 max-w-5xl">
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold tracking-tight">Settings</h1>
-        <p class="text-sm text-muted-foreground mt-1">Manage your account settings and preferences</p>
-    </div>
+    <header class="mb-2">
+        <Eyebrow tone="muted">— The household —</Eyebrow>
+        <h1 class="dg-page-title">The <em>settings</em>.</h1>
+        <p class="dg-page-sub">Account, appearance, plan, and the danger zone.</p>
+    </header>
+    <Rule variant="double" />
+    <div class="mb-6"></div>
 
     <div class="md:grid md:grid-cols-[200px_1fr] md:gap-8">
         <!-- Sub-nav: list on mobile (tappable rows), sticky rail on desktop -->
