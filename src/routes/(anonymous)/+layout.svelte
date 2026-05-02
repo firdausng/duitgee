@@ -29,6 +29,18 @@
     );
     // The editorial layout header (magazine-style) is used everywhere almanac is.
     let isEditorial = $derived(isAlmanac);
+
+    const primaryNav = [
+        { href: "/features", label: "Features" },
+        { href: "/pricing", label: "Pricing" },
+        { href: "/use-cases", label: "Use cases" },
+        { href: "/docs", label: "Docs" },
+    ];
+
+    function isNavActive(prefix: string): boolean {
+        const path = page.url.pathname;
+        return path === prefix || path.startsWith(prefix + "/");
+    }
 </script>
 
 <svelte:head>
@@ -44,7 +56,20 @@
     {#if isEditorial}
         <header class="dg-header dg-header--editorial">
             <div class="dg-header__inner">
-                <a href="/" class="dg-wordmark" aria-label="DuitGee home">DuitGee</a>
+                <div class="dg-header__brand">
+                    <a href="/" class="dg-wordmark" aria-label="DuitGee home">DuitGee</a>
+                    <nav class="dg-header__nav" aria-label="Primary">
+                        {#each primaryNav as item (item.href)}
+                            <a
+                                href={item.href}
+                                class="dg-header__nav-link"
+                                class:dg-header__nav-link--active={isNavActive(item.href)}
+                            >
+                                {item.label}
+                            </a>
+                        {/each}
+                    </nav>
+                </div>
                 <div class="dg-header__actions">
                     <ThemeToggle />
                     {#if data.user}
@@ -58,6 +83,17 @@
                     {/if}
                 </div>
             </div>
+            <nav class="dg-header__nav-mobile" aria-label="Primary">
+                {#each primaryNav as item (item.href)}
+                    <a
+                        href={item.href}
+                        class="dg-header__nav-link"
+                        class:dg-header__nav-link--active={isNavActive(item.href)}
+                    >
+                        {item.label}
+                    </a>
+                {/each}
+            </nav>
         </header>
     {:else}
         <header class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -165,6 +201,62 @@
         justify-content: space-between;
         padding: 0 clamp(1rem, 4vw, 4rem);
     }
+    .dg-header__brand {
+        display: flex;
+        align-items: baseline;
+        gap: clamp(1rem, 3vw, 2.5rem);
+        min-width: 0;
+    }
+    .dg-header__nav {
+        display: none;
+        align-items: baseline;
+        gap: clamp(0.9rem, 2.2vw, 1.8rem);
+    }
+    @media (min-width: 768px) {
+        .dg-header__nav {
+            display: flex;
+        }
+    }
+    .dg-header__nav-link {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--almanac-ink-2);
+        text-decoration: none;
+        padding: 0.25rem 0;
+        border-bottom: 1px solid transparent;
+        transition: color 120ms, border-color 120ms;
+        white-space: nowrap;
+    }
+    .dg-header__nav-link:hover {
+        color: var(--almanac-oxblood);
+    }
+    .dg-header__nav-link--active {
+        color: var(--almanac-oxblood);
+        border-bottom-color: var(--almanac-oxblood);
+    }
+
+    /* Mobile sub-masthead — second row beneath the wordmark/actions row.
+       Hidden on md+ where the inline nav takes over. */
+    .dg-header__nav-mobile {
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: clamp(0.9rem, 4vw, 1.6rem);
+        padding: 0.5rem clamp(1rem, 4vw, 4rem) 0.55rem;
+        border-top: 1px dashed var(--almanac-rule-soft);
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+    .dg-header__nav-mobile::-webkit-scrollbar { display: none; }
+    .dg-header__nav-mobile .dg-header__nav-link {
+        font-size: 0.66rem;
+    }
+    @media (min-width: 768px) {
+        .dg-header__nav-mobile { display: none; }
+    }
+
     .dg-header__actions {
         display: flex;
         align-items: center;
