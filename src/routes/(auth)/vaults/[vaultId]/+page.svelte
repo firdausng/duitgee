@@ -34,7 +34,6 @@
     import Plus from "@lucide/svelte/icons/plus";
     import Globe from "@lucide/svelte/icons/globe";
     import CalendarDays from "@lucide/svelte/icons/calendar-days";
-    import type { Expense } from "./types";
 
     const GROUP_BY_DAY_STORAGE_KEY = 'dg:expenses:groupByDay';
 
@@ -118,7 +117,10 @@
         }
     );
 
-    // Resource for statistics - auto-refetches when filter changes
+    // Statistics resource — collapses four formerly-separate fetches into one.
+    // Server returns: current totals/breakdowns, prior period totals (when not
+    // 'all'), all-time count (for the empty-vault checklist), and the recent
+    // expenses page (for the activity list). Auto-refetches when filter changes.
     const statisticsResource = resource(
         () => {
             // Only include startDate/endDate in dependencies for custom filters
@@ -131,10 +133,30 @@
             const dateRange = getDateRangeWithCustom();
             const urlParams = new URLSearchParams({
                 vaultId: deps[0],
-                    ...dateRange
+                ...dateRange,
+                includeAllTimeCount: 'true',
+                recentExpensesLimit: '100',
             });
 
             if (selectedFundId) urlParams.append('fundId', selectedFundId);
+
+            // Prior period for the SpendHeroCard delta caption — skip when 'all'.
+            if (filterType !== 'all') {
+                const priorRange = getPriorDateRange(
+                    filterType,
+                    filterType === 'custom' && params.startDate
+                        ? localDatetimeToUtcIso(params.startDate)
+                        : undefined,
+                    filterType === 'custom' && params.endDate
+                        ? localDatetimeToUtcIso(params.endDate)
+                        : undefined,
+                );
+                if (priorRange.startDate && priorRange.endDate) {
+                    urlParams.append('includePrior', 'true');
+                    urlParams.append('priorStartDate', priorRange.startDate);
+                    urlParams.append('priorEndDate', priorRange.endDate);
+                }
+            }
 
             const response = await ofetch<{ success: boolean, data: VaultStatistics }>(`/api/getVaultStatistics?${urlParams.toString()}`);
             return response.data;
@@ -144,95 +166,23 @@
         }
     );
 
-    // Resource for the prior period — drives the SpendHeroCard delta caption.
-    // Only fetched when there's a meaningful comparison (skip 'all').
-    const priorStatsResource = resource(
-        () => {
-            if (filterType === 'custom') {
-                return [vaultId, filterType, params.startDate, params.endDate, refetchKey, selectedFundId] as const;
-            }
-            return [vaultId, filterType, refetchKey, selectedFundId] as const;
-        },
-        async (deps) => {
-            if (filterType === 'all') return null;
-            const range = getPriorDateRange(
-                filterType,
-                filterType === 'custom' && params.startDate
-                    ? localDatetimeToUtcIso(params.startDate)
-                    : undefined,
-                filterType === 'custom' && params.endDate
-                    ? localDatetimeToUtcIso(params.endDate)
-                    : undefined,
-            );
-            if (!range.startDate || !range.endDate) return null;
-            const urlParams = new URLSearchParams({ vaultId: deps[0], ...range });
-            if (selectedFundId) urlParams.append('fundId', selectedFundId);
-            const response = await ofetch<{ success: boolean; data: VaultStatistics }>(
-                `/api/getVaultStatistics?${urlParams.toString()}`,
-            );
-            return response.data;
-        },
-        { debounce: 300 },
-    );
-
-    // All-time expense count — drives the empty-vault checklist signal.
-    // Cheap, cached query that ignores date filters.
-    const allTimeCountResource = resource(
-        () => [vaultId, refetchKey] as const,
-        async ([id]) => {
-            try {
-                const res = await ofetch<{ success: boolean; data: VaultStatistics }>(
-                    `/api/getVaultStatistics?vaultId=${id}`,
-                );
-                return res.data?.total?.count ?? 0;
-            } catch {
-                return 1; // fail-safe — don't show checklist if the API errors
-            }
-        },
-    );
-
-    // Pending recurring count — for the PendingActionsCard.
-    const pendingRecurringResource = resource(
-        () => [vaultId, refetchKey] as const,
-        async ([id]) => {
-            try {
-                const res = await ofetch<{ success: boolean; data: unknown[] }>(
-                    `/api/getPendingOccurrences?vaultId=${id}`,
-                );
-                return (res.data ?? []).length;
-            } catch {
-                return 0;
-            }
-        },
-    );
-
-    // Active recurring rules — drives the RecurringCommitmentsCard headline + counts.
-    const recurringRulesResource = resource(
-        () => [vaultId, refetchKey] as const,
-        async ([id]) => {
-            try {
-                const res = await ofetch<{ success: boolean; data: RecurringRule[] }>(
-                    `/api/getRecurringExpenses?vaultId=${id}`,
-                );
-                return res.data ?? [];
-            } catch {
-                return [] as RecurringRule[];
-            }
-        },
-    );
-
-    // Upcoming dues in the next 7 days — feeds the card's preview list.
-    const upcomingRecurringResource = resource(
+    // Recurring summary — collapses three formerly-separate fetches (rules,
+    // upcoming projection, pending count) into one server call.
+    const recurringSummaryResource = resource(
         () => [vaultId, refetchKey] as const,
         async ([id]) => {
             try {
                 const res = await ofetch<{
                     success: boolean;
-                    data: RecurringCommitmentsUpcoming[];
-                }>(`/api/getUpcomingOccurrences?vaultId=${id}&days=7`);
-                return res.data ?? [];
+                    data: {
+                        rules: RecurringRule[];
+                        upcoming: RecurringCommitmentsUpcoming[];
+                        pendingCount: number;
+                    };
+                }>(`/api/getRecurringSummary?vaultId=${id}&days=7`);
+                return res.data ?? { rules: [], upcoming: [], pendingCount: 0 };
             } catch {
-                return [] as RecurringCommitmentsUpcoming[];
+                return { rules: [] as RecurringRule[], upcoming: [] as RecurringCommitmentsUpcoming[], pendingCount: 0 };
             }
         },
     );
@@ -259,57 +209,27 @@
         },
     );
 
-    // Resource for expenses - auto-refetches when filter changes
-    const expensesResource = resource(
-        () => {
-            // Include startDate/endDate in dependencies for custom filters
-            if (filterType === 'custom') {
-                return [vaultId, filterType, params.startDate, params.endDate, refetchKey, selectedFundId] as const;
-            }
-            return [vaultId, filterType, refetchKey, selectedFundId] as const;
-        },
-        async (deps) => {
-            const dateRange = getDateRangeWithCustom();
-            const urlParams = new URLSearchParams({
-                vaultId: deps[0],
-                page: '1',
-                limit: '100'
-            });
-
-            if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
-            if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
-            if (selectedFundId) urlParams.append('fundId', selectedFundId);
-
-            const response = await ofetch<{ expenses: Expense[]; pagination: any }>(
-                `/api/getExpenses?${urlParams.toString()}`
-            );
-            return response.expenses || [];
-        },
-        {
-            debounce: 300,
-        }
-    );
-
-    // Derive data from resources
+    // Derive data from resources. Recent expenses, prior totals, and the
+    // all-time count are all served inline by the consolidated stats response.
     const currentVault = $derived(vaultResource.current);
     const statistics = $derived(statisticsResource.current || null);
-    const priorStats = $derived(priorStatsResource.current || null);
-    const expenses = $derived(expensesResource.current || []);
-    const pendingRecurringCount = $derived(pendingRecurringResource.current ?? 0);
+    const priorStats = $derived(statistics?.prior ?? null);
+    const expenses = $derived(statistics?.recentExpenses?.expenses ?? []);
+    const recurringSummary = $derived(recurringSummaryResource.current ?? null);
+    const pendingRecurringCount = $derived(recurringSummary?.pendingCount ?? 0);
     const pendingReimbursements = $derived(
         pendingReimbursementsResource.current ?? { count: 0, total: 0 },
     );
-    const allTimeExpenseCount = $derived(allTimeCountResource.current ?? null);
+    const allTimeExpenseCount = $derived(statistics?.allTimeCount ?? null);
     const isEmptyVault = $derived(allTimeExpenseCount === 0);
     const showChecklist = $derived(isEmptyVault && !checklistDismissed);
-    const recurringRules = $derived(recurringRulesResource.current ?? []);
-    const upcomingRecurring = $derived(upcomingRecurringResource.current ?? []);
-    const isLoadingRecurring = $derived(
-        recurringRulesResource.loading || upcomingRecurringResource.loading,
-    );
+    const recurringRules = $derived(recurringSummary?.rules ?? []);
+    const upcomingRecurring = $derived(recurringSummary?.upcoming ?? []);
+    const isLoadingRecurring = $derived(recurringSummaryResource.loading);
     const isLoadingVault = $derived(vaultResource.loading);
     const isLoadingStats = $derived(statisticsResource.loading);
-    const isLoadingExpenses = $derived(expensesResource.loading);
+    // Expenses no longer have their own loading state — the stats fetch covers them.
+    const isLoadingExpenses = $derived(statisticsResource.loading);
     const vaultError = $derived(vaultResource.error);
     const statisticsError = $derived(statisticsResource.error);
 

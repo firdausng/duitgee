@@ -18,6 +18,7 @@ import {
     getRecurringExpenseQuerySchema,
     getPendingOccurrencesQuerySchema,
     getUpcomingOccurrencesQuerySchema,
+    getRecurringSummaryQuerySchema,
 } from '$lib/schemas/recurringExpenses';
 import { createRecurringExpense } from './createRecurringExpenseHandler';
 import { createRecurringExpenseWithTemplate } from './createRecurringExpenseWithTemplateHandler';
@@ -34,6 +35,7 @@ import { getRecurringExpenses } from './getRecurringExpensesHandler';
 import { getRecurringExpense } from './getRecurringExpenseHandler';
 import { getPendingOccurrences } from './getPendingOccurrencesHandler';
 import { getUpcomingOccurrences } from './getUpcomingOccurrencesHandler';
+import { getRecurringSummary } from './getRecurringSummaryHandler';
 
 const RECURRING_TAG = ['Recurring Expense'];
 const common = { tags: RECURRING_TAG };
@@ -118,6 +120,22 @@ export const recurringExpensesApi = new Hono<App.Api>()
                 return c.json({ success: true, data });
             } catch (error) {
                 const { message, status } = errorHandler('projecting upcoming occurrences')(error);
+                return c.json({ success: false, error: message }, status as 400);
+            }
+        },
+    )
+    .get(
+        '/getRecurringSummary',
+        describeRoute({ ...common, description: 'Combined dashboard payload — rules + upcoming + pending count' }),
+        vValidator('query', getRecurringSummaryQuerySchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const query = c.req.valid('query');
+            try {
+                const data = await getRecurringSummary(session, query, c.env);
+                return c.json({ success: true, data });
+            } catch (error) {
+                const { message, status } = errorHandler('fetching recurring summary')(error);
                 return c.json({ success: false, error: message }, status as 400);
             }
         },

@@ -4,15 +4,50 @@ import { expenses, expenseTemplates, expenseTags, expenseTagAssignments, vaultMe
 import { eq, and, sql, isNull } from "drizzle-orm";
 import { getUserVaultRole } from "$lib/server/utils/vaultPermissions";
 import { categoryData } from "$lib/configurations/categories";
+import { getExpenses } from "$lib/server/api/expenses/getExpensesHandler";
+
+type DrizzleClient = ReturnType<typeof drizzle<typeof schema>>;
+
+type GetVaultStatisticsOptions = {
+    startDate?: string;
+    endDate?: string;
+    fundId?: string;
+    /**
+     * When provided, also returns a `prior` block with totals for the prior
+     * period — used by SpendHeroCard's "vs. last period" delta caption.
+     * Inherits the current request's fundId filter.
+     */
+    prior?: { startDate: string; endDate: string };
+    /**
+     * When true, returns `allTimeCount` — total expense count ignoring any
+     * date or fund filter. Drives the empty-vault checklist.
+     */
+    includeAllTimeCount?: boolean;
+    /**
+     * When provided, returns `recentExpenses` — the most recent N expenses
+     * matching the same date/fund filter, with full tag/attachment expansion.
+     * Avoids a second round-trip to /getExpenses for the home dashboard.
+     */
+    recentExpenses?: { limit: number; page?: number };
+};
+
+const totalsAggregate = (client: DrizzleClient, whereClause: ReturnType<typeof and>) =>
+    client
+        .select({
+            totalAmount: sql<number>`COALESCE(SUM(${expenses.amount}), 0)`,
+            count: sql<number>`COUNT(*)`,
+        })
+        .from(expenses)
+        .where(whereClause);
 
 export const getVaultStatistics = async (
     vaultId: string,
     session: App.AuthSession,
     env: Cloudflare.Env,
-    options?: { startDate?: string; endDate?: string; fundId?: string }
+    options?: GetVaultStatisticsOptions,
 ) => {
     const client = drizzle(env.DB, { schema });
-    const { startDate, endDate, fundId } = options || {};
+    const { startDate, endDate, fundId, prior, includeAllTimeCount, recentExpenses } = options || {};
 
     // Any active vault member can read statistics
     const role = await getUserVaultRole(session.user.id, vaultId, env);
@@ -20,37 +55,26 @@ export const getVaultStatistics = async (
         throw new Error('You do not have access to this vault');
     }
 
-    // Build base where clause
-    let baseWhereClause = and(
-        eq(expenses.vaultId, vaultId),
-        isNull(expenses.deletedAt)
-    );
+    const buildWhere = (range?: { startDate?: string; endDate?: string }) => {
+        let clause = and(eq(expenses.vaultId, vaultId), isNull(expenses.deletedAt));
+        if (range?.startDate && range?.endDate) {
+            clause = and(
+                clause,
+                sql`${expenses.date} >= ${range.startDate}`,
+                sql`${expenses.date} <= ${range.endDate}`,
+            );
+        }
+        if (fundId) {
+            clause = and(clause, eq(expenses.fundId, fundId));
+        }
+        return clause;
+    };
 
-    // Add date range filter if provided
-    if (startDate && endDate) {
-        baseWhereClause = and(
-            baseWhereClause,
-            sql`${expenses.date} >= ${startDate}`,
-            sql`${expenses.date} <= ${endDate}`
-        );
-    }
+    const baseWhereClause = buildWhere({ startDate, endDate });
 
-    // Add fund filter if provided
-    if (fundId) {
-        baseWhereClause = and(baseWhereClause, eq(expenses.fundId, fundId));
-    }
+    const totalsP = totalsAggregate(client, baseWhereClause);
 
-    // Get total expenses and count
-    const [totals] = await client
-        .select({
-            totalAmount: sql<number>`COALESCE(SUM(${expenses.amount}), 0)`,
-            count: sql<number>`COUNT(*)`,
-        })
-        .from(expenses)
-        .where(baseWhereClause);
-
-    // Get expenses by template
-    const expensesByTemplate = await client
+    const byTemplateP = client
         .select({
             templateId: expenses.expenseTemplateId,
             templateName: expenseTemplates.name,
@@ -63,8 +87,7 @@ export const getVaultStatistics = async (
         .where(baseWhereClause)
         .groupBy(expenses.expenseTemplateId, expenseTemplates.name, expenseTemplates.icon);
 
-    // Get expenses by category
-    const expensesByCategory = await client
+    const byCategoryP = client
         .select({
             categoryName: expenses.categoryName,
             totalAmount: sql<number>`COALESCE(SUM(${expenses.amount}), 0)`,
@@ -74,8 +97,7 @@ export const getVaultStatistics = async (
         .where(baseWhereClause)
         .groupBy(expenses.categoryName);
 
-    // Get expenses by member
-    const expensesByMember = await client
+    const byMemberP = client
         .select({
             userId: expenses.paidBy,
             displayName: vaultMembers.displayName,
@@ -90,9 +112,9 @@ export const getVaultStatistics = async (
         .where(baseWhereClause)
         .groupBy(expenses.paidBy, vaultMembers.displayName);
 
-    // Get expenses by tag (an expense with N tags counts toward each — sums will exceed total).
-    // We restrict to non-deleted tags in this vault to avoid leaking soft-deleted labels.
-    const expensesByTag = await client
+    // An expense with N tags counts toward each — sums will exceed total.
+    // Restricted to non-deleted tags in this vault to avoid leaking labels.
+    const byTagP = client
         .select({
             tagId: expenseTags.id,
             tagName: expenseTags.name,
@@ -110,10 +132,34 @@ export const getVaultStatistics = async (
         .where(baseWhereClause)
         .groupBy(expenseTags.id, expenseTags.name, expenseTags.color);
 
-    // Create a map of category names to category data for quick lookup
-    const categoryMap = new Map(
-        categoryData.categories.map(cat => [cat.name, cat])
-    );
+    const priorP = prior
+        ? totalsAggregate(client, buildWhere(prior))
+        : Promise.resolve(null);
+
+    // Skip the fund filter for all-time count — it powers the empty-vault
+    // checklist, which asks "has this vault ever had any activity at all?"
+    const allTimeP = includeAllTimeCount
+        ? client
+            .select({ count: sql<number>`COUNT(*)` })
+            .from(expenses)
+            .where(and(eq(expenses.vaultId, vaultId), isNull(expenses.deletedAt)))
+        : Promise.resolve(null);
+
+    const recentP = recentExpenses
+        ? getExpenses(vaultId, session, env, {
+            page: recentExpenses.page ?? 1,
+            limit: recentExpenses.limit,
+            startDate,
+            endDate,
+            fundId,
+        })
+        : Promise.resolve(null);
+
+    const [totalsRows, expensesByTemplate, expensesByCategory, expensesByMember, expensesByTag, priorTotalsRows, allTimeRows, recentResult] =
+        await Promise.all([totalsP, byTemplateP, byCategoryP, byMemberP, byTagP, priorP, allTimeP, recentP]);
+
+    const totals = totalsRows[0];
+    const categoryMap = new Map(categoryData.categories.map(cat => [cat.name, cat]));
 
     return {
         total: {
@@ -150,5 +196,15 @@ export const getVaultStatistics = async (
             totalAmount: item.totalAmount,
             count: item.count,
         })),
+        prior: priorTotalsRows
+            ? {
+                total: {
+                    amount: priorTotalsRows[0].totalAmount,
+                    count: priorTotalsRows[0].count,
+                },
+            }
+            : null,
+        allTimeCount: allTimeRows ? Number(allTimeRows[0].count ?? 0) : null,
+        recentExpenses: recentResult,
     };
 };

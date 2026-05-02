@@ -63,4 +63,18 @@ export type VaultStatistics = {
         totalAmount: number;
         count: number;
     }>;
+    // Present when the request asked for includePrior — drives the
+    // SpendHeroCard "vs. last period" delta caption.
+    prior?: {
+        total: { amount: number; count: number };
+    } | null;
+    // Present when the request asked for includeAllTimeCount — drives the
+    // empty-vault welcome checklist visibility.
+    allTimeCount?: number | null;
+    // Present when the request asked for recentExpensesLimit — replaces a
+    // separate /getExpenses round-trip for the home dashboard.
+    recentExpenses?: {
+        expenses: Expense[];
+        pagination: { page: number; limit: number; total: number; pages: number };
+    } | null;
 };

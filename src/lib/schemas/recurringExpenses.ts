@@ -249,3 +249,9 @@ export const getUpcomingOccurrencesQuerySchema = v.object({
     days: v.optional(v.pipe(v.string(), v.transform(Number)), '7'),
 });
 export type GetUpcomingOccurrencesQuery = v.InferOutput<typeof getUpcomingOccurrencesQuerySchema>;
+
+export const getRecurringSummaryQuerySchema = v.object({
+    vaultId: v.string(),
+    days: v.optional(v.pipe(v.string(), v.transform(Number)), '7'),
+});
+export type GetRecurringSummaryQuery = v.InferOutput<typeof getRecurringSummaryQuerySchema>;

@@ -328,16 +328,43 @@ export const vaultsApi = new Hono<App.Api>()
             startDate: v.optional(v.string()),
             endDate: v.optional(v.string()),
             fundId: v.optional(v.string()),
+            // When 'true' (and both prior dates are sent), response gains
+            // a `prior.total` block for the SpendHeroCard delta caption.
+            includePrior: v.optional(v.string()),
+            priorStartDate: v.optional(v.string()),
+            priorEndDate: v.optional(v.string()),
+            // When 'true', response gains `allTimeCount` (ignores filters).
+            includeAllTimeCount: v.optional(v.string()),
+            // When set, response gains `recentExpenses` — the most recent N
+            // expenses matching the same date/fund filter.
+            recentExpensesLimit: v.optional(v.pipe(v.string(), v.transform(Number))),
         })),
         async (c) => {
             const session = c.get('currentSession');
-            const { vaultId, startDate, endDate, fundId } = c.req.valid('query');
+            const {
+                vaultId,
+                startDate,
+                endDate,
+                fundId,
+                includePrior,
+                priorStartDate,
+                priorEndDate,
+                includeAllTimeCount,
+                recentExpensesLimit,
+            } = c.req.valid('query');
 
             try {
                 const stats = await getVaultStatistics(vaultId, session, c.env, {
                     startDate,
                     endDate,
-                    fundId
+                    fundId,
+                    prior: includePrior === 'true' && priorStartDate && priorEndDate
+                        ? { startDate: priorStartDate, endDate: priorEndDate }
+                        : undefined,
+                    includeAllTimeCount: includeAllTimeCount === 'true',
+                    recentExpenses: recentExpensesLimit && recentExpensesLimit > 0
+                        ? { limit: recentExpensesLimit }
+                        : undefined,
                 });
                 return c.json({
                     success: true,
