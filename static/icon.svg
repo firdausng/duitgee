@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="DuitGee">
+  <style>
+    :root {
+      --line: #1F1A14;
+      --gold: #B98A30;
+      --ox: #6B2118;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --line: #F2EADC;
+        --gold: #D8AB55;
+        --ox: #C56B5D;
+      }
+    }
+    .ring   { fill: none; stroke: var(--line); stroke-width: 1.5; }
+    .tick   { stroke: var(--line); stroke-width: 1; stroke-linecap: round; }
+    .letter { fill: none; stroke: var(--gold); stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+    .n-half { fill: var(--ox);  }
+    .s-half { fill: var(--line); }
+    .orb-o  { fill: var(--ox);  }
+    .orb-i  { fill: var(--line); }
+  </style>
+
+  <!-- Outer compass ring -->
+  <circle class="ring" cx="64" cy="64" r="58" />
+
+  <!-- Inter-cardinal short ticks (NE, SE, SW, NW) -->
+  <g class="tick">
+    <line x1="100.06" y1="27.94" x2="105.01" y2="22.99" />
+    <line x1="100.06" y1="100.06" x2="105.01" y2="105.01" />
+    <line x1="27.94"  y1="100.06" x2="22.99"  y2="105.01" />
+    <line x1="27.94"  y1="27.94"  x2="22.99"  y2="22.99" />
+  </g>
+
+  <!-- Cardinal letters in gold: G E E W (clockwise from north) -->
+  <g class="letter" transform="translate(64 16)">
+    <path d="M 5,-3 A 5,5 0 1,0 5,3 L 0,3 L 0,0" />
+  </g>
+  <g class="letter" transform="translate(112 64)">
+    <path d="M 5,-5 H -5 V 5 H 5 M -5,0 H 3" />
+  </g>
+  <g class="letter" transform="translate(64 112)">
+    <path d="M 5,-5 H -5 V 5 H 5 M -5,0 H 3" />
+  </g>
+  <g class="letter" transform="translate(16 64)">
+    <path d="M -5,-5 L -2.5,5 L 0,-2 L 2.5,5 L 5,-5" />
+  </g>
+
+  <!-- Compass needle: oxblood north half, ink south half -->
+  <polygon class="n-half" points="64,28 70,64 58,64" />
+  <polygon class="s-half" points="64,100 70,64 58,64" />
+
+  <!-- Center orb -->
+  <circle class="orb-o" cx="64" cy="64" r="4" />
+  <circle class="orb-i" cx="64" cy="64" r="1.5" />
+</svg>

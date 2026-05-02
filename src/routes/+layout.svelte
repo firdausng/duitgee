@@ -2,7 +2,6 @@
 	import '../app.css';
 	import GdprBanner from '@beyonk/gdpr-cookie-consent-banner'
 	import posthog from 'posthog-js';
-	import favicon from '$lib/assets/favicon.svg';
     import { ModeWatcher } from "mode-watcher";
 	import {browser, dev} from "$app/environment";
 	import { onMount } from "svelte";
@@ -31,10 +30,6 @@
 		}
 	}
 </script>
-
-<svelte:head>
-	<link rel="icon" href={favicon} />
-</svelte:head>
 
 <GdprBanner
 		cookieName="gdpr-consent"

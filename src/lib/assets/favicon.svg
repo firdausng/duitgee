@@ -1,28 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <defs>
-    <linearGradient id="needle" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#059669" />
-      <stop offset="100%" style="stop-color:#10b981" />
-    </linearGradient>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="DuitGee">
+  <style>
+    :root { --line: #1F1A14; --ox: #6B2118; }
+    @media (prefers-color-scheme: dark) {
+      :root { --line: #F2EADC; --ox: #C56B5D; }
+    }
+    .ring   { fill: none; stroke: var(--line); stroke-width: 1.75; }
+    .n-half { fill: var(--ox); }
+    .s-half { fill: var(--line); }
+    .orb    { fill: var(--ox); }
+  </style>
 
-  <!-- Outer ring -->
-  <circle cx="64" cy="64" r="63" fill="none" stroke="#10b981" stroke-width="5" />
-
-  <!-- Inner face -->
-  <circle cx="64" cy="64" r="57" fill="#f0fdf4" />
-
-  <!-- Cardinal positions: G E E W -->
-  <text x="64" y="26" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#059669" text-anchor="middle">G</text>
-  <text x="112" y="70" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#059669" text-anchor="middle">E</text>
-  <text x="64" y="116" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#059669" text-anchor="middle">E</text>
-  <text x="16" y="70" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#10b981" text-anchor="middle">W</text>
-
-  <!-- Needle -->
-  <polygon points="64,28 73,64 64,72 55,64" fill="url(#needle)" />
-  <polygon points="64,100 73,64 64,56 55,64" fill="#d1fae5" />
-
-  <!-- Center orb -->
-  <circle cx="64" cy="64" r="8" fill="#059669" />
-  <circle cx="64" cy="64" r="5" fill="#10b981" />
+  <circle class="ring" cx="16" cy="16" r="14" />
+  <polygon class="n-half" points="16,4 20,16 12,16" />
+  <polygon class="s-half" points="16,28 20,16 12,16" />
+  <circle class="orb" cx="16" cy="16" r="1.6" />
 </svg>

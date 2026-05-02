@@ -1,0 +1,14 @@
+{
+    "name": "DuitGee",
+    "short_name": "DuitGee",
+    "description": "Collaborative expense tracker for households — reduce friction between people sharing money and spot spending patterns.",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#F2EADC",
+    "theme_color": "#6B2118",
+    "icons": [
+        { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+        { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    ]
+}
