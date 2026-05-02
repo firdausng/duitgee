@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { docsNav } from '$lib/configurations/docs-nav';
+	import { Eyebrow, Rule } from '$lib/components/almanac';
 	import { Menu, X, Search } from '@lucide/svelte';
 	import Fuse from 'fuse.js';
 
@@ -116,78 +117,66 @@
 </svelte:head>
 
 {#if isEmbed}
-	<div class="px-4 py-6">
-		<main
-			class="prose prose-slate dark:prose-invert prose-sm max-w-none
-				prose-headings:scroll-mt-4
-				prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-				prose-code:before:content-none prose-code:after:content-none
-				prose-code:rounded prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-normal
-				prose-h1:text-2xl prose-h1:font-bold prose-h1:tracking-tight
-				prose-h2:text-lg prose-h2:font-semibold prose-h2:border-b prose-h2:border-border prose-h2:pb-2 prose-h2:mt-8
-				prose-h3:text-base prose-h3:font-semibold
-				prose-img:rounded-lg prose-img:border prose-img:border-border
-				prose-table:text-sm
-				prose-th:text-left prose-th:font-semibold
-				prose-td:py-2 prose-th:py-2"
-		>
+	<div class="dg-docs-embed">
+		<main class="dg-docs-prose">
 			{@render children()}
 		</main>
 	</div>
 {:else}
-	<div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
-		<div class="mb-4 lg:hidden">
-			<button
-				onclick={() => (mobileOpen = !mobileOpen)}
-				class="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-			>
-				{#if mobileOpen}
-					<X class="size-4" />
-					Close menu
-				{:else}
-					<Menu class="size-4" />
-					Documentation menu
-				{/if}
-			</button>
-		</div>
+	<div class="dg-docs">
+		<div class="dg-docs__inner">
+			<div class="dg-docs__mobile-bar">
+				<button
+					type="button"
+					class="dg-docs__menu-btn"
+					onclick={() => (mobileOpen = !mobileOpen)}
+				>
+					{#if mobileOpen}
+						<X class="size-4" />
+						<span>Close menu</span>
+					{:else}
+						<Menu class="size-4" />
+						<span>Documentation menu</span>
+					{/if}
+				</button>
+			</div>
 
-		<div class="flex gap-10">
-			<aside
-				class="
-					{mobileOpen ? 'block' : 'hidden'}
-					lg:sticky lg:top-20 lg:block lg:h-[calc(100vh-5rem)] lg:w-56 lg:shrink-0 lg:overflow-y-auto"
-			>
-				<div class="relative mb-6">
-					<Search class="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+			<aside class="dg-docs__aside" class:dg-docs__aside--open={mobileOpen}>
+				<div class="dg-docs__masthead">
+					<Eyebrow tone="muted">— The almanac &middot; documentation —</Eyebrow>
+					<h2 class="dg-docs__masthead-title">
+						The <em>handbook</em>.
+					</h2>
+				</div>
+				<Rule />
+
+				<div class="dg-docs__search">
+					<Search class="dg-docs__search-icon" />
 					<input
 						bind:this={searchEl}
 						bind:value={query}
 						onkeydown={onSearchKeydown}
 						onfocus={() => (searchOpen = true)}
 						type="search"
-						placeholder="Search docs..."
+						placeholder="Search the volume…"
 						aria-label="Search documentation"
-						class="w-full rounded-md border border-border bg-background py-2 pr-3 pl-8 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+						class="dg-docs__search-input"
 					/>
 					{#if searchOpen && query.trim().length >= 2}
-						<div
-							class="absolute top-full right-0 left-0 z-10 mt-1 max-h-96 overflow-y-auto rounded-md border border-border bg-popover shadow-md"
-						>
+						<div class="dg-docs__search-results">
 							{#if results.length === 0}
-								<div class="px-3 py-3 text-sm text-muted-foreground">No results for "{query}"</div>
+								<div class="dg-docs__search-empty">
+									No entries for &ldquo;<em>{query}</em>&rdquo;.
+								</div>
 							{:else}
-								<ul class="py-1">
+								<ul class="dg-docs__search-list">
 									{#each results as r (r.slug)}
 										<li>
-											<a
-												href="/docs/{r.slug}"
-												onclick={onResultClick}
-												class="block px-3 py-2 text-sm transition-colors hover:bg-accent"
-											>
-												<div class="font-medium text-foreground">{r.title}</div>
-												<div class="mt-0.5 text-xs text-muted-foreground">{r.group}</div>
+											<a href="/docs/{r.slug}" onclick={onResultClick} class="dg-docs__search-result">
+												<span class="dg-docs__search-result-title">{r.title}</span>
+												<span class="dg-docs__search-result-group">{r.group}</span>
 												{#if r.description}
-													<div class="mt-1 line-clamp-2 text-xs text-muted-foreground">{r.description}</div>
+													<span class="dg-docs__search-result-desc">{r.description}</span>
 												{/if}
 											</a>
 										</li>
@@ -198,22 +187,18 @@
 					{/if}
 				</div>
 
-				<nav>
+				<nav class="dg-docs__nav">
 					{#each docsNav as group (group.title)}
-						<div class="mb-6">
-							<h4 class="mb-2 px-3 text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-								{group.title}
-							</h4>
-							<ul class="space-y-0.5">
+						<div class="dg-docs__nav-group">
+							<div class="dg-docs__nav-eyebrow">— {group.title} —</div>
+							<ul class="dg-docs__nav-list">
 								{#each group.items as item (item.slug)}
 									<li>
 										<a
 											href="/docs/{item.slug}"
 											onclick={() => (mobileOpen = false)}
-											class="block rounded-md px-3 py-1.5 text-sm transition-colors
-												{isActive(item.slug)
-													? 'bg-primary/10 font-medium text-primary'
-													: 'text-muted-foreground hover:bg-accent hover:text-foreground'}"
+											class="dg-docs__nav-link"
+											class:dg-docs__nav-link--active={isActive(item.slug)}
 										>
 											{item.title}
 										</a>
@@ -225,22 +210,488 @@
 				</nav>
 			</aside>
 
-			<main
-				class="prose prose-slate dark:prose-invert min-w-0 max-w-none flex-1
-					prose-headings:scroll-mt-20
-					prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-					prose-code:before:content-none prose-code:after:content-none
-					prose-code:rounded prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-normal
-					prose-h1:text-3xl prose-h1:font-bold prose-h1:tracking-tight
-					prose-h2:text-xl prose-h2:font-semibold prose-h2:border-b prose-h2:border-border prose-h2:pb-2 prose-h2:mt-10
-					prose-h3:text-lg prose-h3:font-semibold
-					prose-img:rounded-lg prose-img:border prose-img:border-border
-					prose-table:text-sm
-					prose-th:text-left prose-th:font-semibold
-					prose-td:py-2 prose-th:py-2"
-			>
+			<main class="dg-docs__main dg-docs-prose">
 				{@render children()}
 			</main>
 		</div>
 	</div>
 {/if}
+
+<style>
+	.dg-docs {
+		max-width: 78rem;
+		margin: 0 auto;
+		padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 3vw, 2rem);
+		color: var(--almanac-ink);
+	}
+
+	.dg-docs__inner {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: clamp(1.5rem, 3vw, 2.5rem);
+	}
+
+	@media (min-width: 1024px) {
+		.dg-docs__inner {
+			grid-template-columns: 17rem 1fr;
+		}
+	}
+
+	/* Mobile menu trigger */
+	.dg-docs__mobile-bar {
+		display: block;
+	}
+	@media (min-width: 1024px) {
+		.dg-docs__mobile-bar { display: none; }
+	}
+	.dg-docs__menu-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 0.7rem;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: var(--almanac-ink-2);
+		background: var(--almanac-card);
+		border: 1px solid var(--almanac-ink);
+		padding: 0.5rem 0.8rem;
+		cursor: pointer;
+		transition: background-color 120ms;
+	}
+	.dg-docs__menu-btn:hover { background: var(--almanac-paper-2); }
+
+	/* Sidebar */
+	.dg-docs__aside {
+		display: none;
+	}
+	.dg-docs__aside--open { display: block; }
+	@media (min-width: 1024px) {
+		.dg-docs__aside {
+			display: block;
+			position: sticky;
+			top: 5rem;
+			align-self: start;
+			max-height: calc(100vh - 6rem);
+			overflow-y: auto;
+		}
+	}
+
+	.dg-docs__masthead {
+		padding: 0.25rem 0 0.5rem;
+	}
+	.dg-docs__masthead-title {
+		font-family: 'Fraunces', Georgia, serif;
+		font-variation-settings: 'opsz' 144, 'SOFT' 50, 'wght' 400;
+		font-size: 1.5rem;
+		line-height: 1.05;
+		letter-spacing: -0.014em;
+		color: var(--almanac-ink);
+		margin: 0.4rem 0 0.6rem;
+	}
+	.dg-docs__masthead-title em {
+		font-style: italic;
+		font-variation-settings: 'opsz' 144, 'SOFT' 100, 'wght' 380;
+		color: var(--almanac-oxblood);
+	}
+
+	/* Search */
+	.dg-docs__search {
+		position: relative;
+		margin: 1rem 0 1.25rem;
+	}
+	:global(.dg-docs__search-icon) {
+		position: absolute;
+		left: 0.6rem;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 0.95rem;
+		height: 0.95rem;
+		color: var(--almanac-ink-3);
+		pointer-events: none;
+	}
+	.dg-docs__search-input {
+		width: 100%;
+		font-family: 'Newsreader', serif;
+		font-size: 0.95rem;
+		font-style: italic;
+		color: var(--almanac-ink);
+		background: var(--almanac-card);
+		border: 1px solid var(--almanac-ink);
+		border-radius: 0;
+		padding: 0.5rem 0.6rem 0.5rem 2rem;
+		outline: none;
+	}
+	.dg-docs__search-input::placeholder {
+		color: var(--almanac-ink-3);
+		font-style: italic;
+	}
+	.dg-docs__search-input:focus {
+		box-shadow: inset 0 -2px 0 0 var(--almanac-oxblood);
+	}
+
+	.dg-docs__search-results {
+		position: absolute;
+		top: calc(100% + 4px);
+		left: 0;
+		right: 0;
+		z-index: 20;
+		background: var(--almanac-card);
+		border: 1px solid var(--almanac-ink);
+		max-height: 24rem;
+		overflow-y: auto;
+	}
+	.dg-docs__search-empty {
+		padding: 0.75rem 0.9rem;
+		font-family: 'Newsreader', serif;
+		font-size: 0.9rem;
+		color: var(--almanac-ink-2);
+	}
+	.dg-docs__search-empty em {
+		font-style: italic;
+		color: var(--almanac-oxblood);
+	}
+	.dg-docs__search-list {
+		list-style: none;
+		margin: 0;
+		padding: 0.25rem 0;
+	}
+	.dg-docs__search-list li {
+		border-bottom: 1px dashed var(--almanac-rule-soft);
+	}
+	.dg-docs__search-list li:last-child { border-bottom: none; }
+	.dg-docs__search-result {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		padding: 0.55rem 0.9rem;
+		text-decoration: none;
+		transition: background-color 120ms;
+	}
+	.dg-docs__search-result:hover {
+		background: color-mix(in oklch, var(--almanac-oxblood) 8%, transparent);
+	}
+	.dg-docs__search-result-title {
+		font-family: 'Fraunces', Georgia, serif;
+		font-style: italic;
+		font-variation-settings: 'opsz' 96, 'SOFT' 60, 'wght' 460;
+		font-size: 1rem;
+		color: var(--almanac-ink);
+	}
+	.dg-docs__search-result-group {
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 0.65rem;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--almanac-ink-3);
+	}
+	.dg-docs__search-result-desc {
+		font-family: 'Newsreader', serif;
+		font-size: 0.82rem;
+		font-style: italic;
+		color: var(--almanac-ink-2);
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+
+	/* Nav */
+	.dg-docs__nav {
+		margin-top: 0.5rem;
+	}
+	.dg-docs__nav-group {
+		margin-bottom: 1.4rem;
+	}
+	.dg-docs__nav-eyebrow {
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 0.66rem;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: var(--almanac-ink-3);
+		padding: 0 0.25rem 0.4rem;
+	}
+	.dg-docs__nav-list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+	.dg-docs__nav-link {
+		display: block;
+		font-family: 'Newsreader', serif;
+		font-size: 0.95rem;
+		color: var(--almanac-ink-2);
+		text-decoration: none;
+		padding: 0.32rem 0.7rem;
+		border-left: 2px solid transparent;
+		transition: background-color 120ms, color 120ms;
+	}
+	.dg-docs__nav-link:hover {
+		background: color-mix(in oklch, var(--almanac-oxblood) 8%, transparent);
+		color: var(--almanac-ink);
+	}
+	.dg-docs__nav-link--active {
+		font-style: italic;
+		font-family: 'Fraunces', Georgia, serif;
+		font-variation-settings: 'opsz' 96, 'SOFT' 80, 'wght' 460;
+		color: var(--almanac-oxblood);
+		background: color-mix(in oklch, var(--almanac-oxblood) 14%, transparent);
+		border-left-color: var(--almanac-oxblood);
+	}
+
+	/* Main content well */
+	.dg-docs__main {
+		min-width: 0;
+		background: var(--almanac-card);
+		border: 1px solid var(--almanac-ink);
+		padding: clamp(1.75rem, 4vw, 3rem) clamp(1.25rem, 3.5vw, 2.5rem);
+	}
+
+	/* Embed mode (no sidebar, no chrome) */
+	.dg-docs-embed {
+		padding: 1.25rem;
+	}
+
+	/* ============================================================
+	   Editorial prose styling — applied to mdsvex output globally
+	   ============================================================ */
+	:global(.dg-docs-prose) {
+		color: var(--almanac-ink);
+		font-family: 'Newsreader', serif;
+		font-size: 1rem;
+		line-height: 1.7;
+	}
+
+	:global(.dg-docs-prose > *:first-child) { margin-top: 0; }
+	:global(.dg-docs-prose > *:last-child) { margin-bottom: 0; }
+
+	/* Headings */
+	:global(.dg-docs-prose h1) {
+		font-family: 'Fraunces', Georgia, serif;
+		font-variation-settings: 'opsz' 144, 'SOFT' 50, 'wght' 400;
+		font-style: italic;
+		font-size: clamp(2.2rem, 4.4vw, 3rem);
+		line-height: 1.05;
+		letter-spacing: -0.018em;
+		color: var(--almanac-oxblood);
+		margin: 0 0 0.6rem;
+		scroll-margin-top: 5rem;
+	}
+	:global(.dg-docs-prose h1 + p) {
+		font-family: 'Newsreader', serif;
+		font-style: italic;
+		font-size: 1.05rem;
+		color: var(--almanac-ink-2);
+		margin-top: 0;
+		margin-bottom: 1.6rem;
+	}
+	:global(.dg-docs-prose h2) {
+		font-family: 'Fraunces', Georgia, serif;
+		font-variation-settings: 'opsz' 144, 'SOFT' 60, 'wght' 380;
+		font-style: italic;
+		font-size: clamp(1.45rem, 2.4vw, 1.8rem);
+		line-height: 1.15;
+		letter-spacing: -0.012em;
+		color: var(--almanac-ink);
+		margin: 2.2rem 0 0.9rem;
+		padding-top: 1.4rem;
+		border-top: 1px solid var(--almanac-ink);
+		scroll-margin-top: 5rem;
+	}
+	:global(.dg-docs-prose h3) {
+		font-family: 'Fraunces', Georgia, serif;
+		font-variation-settings: 'opsz' 96, 'SOFT' 50, 'wght' 460;
+		font-size: 1.1rem;
+		line-height: 1.3;
+		color: var(--almanac-ink);
+		margin: 1.6rem 0 0.6rem;
+		scroll-margin-top: 5rem;
+	}
+	:global(.dg-docs-prose h4) {
+		font-family: 'Fraunces', Georgia, serif;
+		font-variation-settings: 'opsz' 96, 'SOFT' 40, 'wght' 500;
+		font-size: 1rem;
+		color: var(--almanac-ink);
+		margin: 1.4rem 0 0.5rem;
+	}
+
+	/* Paragraphs */
+	:global(.dg-docs-prose p) {
+		margin: 0 0 1rem;
+		color: var(--almanac-ink-2);
+	}
+	:global(.dg-docs-prose p em),
+	:global(.dg-docs-prose li em) {
+		font-style: italic;
+		color: var(--almanac-oxblood);
+	}
+	:global(.dg-docs-prose strong) {
+		font-weight: 600;
+		font-style: italic;
+		color: var(--almanac-ink);
+	}
+
+	/* Links */
+	:global(.dg-docs-prose a) {
+		color: var(--almanac-oxblood);
+		text-decoration: underline;
+		text-underline-offset: 3px;
+		text-decoration-thickness: 1px;
+		font-style: italic;
+	}
+	:global(.dg-docs-prose a:hover) { opacity: 0.8; }
+
+	/* Lists */
+	:global(.dg-docs-prose ul),
+	:global(.dg-docs-prose ol) {
+		list-style: none;
+		padding: 0;
+		margin: 0 0 1rem;
+		color: var(--almanac-ink-2);
+	}
+	:global(.dg-docs-prose ul li),
+	:global(.dg-docs-prose ol li) {
+		position: relative;
+		padding: 0.4rem 0 0.4rem 1.4rem;
+		border-bottom: 1px dashed var(--almanac-rule-soft);
+	}
+	:global(.dg-docs-prose ul li:last-child),
+	:global(.dg-docs-prose ol li:last-child) {
+		border-bottom: none;
+	}
+	:global(.dg-docs-prose ul li::before) {
+		content: "";
+		position: absolute;
+		left: 0;
+		top: 0.85rem;
+		width: 0.45rem;
+		height: 0.45rem;
+		background: var(--almanac-oxblood);
+	}
+	:global(.dg-docs-prose ol) {
+		counter-reset: dg-doc-ol;
+	}
+	:global(.dg-docs-prose ol li) {
+		counter-increment: dg-doc-ol;
+		padding-left: 2rem;
+	}
+	:global(.dg-docs-prose ol li::before) {
+		content: counter(dg-doc-ol, decimal) ".";
+		position: absolute;
+		left: 0;
+		top: 0.4rem;
+		font-family: 'Fraunces', Georgia, serif;
+		font-style: italic;
+		color: var(--almanac-gold);
+		font-size: 1rem;
+		min-width: 1.6rem;
+	}
+	:global(.dg-docs-prose li > p) { margin: 0; }
+	:global(.dg-docs-prose li ul),
+	:global(.dg-docs-prose li ol) {
+		margin: 0.4rem 0 0;
+	}
+	:global(.dg-docs-prose li ul li),
+	:global(.dg-docs-prose li ol li) {
+		border-bottom: none;
+		padding: 0.2rem 0 0.2rem 1.4rem;
+	}
+
+	/* Code */
+	:global(.dg-docs-prose code) {
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 0.85em;
+		background: var(--almanac-paper-2);
+		color: var(--almanac-ink);
+		padding: 0.1rem 0.35rem;
+		border: 1px solid var(--almanac-rule-soft);
+	}
+	:global(.dg-docs-prose pre) {
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 0.85rem;
+		background: var(--almanac-paper-2);
+		color: var(--almanac-ink);
+		border: 1px solid var(--almanac-ink);
+		padding: 0.9rem 1.1rem;
+		margin: 1rem 0;
+		overflow-x: auto;
+		line-height: 1.55;
+	}
+	:global(.dg-docs-prose pre code) {
+		background: transparent;
+		border: none;
+		padding: 0;
+		font-size: inherit;
+	}
+
+	/* Blockquote */
+	:global(.dg-docs-prose blockquote) {
+		font-family: 'Newsreader', serif;
+		font-style: italic;
+		font-size: 1.02rem;
+		color: var(--almanac-ink);
+		border-left: 2px solid var(--almanac-oxblood);
+		padding: 0.2rem 0 0.2rem 1rem;
+		margin: 1.2rem 0;
+	}
+	:global(.dg-docs-prose blockquote p) {
+		color: inherit;
+		margin: 0 0 0.5rem;
+	}
+	:global(.dg-docs-prose blockquote p:last-child) { margin: 0; }
+
+	/* Horizontal rule */
+	:global(.dg-docs-prose hr) {
+		border: none;
+		border-top: 1px solid var(--almanac-ink);
+		margin: 2rem 0;
+	}
+
+	/* Tables */
+	:global(.dg-docs-prose table) {
+		width: 100%;
+		border-collapse: collapse;
+		margin: 1.2rem 0;
+		font-family: 'Newsreader', serif;
+		font-size: 0.95rem;
+	}
+	:global(.dg-docs-prose thead th) {
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 0.7rem;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		font-weight: 500;
+		text-align: left;
+		color: var(--almanac-ink);
+		padding: 0.55rem 0.7rem;
+		border-bottom: 1px solid var(--almanac-ink);
+		background: var(--almanac-paper-2);
+	}
+	:global(.dg-docs-prose tbody td) {
+		padding: 0.55rem 0.7rem;
+		border-bottom: 1px dashed var(--almanac-rule-soft);
+		color: var(--almanac-ink-2);
+		vertical-align: top;
+	}
+	:global(.dg-docs-prose tbody tr:last-child td) {
+		border-bottom: 1px solid var(--almanac-ink);
+	}
+	:global(.dg-docs-prose tbody td em) {
+		font-style: italic;
+		color: var(--almanac-oxblood);
+	}
+	:global(.dg-docs-prose tbody td strong) {
+		font-style: italic;
+		color: var(--almanac-ink);
+	}
+
+	/* Images */
+	:global(.dg-docs-prose img) {
+		display: block;
+		max-width: 100%;
+		height: auto;
+		margin: 1.2rem auto;
+		border: 1px solid var(--almanac-ink);
+	}
+</style>
