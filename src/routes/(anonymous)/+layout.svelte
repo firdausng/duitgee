@@ -22,7 +22,7 @@
         "/register",
         "/forgot-password",
     ];
-    const almanacPrefixes = ["/alternative-to", "/use-cases"];
+    const almanacPrefixes = ["/alternative-to", "/use-cases", "/docs"];
     let isAlmanac = $derived(
         almanacRoutes.includes(page.url.pathname) ||
             almanacPrefixes.some((p) => page.url.pathname.startsWith(p))

@@ -15,7 +15,8 @@ const publicRoutes = [
     '/scalar',
     '/api',
     '/_cron',
-    '/ops'
+    '/ops',
+    '/docs'
 ]
 
 export const checkSessionHandler: Handle = async ({ event, resolve }) => {

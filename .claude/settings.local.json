@@ -109,7 +109,8 @@
       "Bash(awk '/^d:/{file=$0} /Error/{print file\"\\\\t\"$0}' /tmp/check2.txt)",
       "mcp__playwright__browser_hover",
       "Bash(npx svelte-check *)",
-      "Read(//c/Users/firdaus/AppData/Local/Temp/claude/D--projects-duitgee-app/b82171f6-a73a-496a-9dd4-e508b2ab5800/tasks/**)"
+      "Read(//c/Users/firdaus/AppData/Local/Temp/claude/D--projects-duitgee-app/b82171f6-a73a-496a-9dd4-e508b2ab5800/tasks/**)",
+      "Bash(pnpm exec *)"
     ]
   }
 }

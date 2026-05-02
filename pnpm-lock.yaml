@@ -35,6 +35,9 @@ importers:
       drizzle-valibot:
         specifier: ^0.4.2
         version: 0.4.2(drizzle-orm@0.44.7(@cloudflare/workers-types@4.20251014.0)(@libsql/client@0.15.15)(kysely@0.28.8))(valibot@1.2.0(typescript@5.9.3))
+      fuse.js:
+        specifier: ^7.3.0
+        version: 7.3.0
       hono:
         specifier: ^4.9.5
         version: 4.10.4
@@ -126,6 +129,9 @@ importers:
       layerchart:
         specifier: 2.0.0-next.48
         version: 2.0.0-next.48(@sveltejs/kit@2.48.4(@sveltejs/vite-plugin-svelte@6.2.1(svelte@5.43.2)(vite@7.1.12(@types/node@22.18.13)(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.43.2)(vite@7.1.12(@types/node@22.18.13)(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.43.2)(zod@4.1.12)
+      mdsvex:
+        specifier: ^0.12.7
+        version: 0.12.7(svelte@5.43.2)
       playwright:
         specifier: ^1.55.1
         version: 1.56.1
@@ -1419,11 +1425,17 @@ packages:
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
+  '@types/mdast@4.0.4':
+    resolution: {integrity: sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA==}
+
   '@types/node@22.18.13':
     resolution: {integrity: sha512-Bo45YKIjnmFtv6I1TuC8AaHBbqXtIo+Om5fE4QiU1Tj8QR/qt+8O3BAtOimG5IFmwaWiPmB3Mv3jtYzBA4Us2A==}
 
   '@types/papaparse@5.5.2':
     resolution: {integrity: sha512-gFnFp/JMzLHCwRf7tQHrNnfhN4eYBVYYI897CGX4MY1tzY9l2aLkVyx2IlKZ/SAqDbB3I1AOZW5gTMGGsqWliA==}
+
+  '@types/unist@2.0.11':
+    resolution: {integrity: sha512-CmBKiL6NNo/OqgmMn95Fk9Whlp2mtvIv+KNpQKN2F4SjvrEesubTRWGYSg+BnWZOnlCaSTU1sMpsBOzgbYhnsA==}
 
   '@types/validator@13.15.4':
     resolution: {integrity: sha512-LSFfpSnJJY9wbC0LQxgvfb+ynbHftFo0tMsFOl/J4wexLnYMmDSPaj2ZyDv3TkfL1UePxPrxOWJfbiRS8mQv7A==}
@@ -2030,6 +2042,10 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
+  fuse.js@7.3.0:
+    resolution: {integrity: sha512-plz8RVjfcDedTGfVngWH1jmJvBvAwi1v2jecfDerbEnMcmOYUEEwKFTHbNoCiYyzaK2Ws8lABkTCcRSqCY1q4w==}
+    engines: {node: '>=10'}
+
   get-tsconfig@4.13.0:
     resolution: {integrity: sha512-1VKTZJCwBrvbd+Wn3AOgQP/2Av+TfTCOlE4AcRJE72W1ksZXbAx8PPBR9RzgTeSPzlPMHrbANMH3LbltH73wxQ==}
 
@@ -2209,6 +2225,11 @@ packages:
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
+  mdsvex@0.12.7:
+    resolution: {integrity: sha512-gx4bReLCUvq+MPErHXYeyX+TEq1hsS2KfiZtEOMNTcbibSouFy8AHc5h04KbGCl+g5tLuo4/lbgRVYRnc7bJZw==}
+    peerDependencies:
+      svelte: ^3.56.0 || ^4.0.0 || ^5.0.0-next.120
+
   memoize-weak@1.0.2:
     resolution: {integrity: sha512-gj39xkrjEw7nCn4nJ1M5ms6+MyMlyiGmttzsqAUsAKn6bYKwuTHh/AO3cKPF8IBrTIYTxb0wWXFs3E//Y8VoWQ==}
 
@@ -2340,6 +2361,13 @@ packages:
   pretty-format@27.5.1:
     resolution: {integrity: sha512-Qb1gy5OrP5+zDf2Bvnzdl3jsTf1qXVMazbvCoKhtKqVs4/YK4ozX4gKQJJVyNe+cajNPn0KoC0MC3FUmaHWEmQ==}
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
+
+  prism-svelte@0.4.7:
+    resolution: {integrity: sha512-yABh19CYbM24V7aS7TuPYRNMqthxwbvx6FF/Rw920YbyBWO3tnyPIqRMgHuSVsLmuHkkBS1Akyof463FVdkeDQ==}
+
+  prismjs@1.30.0:
+    resolution: {integrity: sha512-DEvV2ZF2r2/63V+tK8hQvrR2ZGn10srHbXviTlcv7Kpzw8jWiNTqbVgjO3IY8RxrrOUF8VPMQQFysYYYv0YZxw==}
+    engines: {node: '>=6'}
 
   promise-limit@2.7.0:
     resolution: {integrity: sha512-7nJ6v5lnJsXwGprnGXga4wx6d1POjvi5Qmf1ivTRxTjH4Z/9Czja/UCMLVmB9N93GeWOU93XaFaEt6jbuoagNw==}
@@ -2659,6 +2687,18 @@ packages:
   unenv@2.0.0-rc.21:
     resolution: {integrity: sha512-Wj7/AMtE9MRnAXa6Su3Lk0LNCfqDYgfwVjwRFVum9U7wsto1imuHqk4kTm7Jni+5A0Hn7dttL6O/zjvUvoo+8A==}
 
+  unist-util-is@4.1.0:
+    resolution: {integrity: sha512-ZOQSsnce92GrxSqlnEEseX0gi7GH9zTJZ0p9dtu87WRb/37mMPO2Ilx1s/t9vBHrFhbgweUwb+t7cIn5dxPhZg==}
+
+  unist-util-stringify-position@2.0.3:
+    resolution: {integrity: sha512-3faScn5I+hy9VleOq/qNbAd6pAx7iH5jYBMS9I1HgQVijz/4mv5Bvw5iw1sC/90CODiKo81G/ps8AJrISn687g==}
+
+  unist-util-visit-parents@3.1.1:
+    resolution: {integrity: sha512-1KROIZWo6bcMrZEwiH2UrXDyalAa0uqzWCxCJj6lPOvTve2WkfgCytoDTPaMnodXh1WrXOq0haVYHj99ynJlsg==}
+
+  unist-util-visit@2.0.3:
+    resolution: {integrity: sha512-iJ4/RczbJMkD0712mGktuGpm/U4By4FfDonL7N/9tATGIF4imikjOuagyMY53tnZq3NP6BcmlrHhEKAfGWjh7Q==}
+
   url-parse@1.5.10:
     resolution: {integrity: sha512-WypcfiRhfeUP9vvF0j6rw0J3hrWrw6iZv3+22h6iRMJ/8z1Tj6XfLP4DsUix5MhMPnXpiHDoKyoZ/bdCkwBCiQ==}
 
@@ -2698,6 +2738,9 @@ packages:
     engines: {node: '>=18', pnpm: '>=8.7.0'}
     peerDependencies:
       svelte: ^5.0.0
+
+  vfile-message@2.0.4:
+    resolution: {integrity: sha512-DjssxRGkMvifUOJre00juHoP9DPWuzjxKuMDrhNbk2TdaYYBNMStsNhEOt3idrtI12VQYM/1+iM0KOzXi4pxwQ==}
 
   vite-node@3.2.4:
     resolution: {integrity: sha512-EbKSKh+bh1E1IFxeO0pg1n4dvoOTt0UDiXMd/qn++r98+jPO1xtJilvXldeuQ8giIB5IkpjCgMleHMNEsGH6pg==}
@@ -3773,6 +3816,10 @@ snapshots:
 
   '@types/json-schema@7.0.15': {}
 
+  '@types/mdast@4.0.4':
+    dependencies:
+      '@types/unist': 2.0.11
+
   '@types/node@22.18.13':
     dependencies:
       undici-types: 6.21.0
@@ -3780,6 +3827,8 @@ snapshots:
   '@types/papaparse@5.5.2':
     dependencies:
       '@types/node': 22.18.13
+
+  '@types/unist@2.0.11': {}
 
   '@types/validator@13.15.4':
     optional: true
@@ -4334,6 +4383,8 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
+  fuse.js@7.3.0: {}
+
   get-tsconfig@4.13.0:
     dependencies:
       resolve-pkg-maps: 1.0.0
@@ -4514,6 +4565,16 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  mdsvex@0.12.7(svelte@5.43.2):
+    dependencies:
+      '@types/mdast': 4.0.4
+      '@types/unist': 2.0.11
+      prism-svelte: 0.4.7
+      prismjs: 1.30.0
+      svelte: 5.43.2
+      unist-util-visit: 2.0.3
+      vfile-message: 2.0.4
+
   memoize-weak@1.0.2: {}
 
   memoize@10.2.0:
@@ -4633,6 +4694,10 @@ snapshots:
       ansi-regex: 5.0.1
       ansi-styles: 5.2.0
       react-is: 17.0.2
+
+  prism-svelte@0.4.7: {}
+
+  prismjs@1.30.0: {}
 
   promise-limit@2.7.0: {}
 
@@ -4984,6 +5049,23 @@ snapshots:
       pathe: 2.0.3
       ufo: 1.6.1
 
+  unist-util-is@4.1.0: {}
+
+  unist-util-stringify-position@2.0.3:
+    dependencies:
+      '@types/unist': 2.0.11
+
+  unist-util-visit-parents@3.1.1:
+    dependencies:
+      '@types/unist': 2.0.11
+      unist-util-is: 4.1.0
+
+  unist-util-visit@2.0.3:
+    dependencies:
+      '@types/unist': 2.0.11
+      unist-util-is: 4.1.0
+      unist-util-visit-parents: 3.1.1
+
   url-parse@1.5.10:
     dependencies:
       querystringify: 2.2.0
@@ -5012,6 +5094,11 @@ snapshots:
       runed: 0.23.4(svelte@5.43.2)
       svelte: 5.43.2
       svelte-toolbelt: 0.7.1(svelte@5.43.2)
+
+  vfile-message@2.0.4:
+    dependencies:
+      '@types/unist': 2.0.11
+      unist-util-stringify-position: 2.0.3
 
   vite-node@3.2.4(@types/node@22.18.13)(jiti@2.6.1)(lightningcss@1.30.2):
     dependencies:
