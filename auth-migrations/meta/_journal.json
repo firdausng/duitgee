@@ -15,6 +15,13 @@
       "when": 1763263956512,
       "tag": "0001_foamy_puck",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1777717133514,
+      "tag": "0002_odd_harry_osborn",
+      "breakpoints": true
     }
   ]
 }

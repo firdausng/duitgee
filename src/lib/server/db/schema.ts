@@ -17,8 +17,6 @@ export const vaults = sqliteTable('vaults', {
     // Localization settings
     locale: text('locale').notNull().default('en-US'), // BCP 47 language tag (e.g., en-US, ja-JP, id-ID)
     currency: text('currency').default('USD'), // ISO 4217 currency code (e.g., USD, JPY, IDR)
-    // Plan - references plan config (no FK constraint, can migrate to table later)
-    planId: text('plan_id').notNull().default('plan_free'),
     // Audit fields
     createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
     createdBy: text('created_by').notNull(), // User ID as string, no FK constraint
@@ -50,6 +48,19 @@ export const vaultMembers = sqliteTable('vault_members', {
     uniqueDefaultPerUser: index('idx_one_default_vault_per_user_member')
         .on(table.userId)
         .where(sql`${table.isDefault} = 1`),
+}));
+
+// vaultPlanCoverage — when a Pro user owns or admins more vaults than their
+// plan's `maxCoveredVaults`, they pick which vaults their Pro shines onto.
+// Empty rows = under the cap, deterministic order applies. Rows present =
+// explicit picks override the deterministic default.
+export const vaultPlanCoverage = sqliteTable('vault_plan_coverage', {
+    userId: text('user_id').notNull(),
+    vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
+    createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
+}, (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.vaultId] }),
+    userIdx: index('idx_plan_coverage_user').on(table.userId),
 }));
 
 export const expenseTemplates = sqliteTable('expense_templates', {

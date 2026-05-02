@@ -110,7 +110,14 @@
       "mcp__playwright__browser_hover",
       "Bash(npx svelte-check *)",
       "Read(//c/Users/firdaus/AppData/Local/Temp/claude/D--projects-duitgee-app/b82171f6-a73a-496a-9dd4-e508b2ab5800/tasks/**)",
-      "Bash(pnpm exec *)"
+      "Bash(pnpm exec *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(pnpm dev *)",
+      "Bash(pkill -f \"vite dev\")",
+      "Bash(Get-ChildItem -Path \"D:\\\\projects\\\\gee-ledger\" -Directory)",
+      "Bash(Select-Object -First 20)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\projects\\\\gee-ledger\" -Directory | ForEach-Object { $_.Name })"
     ]
   }
 }
