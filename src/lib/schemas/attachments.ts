@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { hasEntitlement } from '$lib/configurations/plans';
+import { FREE_PLAN_ID, PRO_PLAN_ID, getPlanLimit } from '$lib/configurations/plans';
 
 // Server-enforced limits. Mirror gee-ledger's defaults.
 export const ATTACHMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -9,19 +9,16 @@ export const ATTACHMENT_ALLOWED_MIME_TYPES = [
     'image/webp',
     'application/pdf',
 ] as const;
-export const ATTACHMENT_MAX_PER_EXPENSE_FREE = 5;
-export const ATTACHMENT_MAX_PER_EXPENSE_PRO = 20;
+export const ATTACHMENT_MAX_PER_EXPENSE_FREE = getPlanLimit(FREE_PLAN_ID, 'maxAttachmentsPerExpense');
+export const ATTACHMENT_MAX_PER_EXPENSE_PRO = getPlanLimit(PRO_PLAN_ID, 'maxAttachmentsPerExpense');
 
 /**
- * Per-expense attachment count limit for a vault's plan. Pro vaults with the
- * `attachment:multiple` entitlement get the higher cap; everyone else gets the
- * Free cap. Used by both the client (picker `maxFiles`) and server (handler
- * enforcement) so the two stay in sync.
+ * Per-expense attachment count limit for a plan. Used by both the client
+ * (picker `maxFiles`) and server (handler enforcement). The server resolves
+ * a vault's effective plan via `getVaultPlanLimit`.
  */
 export function getAttachmentLimitPerExpense(planId: string): number {
-    return hasEntitlement(planId, 'attachment:multiple')
-        ? ATTACHMENT_MAX_PER_EXPENSE_PRO
-        : ATTACHMENT_MAX_PER_EXPENSE_FREE;
+    return getPlanLimit(planId, 'maxAttachmentsPerExpense');
 }
 
 export const attachmentSchema = v.object({

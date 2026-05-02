@@ -134,6 +134,11 @@
                 depth, and AI</em>. And CSV export is free, forever, with no
                 row limit.
             </DropCap>
+            <p class="dg-lead-note" data-reveal style="--rd: 220ms">
+                <em>Pro applies to your account.</em> Any vault you own or
+                admin gets Pro features for everyone in it, up to five vaults.
+                One person pays; the household benefits.
+            </p>
         </div>
     </section>
 
@@ -179,6 +184,11 @@
                     <li>Advanced breakdowns &middot; custom range &middot; chart export</li>
                     <li>CSV import &middot; fund transfers &middot; cross-fund reimbursements</li>
                 </ul>
+                <p class="dg-tier__note">
+                    <em>One subscription, your whole household.</em> Pro covers
+                    up to five vaults you own or admin &mdash; everyone in
+                    those vaults gets the Pro feature set.
+                </p>
                 <p class="dg-tier__note">
                     <em>No credit card. No 14-day clock.</em> Pro can wait until
                     you actually need it.
@@ -342,10 +352,35 @@
                     </AccordionContent>
                 </AccordionItem>
 
-                <AccordionItem value="downgrade">
+                <AccordionItem value="shared-vaults">
                     <AccordionTrigger>
                         <span class="dg-faq__head">
                             <ChapterNum class="dg-faq__num">ii.</ChapterNum>
+                            How does Pro work in a shared vault?
+                        </span>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <p>
+                            Pro lives on your account, not on individual
+                            vaults. If you&rsquo;re an owner or admin of a
+                            shared vault, your Pro flows into that vault and
+                            every member &mdash; paying or not &mdash; gets
+                            the Pro feature set. One household, one
+                            subscription, everyone benefits.
+                        </p>
+                        <p>
+                            Plain &ldquo;member&rdquo; status doesn&rsquo;t
+                            propagate Pro &mdash; only owners and admins do.
+                            And a single Pro account covers up to five vaults
+                            you own or admin.
+                        </p>
+                    </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="downgrade">
+                    <AccordionTrigger>
+                        <span class="dg-faq__head">
+                            <ChapterNum class="dg-faq__num">iii.</ChapterNum>
                             What happens if I cancel Pro?
                         </span>
                     </AccordionTrigger>
@@ -363,7 +398,7 @@
                 <AccordionItem value="freeforever">
                     <AccordionTrigger>
                         <span class="dg-faq__head">
-                            <ChapterNum class="dg-faq__num">iii.</ChapterNum>
+                            <ChapterNum class="dg-faq__num">iv.</ChapterNum>
                             Will Free always cover daily use?
                         </span>
                     </AccordionTrigger>
@@ -381,7 +416,7 @@
                 <AccordionItem value="export">
                     <AccordionTrigger>
                         <span class="dg-faq__head">
-                            <ChapterNum class="dg-faq__num">iv.</ChapterNum>
+                            <ChapterNum class="dg-faq__num">v.</ChapterNum>
                             Can I really get my full data out, even on Free?
                         </span>
                     </AccordionTrigger>
@@ -398,7 +433,7 @@
                 <AccordionItem value="ai-cost">
                     <AccordionTrigger>
                         <span class="dg-faq__head">
-                            <ChapterNum class="dg-faq__num">v.</ChapterNum>
+                            <ChapterNum class="dg-faq__num">vi.</ChapterNum>
                             Why is the AI behind Pro?
                         </span>
                     </AccordionTrigger>
@@ -540,6 +575,16 @@
         color: var(--almanac-ink-2);
         margin: 1.4rem 0 0;
     }
+    .dg-lead-note {
+        font-family: 'Newsreader', serif;
+        font-size: 1rem;
+        line-height: 1.55;
+        color: var(--almanac-ink-3);
+        margin: 0.9rem 0 0;
+        padding: 0.7rem 0 0;
+        border-top: 1px dashed var(--almanac-rule-soft);
+    }
+    .dg-lead-note em { font-style: italic; color: var(--almanac-ink); }
 
     /* ---------- Section shell ---------- */
     .dg-section {

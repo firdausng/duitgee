@@ -13,7 +13,7 @@
 	import { AttachmentPicker, type ScanApplyPayload } from '$lib/components/ui/attachment-picker';
 	import { Eyebrow, Rule } from '$lib/components/almanac';
 	import { hasEntitlement } from '$lib/configurations/plans';
-	import { getAttachmentLimitPerExpense } from '$lib/schemas/attachments';
+	import { getAttachmentLimitPerExpense, ATTACHMENT_MAX_PER_EXPENSE_FREE } from '$lib/schemas/attachments';
 	import { page as pageState } from '$app/state';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { CalculatorInput } from '$lib/components/ui/calculator-input';
@@ -125,9 +125,7 @@
 	const maxAttachments = $derived(
 		getAttachmentLimitPerExpense(currentVaultRow?.vaults?.planId ?? 'plan_free'),
 	);
-	const hasAttachmentMultiple = $derived(
-		hasEntitlement(currentVaultRow?.vaults?.planId ?? 'plan_free', 'attachment:multiple'),
-	);
+	const hasAttachmentMultiple = $derived(maxAttachments > ATTACHMENT_MAX_PER_EXPENSE_FREE);
 
 	// Apply AI-extracted fields. Preserve user-entered values — only fill empty fields
 	// (or `0` amount, since 0 means "user hasn't typed yet" in the calculator input).

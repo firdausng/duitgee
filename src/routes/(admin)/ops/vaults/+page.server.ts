@@ -3,6 +3,7 @@ import * as schema from '$lib/server/db/schema';
 import { vaults, vaultMembers, funds, expenses } from '$lib/server/db/schema';
 import { and, count, countDistinct, desc, eq, isNull, like } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
+import { getVaultEffectivePlan } from '$lib/server/utils/entitlements';
 
 const PAGE_SIZE = 50;
 
@@ -27,7 +28,6 @@ export const load: PageServerLoad = async ({ platform, url }) => {
                 id: vaults.id,
                 name: vaults.name,
                 icon: vaults.icon,
-                planId: vaults.planId,
                 currency: vaults.currency,
                 locale: vaults.locale,
                 createdAt: vaults.createdAt,
@@ -57,8 +57,16 @@ export const load: PageServerLoad = async ({ platform, url }) => {
         client.select({ n: count() }).from(vaults).where(baseWhere),
     ]);
 
+    // Resolve effective plan per row. Acceptable cost on an admin page (≤50 rows).
+    const enriched = await Promise.all(
+        rows.map(async (r) => ({
+            ...r,
+            planId: await getVaultEffectivePlan(r.id, platform.env),
+        })),
+    );
+
     return {
-        vaults: rows,
+        vaults: enriched,
         pagination: {
             page,
             pageSize: PAGE_SIZE,

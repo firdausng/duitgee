@@ -1,9 +1,10 @@
 import * as v from 'valibot';
+import { FREE_PLAN_ID, getPlanLimit } from '$lib/configurations/plans';
 
-// Free plan caps active recurring rules per vault. Pro removes the cap entirely
-// (`recurring:create_multiple` entitlement). Single source of truth — both the
-// list-page hint and server gates read from here.
-export const RECURRING_MAX_PER_VAULT_FREE = 5;
+// Free plan cap on active recurring rules per vault. Mirrored on the client
+// for upsell hints; the server enforces the dynamic vault limit via
+// `getVaultPlanLimit(..., 'maxRecurringPerVault')`.
+export const RECURRING_MAX_PER_VAULT_FREE = getPlanLimit(FREE_PLAN_ID, 'maxRecurringPerVault');
 
 export const scheduleUnitSchema = v.picklist(['day', 'week', 'month', 'year']);
 export const generationModeSchema = v.picklist(['auto', 'queue']);

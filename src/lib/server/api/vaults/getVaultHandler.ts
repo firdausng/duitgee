@@ -4,6 +4,7 @@ import {vaults, vaultMembers} from "$lib/server/db/schema";
 import * as authSchema from "$lib/server/db/better-auth-schema";
 import { user as authUser } from "$lib/server/db/better-auth-schema";
 import {and, eq, inArray, isNull } from "drizzle-orm";
+import { getVaultEffectivePlan } from "$lib/server/utils/entitlements";
 
 export const getVault = async (
     authSession: App.AuthSession,
@@ -78,8 +79,11 @@ export const getVault = async (
         image: memberImages.get(m.userId) ?? null,
     }));
 
+    // Resolve the vault's effective plan from member plans + coverage rules.
+    const planId = await getVaultEffectivePlan(vaultId, env);
+
     return {
-        vaults: vaultData,
+        vaults: { ...vaultData, planId },
         vaultMembers: currentMembership,
         members
     };

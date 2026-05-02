@@ -47,7 +47,7 @@
         { label: 'Anonymous', value: data.stats.anonymousUsers, icon: UserX },
         { label: '7-day signups', value: data.stats.recentSignups, icon: UserPlus },
         { label: 'Vaults', value: data.stats.vaults, icon: Wallet },
-        { label: 'Pro vaults', value: data.stats.proVaults, icon: Crown },
+        { label: 'Pro users', value: data.stats.proUsers, icon: Crown },
         { label: 'Active funds', value: data.stats.funds, icon: PiggyBank },
         { label: 'Expenses', value: data.stats.expenses, icon: Receipt },
         { label: 'Recurring', value: data.stats.recurring, icon: RefreshCw },

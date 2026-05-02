@@ -10,7 +10,8 @@ import {
     recurringExpenses,
     expenseTemplates,
 } from '$lib/server/db/schema';
-import { and, eq, isNull, isNotNull, count, or, gte, ne, asc } from 'drizzle-orm';
+import { and, eq, isNull, isNotNull, count, or, gte, asc } from 'drizzle-orm';
+import { PRO_PLAN_ID } from '$lib/configurations/plans';
 import { subDays } from 'date-fns';
 import type { PageServerLoad } from './$types';
 
@@ -28,7 +29,7 @@ export const load: PageServerLoad = async ({ platform }) => {
         [anonymousCount],
         [recentSignupCount],
         [vaultCount],
-        [proVaultCount],
+        [proUserCount],
         [fundCount],
         [expenseCount],
         [recurringCount],
@@ -51,10 +52,10 @@ export const load: PageServerLoad = async ({ platform }) => {
             .from(authSchema.user)
             .where(gte(authSchema.user.createdAt, sevenDaysAgo)),
         client.select({ n: count() }).from(vaults).where(isNull(vaults.deletedAt)),
-        client
+        authClient
             .select({ n: count() })
-            .from(vaults)
-            .where(and(isNull(vaults.deletedAt), ne(vaults.planId, 'plan_free'))),
+            .from(authSchema.user)
+            .where(eq(authSchema.user.planId, PRO_PLAN_ID)),
         client
             .select({ n: count() })
             .from(funds)
@@ -130,7 +131,7 @@ export const load: PageServerLoad = async ({ platform }) => {
             anonymousUsers: anonymousCount.n,
             recentSignups: recentSignupCount.n,
             vaults: vaultCount.n,
-            proVaults: proVaultCount.n,
+            proUsers: proUserCount.n,
             funds: fundCount.n,
             expenses: expenseCount.n,
             recurring: recurringCount.n,

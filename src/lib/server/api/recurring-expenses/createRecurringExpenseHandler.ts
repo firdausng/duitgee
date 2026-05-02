@@ -6,12 +6,12 @@ import { parseISO, formatISO } from 'date-fns';
 import { UTCDate } from '@date-fns/utc';
 import { initialAuditFields } from '$lib/server/utils/audit';
 import { requireVaultPermission } from '$lib/server/utils/vaultPermissions';
-import { requireVaultEntitlement, checkVaultEntitlement } from '$lib/server/utils/entitlements';
+import { requireVaultEntitlement, getVaultPlanLimit } from '$lib/server/utils/entitlements';
 import {
     computeNextOccurrence,
     type ScheduleUnit,
 } from '$lib/utils/recurringSchedule';
-import { type CreateRecurringExpenseRequest, RECURRING_MAX_PER_VAULT_FREE } from '$lib/schemas/recurringExpenses';
+import type { CreateRecurringExpenseRequest } from '$lib/schemas/recurringExpenses';
 
 export const createRecurringExpense = async (
     session: App.AuthSession,
@@ -50,26 +50,22 @@ export const createRecurringExpense = async (
         await requireVaultEntitlement(session, data.vaultId, 'recurring:auto_generation', env);
     }
 
-    // Gate: more than one active rule requires Pro
-    const [activeCount] = await client
-        .select({ n: count() })
-        .from(recurringExpenses)
-        .where(
-            and(
-                eq(recurringExpenses.vaultId, data.vaultId),
-                eq(recurringExpenses.status, 'active'),
-                isNull(recurringExpenses.deletedAt),
-            ),
-        );
-    if ((activeCount?.n ?? 0) >= RECURRING_MAX_PER_VAULT_FREE) {
-        const canMultiple = await checkVaultEntitlement(
-            data.vaultId,
-            'recurring:create_multiple',
-            env,
-        );
-        if (!canMultiple) {
+    // Per-vault active rule cap from the plan's limits.
+    const ruleCap = await getVaultPlanLimit(data.vaultId, 'maxRecurringPerVault', env);
+    if (ruleCap !== -1) {
+        const [activeCount] = await client
+            .select({ n: count() })
+            .from(recurringExpenses)
+            .where(
+                and(
+                    eq(recurringExpenses.vaultId, data.vaultId),
+                    eq(recurringExpenses.status, 'active'),
+                    isNull(recurringExpenses.deletedAt),
+                ),
+            );
+        if ((activeCount?.n ?? 0) >= ruleCap) {
             throw new Error(
-                `Free plan allows up to ${RECURRING_MAX_PER_VAULT_FREE} active recurring rules per vault. Upgrade to Pro to add more.`,
+                `Recurring rule limit reached: this vault's plan allows ${ruleCap} active rules. Upgrade to Pro to add more.`,
             );
         }
     }

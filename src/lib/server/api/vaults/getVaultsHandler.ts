@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
 import {vaultMembers, vaults} from "$lib/server/db/schema";
 import {and, eq, isNull} from "drizzle-orm";
+import { getVaultEffectivePlan } from "$lib/server/utils/entitlements";
 
 export const getVaults = async (
     session: App.AuthSession,
@@ -22,8 +23,15 @@ export const getVaults = async (
             isNull(vaults.deletedAt)
         ));
 
+    // Attach effective plan to each vault (resolved from member plans + coverage).
+    const enriched = await Promise.all(
+        vaultList.map(async (row) => ({
+            ...row,
+            vaults: { ...row.vaults, planId: await getVaultEffectivePlan(row.vaults.id, env) },
+        })),
+    );
 
     return {
-        vaults: vaultList,
+        vaults: enriched,
     };
 };

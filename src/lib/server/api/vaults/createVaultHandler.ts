@@ -8,6 +8,7 @@ import {UTCDate} from "@date-fns/utc";
 import {initialAuditFields} from "$lib/server/utils/audit";
 import {eq, and} from "drizzle-orm";
 import {DEFAULT_VAULT_TAGS} from "$lib/configurations/defaultTags";
+import {getUserPlanLimit} from "$lib/server/utils/entitlements";
 
 export const createVault = async (
     session: App.AuthSession,
@@ -16,17 +17,20 @@ export const createVault = async (
 ) => {
     const client = drizzle(env.DB, { schema });
 
-    if(session.user.role !== 'admin'){
-        const existingVaults = await client
-            .select()
-            .from(vaults)
-            .where(eq(vaults.createdBy, session.user.id));
+    if (session.user.role !== 'admin') {
+        const vaultCap = await getUserPlanLimit(session.user.id, 'maxVaults', env);
+        if (vaultCap !== -1) {
+            const existingVaults = await client
+                .select()
+                .from(vaults)
+                .where(eq(vaults.createdBy, session.user.id));
 
-        if(existingVaults.length >= env.VAULT_LIMIT){
-            return {
-                vault: null,
-                member: null,
-                error: "Vault limit reached"
+            if (existingVaults.length >= vaultCap) {
+                return {
+                    vault: null,
+                    member: null,
+                    error: "Vault limit reached"
+                }
             }
         }
     }

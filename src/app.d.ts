@@ -37,6 +37,7 @@ declare global {
             banned: boolean | null | undefined,
             banReason?: string | null | undefined,
             banExpires?: Date | null | undefined,
+            planId?: string | null | undefined,
         }
 
         interface Session {

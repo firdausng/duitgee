@@ -3,7 +3,7 @@ import * as schema from '$lib/server/db/schema';
 import { funds, fundPolicies, fundCycles } from '$lib/server/db/schema';
 import { eq, and, isNull, count } from 'drizzle-orm';
 import { requireVaultPermission } from '$lib/server/utils/vaultPermissions';
-import { requireVaultEntitlement } from '$lib/server/utils/entitlements';
+import { requireVaultEntitlement, getVaultPlanLimit } from '$lib/server/utils/entitlements';
 import { initialAuditFields } from '$lib/server/utils/audit';
 import { calculateCyclePeriod } from './cyclePeriod';
 import type { CreateFund } from '$lib/schemas/funds';
@@ -24,20 +24,25 @@ export const createFund = async (
     const client = drizzle(env.DB, { schema });
     const userId = session.user.id;
 
-    // If vault already has an active fund, require fund:create_multiple
-    const [{ value: activeFundCount }] = await client
-        .select({ value: count() })
-        .from(funds)
-        .where(
-            and(
-                eq(funds.vaultId, data.vaultId),
-                eq(funds.status, 'active'),
-                isNull(funds.deletedAt),
-            ),
-        );
+    // Enforce per-vault fund cap from the plan's limits.
+    const fundCap = await getVaultPlanLimit(data.vaultId, 'maxFundsPerVault', env);
+    if (fundCap !== -1) {
+        const [{ value: activeFundCount }] = await client
+            .select({ value: count() })
+            .from(funds)
+            .where(
+                and(
+                    eq(funds.vaultId, data.vaultId),
+                    eq(funds.status, 'active'),
+                    isNull(funds.deletedAt),
+                ),
+            );
 
-    if (activeFundCount >= 1) {
-        await requireVaultEntitlement(session, data.vaultId, 'fund:create_multiple', env);
+        if (activeFundCount >= fundCap) {
+            throw new Error(
+                `Fund limit reached: this vault's plan allows ${fundCap} active fund${fundCap === 1 ? '' : 's'}. Upgrade to add more.`,
+            );
+        }
     }
 
     // Validate carry-over target fund if specified

@@ -44,7 +44,7 @@
     import X from '@lucide/svelte/icons/x';
     import Search from '@lucide/svelte/icons/search';
     import Sparkles from '@lucide/svelte/icons/sparkles';
-    import { hasEntitlement } from '$lib/configurations/plans';
+    import { hasEntitlement, getPlanLimit } from '$lib/configurations/plans';
     import { RECURRING_MAX_PER_VAULT_FREE } from '$lib/schemas/recurringExpenses';
     import type { UpcomingOccurrence } from '$lib/server/api/recurring-expenses/getUpcomingOccurrencesHandler';
 
@@ -176,10 +176,10 @@
 
     // Plan-gate: free vaults can have up to RECURRING_MAX_PER_VAULT_FREE active rules.
     const planId = $derived(vaultResource.current?.vaults.planId ?? 'plan_free');
-    const canCreateMultiple = $derived(hasEntitlement(planId, 'recurring:create_multiple'));
+    const recurringCap = $derived(getPlanLimit(planId, 'maxRecurringPerVault'));
     const activeRulesCount = $derived(allRules.filter((r) => r.status === 'active').length);
     const atRecurringLimit = $derived(
-        !canCreateMultiple && activeRulesCount >= RECURRING_MAX_PER_VAULT_FREE,
+        recurringCap !== -1 && activeRulesCount >= recurringCap,
     );
 
     // Search-filtered views. Empty search → unchanged arrays.
