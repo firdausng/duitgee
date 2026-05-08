@@ -7,14 +7,25 @@
         count: number;
     };
 
+    export type CategoryBreakdownCardTemplate = {
+        templateId: string | null;
+        templateName: string;
+        templateIcon: string;
+        totalAmount: number;
+        count: number;
+    };
+
     export type CategoryBreakdownCardProps = {
         vaultId: string;
         categories: CategoryBreakdownCardCategory[];
+        templates?: CategoryBreakdownCardTemplate[];
         loading?: boolean;
         formatCurrency: (amount: number) => string;
         /** Forwarded to /statistics when a row is clicked. */
         currentSearch?: string;
     };
+
+    type BreakdownMode = 'category' | 'template';
 </script>
 
 <script lang="ts">
@@ -26,28 +37,77 @@
     let {
         vaultId,
         categories,
+        templates = [],
         loading = false,
         formatCurrency,
         currentSearch = '',
     }: CategoryBreakdownCardProps = $props();
 
+    const storageKey = $derived(`dg:breakdown-mode:${vaultId}`);
+
+    let mode = $state<BreakdownMode>('category');
+
+    $effect(() => {
+        if (typeof window === 'undefined') return;
+        const stored = window.localStorage.getItem(storageKey);
+        if (stored === 'template' || stored === 'category') {
+            mode = stored;
+        }
+    });
+
+    function setMode(next: BreakdownMode) {
+        mode = next;
+        if (typeof window !== 'undefined') {
+            window.localStorage.setItem(storageKey, next);
+        }
+    }
+
     const rows = $derived<BreakdownRow[]>(
-        categories.map((c) => ({
-            id: c.categoryName,
-            label: c.categoryName,
-            icon: c.categoryIcon ?? null,
-            iconType: c.categoryIconType ?? null,
-            value: c.totalAmount,
-            count: c.count,
-        })),
+        mode === 'category'
+            ? categories.map((c) => ({
+                  id: c.categoryName,
+                  label: c.categoryName,
+                  icon: c.categoryIcon ?? null,
+                  iconType: c.categoryIconType ?? null,
+                  value: c.totalAmount,
+                  count: c.count,
+              }))
+            : templates
+                  .filter((t) => t.templateId !== null)
+                  .map((t) => ({
+                      id: t.templateId,
+                      label: t.templateName,
+                      icon: t.templateIcon ?? null,
+                      iconType: null,
+                      value: t.totalAmount,
+                      count: t.count,
+                  })),
     );
 
     const total = $derived(rows.reduce((sum, r) => sum + r.value, 0));
 
+    const subline = $derived(
+        mode === 'category'
+            ? `across ${rows.length} categor${rows.length === 1 ? 'y' : 'ies'}`
+            : `across ${rows.length} template${rows.length === 1 ? '' : 's'}`,
+    );
+
+    const emptyCopy = $derived(
+        mode === 'category'
+            ? 'No spending in this period yet.'
+            : 'No expenses linked to a template in this period.',
+    );
+
     function handleSelect(row: BreakdownRow) {
         const params = new URLSearchParams(currentSearch.startsWith('?') ? currentSearch.slice(1) : currentSearch);
-        params.set('filterType', 'category');
-        params.set('filterName', row.label);
+        if (mode === 'category') {
+            params.set('filterType', 'category');
+            params.set('filterName', row.label);
+        } else {
+            params.set('filterType', 'template');
+            params.set('filterName', row.label);
+            if (row.id) params.set('filterId', row.id);
+        }
         goto(`/vaults/${vaultId}/statistics?${params.toString()}`);
     }
 
@@ -62,12 +122,37 @@
         <div class="min-w-0">
             <p class="dg-cb__eyebrow">— Where it went —</p>
             {#if total > 0}
-                <p class="dg-cb__total"><em>{formatCurrency(total)}</em> across the period</p>
+                <p class="dg-cb__total"><em>{formatCurrency(total)}</em> {subline}</p>
             {/if}
         </div>
-        <button type="button" onclick={viewAll} class="dg-cb__link">
-            View all <ArrowRight class="size-3" />
-        </button>
+        <div class="flex items-center gap-3 shrink-0">
+            <div class="dg-cb__toggle" role="tablist" aria-label="Group breakdown by">
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={mode === 'category'}
+                    onclick={() => setMode('category')}
+                    class="dg-cb__toggle-btn"
+                    class:is-active={mode === 'category'}
+                >
+                    Category
+                </button>
+                <span class="dg-cb__toggle-sep" aria-hidden="true">·</span>
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={mode === 'template'}
+                    onclick={() => setMode('template')}
+                    class="dg-cb__toggle-btn"
+                    class:is-active={mode === 'template'}
+                >
+                    Template
+                </button>
+            </div>
+            <button type="button" onclick={viewAll} class="dg-cb__link">
+                View all <ArrowRight class="size-3" />
+            </button>
+        </div>
     </div>
 
     {#if loading}
@@ -80,7 +165,7 @@
         <div class="rounded-[var(--radius-md)] border bg-card flex flex-col items-center justify-center text-center py-6 px-4">
             <PieChart class="size-6 text-muted-foreground mb-2" />
             <p class="text-sm text-muted-foreground">
-                No spending in this period yet.
+                {emptyCopy}
             </p>
         </div>
     {:else}
@@ -131,5 +216,39 @@
         gap: 0.25rem;
         flex-shrink: 0;
         padding: 0;
+    }
+    .dg-cb__toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.65rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+    }
+    .dg-cb__toggle-btn {
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        color: var(--almanac-ink-3);
+        font: inherit;
+        text-transform: inherit;
+        letter-spacing: inherit;
+        transition: color 120ms ease;
+    }
+    .dg-cb__toggle-btn:hover {
+        color: var(--almanac-ink-2);
+    }
+    .dg-cb__toggle-btn.is-active {
+        color: var(--almanac-oxblood);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        text-decoration-thickness: 1px;
+    }
+    .dg-cb__toggle-sep {
+        color: var(--almanac-ink-3);
+        opacity: 0.5;
     }
 </style>

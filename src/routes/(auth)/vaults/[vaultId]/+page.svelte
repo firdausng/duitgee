@@ -602,6 +602,7 @@
             <CategoryBreakdownCard
                 {vaultId}
                 categories={statistics?.byCategory ?? []}
+                templates={statistics?.byTemplate ?? []}
                 loading={isLoadingStats}
                 formatCurrency={vaultFormatters.currency}
                 currentSearch={page.url.search}
