@@ -47,6 +47,11 @@
     import { hasEntitlement, getPlanLimit } from '$lib/configurations/plans';
     import { RECURRING_MAX_PER_VAULT_FREE } from '$lib/schemas/recurringExpenses';
     import type { UpcomingOccurrence } from '$lib/server/api/recurring-expenses/getUpcomingOccurrencesHandler';
+    import { shallowModal } from '$lib/utils/shallow-modal.svelte';
+
+    // Shallow-routed dialogs — back button closes them.
+    const settleDialog = shallowModal('settle');
+    const deleteDialog = shallowModal('recurringDelete');
 
     const vaultId = $derived(page.params.vaultId);
 
@@ -265,11 +270,13 @@
     let confirmAction = $state<ConfirmAction | null>(null);
     let confirming = $state(false);
 
-    // Settlement dialog state
-    let settleTarget = $state<Rule | null>(null);
+    // Settlement dialog state — settleTarget is now derived from page.state.
     let settleAmount = $state<number>(0);
     let settleDate = $state<string>('');
     let settling = $state(false);
+    const settleTarget = $derived(
+        settleDialog.value ? allRules.find((r) => r.id === settleDialog.value!.ruleId) ?? null : null,
+    );
 
     function askSettle(rule: Rule) {
         // Prefer the *declared* outstanding balance (totalAmount − paidAmount) when set;
@@ -277,12 +284,12 @@
         const remaining = remainingAmount(rule);
         settleAmount = Math.max(0.01, remaining.value);
         settleDate = formatDatetimeLocal(new Date());
-        settleTarget = rule;
+        settleDialog.push({ ruleId: rule.id });
     }
 
     function cancelSettle() {
         if (settling) return;
-        settleTarget = null;
+        settleDialog.close();
     }
 
     async function confirmSettle() {
@@ -308,7 +315,7 @@
                 headers: { 'Content-Type': 'application/json' },
             });
             toast.success('Settled in full');
-            settleTarget = null;
+            settleDialog.close();
             refetchKey++;
         } catch (error: any) {
             toast.error(error?.data?.error || error?.message || 'Failed to settle');
@@ -372,16 +379,18 @@
         }
     }
 
-    let deleteTarget = $state<Rule | null>(null);
     let deleting = $state(false);
+    const deleteTarget = $derived(
+        deleteDialog.value ? allRules.find((r) => r.id === deleteDialog.value!.ruleId) ?? null : null,
+    );
 
     function handleDeleteRule(rule: Rule) {
-        deleteTarget = rule;
+        deleteDialog.push({ ruleId: rule.id });
     }
 
     function cancelDelete() {
         if (deleting) return;
-        deleteTarget = null;
+        deleteDialog.close();
     }
 
     async function confirmDelete(deleteExpenses: boolean) {
@@ -399,7 +408,7 @@
                     ? `Rule deleted · ${n} expense${n === 1 ? '' : 's'} removed`
                     : 'Rule deleted',
             );
-            deleteTarget = null;
+            deleteDialog.close();
             refetchKey++;
         } catch (error: any) {
             toast.error(error?.data?.error || error?.message || 'Failed to delete');

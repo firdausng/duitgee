@@ -69,6 +69,10 @@
     import Sparkles from '@lucide/svelte/icons/sparkles';
     import { cn } from '$lib/utils';
     import { ATTACHMENT_MAX_PER_EXPENSE_PRO } from '$lib/schemas/attachments';
+    import { shallowModal } from '$lib/utils/shallow-modal.svelte';
+
+    // Shallow-routed lightbox — back button closes the viewer.
+    const lightbox = shallowModal('lightbox');
 
     let {
         vaultId,
@@ -128,25 +132,38 @@
     const readyPreviewable = $derived(
         items.filter((i) => i.status === 'ready' && isPreviewable(i.mimeType)),
     );
-    let lightboxIndex = $state<number | null>(null);
+    // Lightbox state lives in page.state via shallowModal. Index is recomputed
+    // from the stored attachment ID so the viewer stays anchored even if the
+    // underlying array shifts (e.g. an upload completes mid-preview).
+    const lightboxIndex = $derived.by(() => {
+        const v = lightbox.value;
+        if (!v) return null;
+        const idx = readyPreviewable.findIndex((i) => i.id === v.id);
+        return idx >= 0 ? idx : null;
+    });
     const lightboxItem = $derived(
         lightboxIndex !== null ? readyPreviewable[lightboxIndex] ?? null : null,
     );
 
     function openLightbox(item: AttachmentMeta) {
         const idx = readyPreviewable.findIndex((i) => i.id === item.id);
-        if (idx >= 0) lightboxIndex = idx;
+        if (idx >= 0) lightbox.push({ id: item.id, index: idx });
     }
     function closeLightbox() {
-        lightboxIndex = null;
+        lightbox.close();
     }
     function lightboxPrev() {
         if (lightboxIndex === null || readyPreviewable.length === 0) return;
-        lightboxIndex = (lightboxIndex - 1 + readyPreviewable.length) % readyPreviewable.length;
+        const next = (lightboxIndex - 1 + readyPreviewable.length) % readyPreviewable.length;
+        const target = readyPreviewable[next];
+        // replace, not push — each prev/next shouldn't be its own back-button stop.
+        if (target) lightbox.replace({ id: target.id, index: next });
     }
     function lightboxNext() {
         if (lightboxIndex === null || readyPreviewable.length === 0) return;
-        lightboxIndex = (lightboxIndex + 1) % readyPreviewable.length;
+        const next = (lightboxIndex + 1) % readyPreviewable.length;
+        const target = readyPreviewable[next];
+        if (target) lightbox.replace({ id: target.id, index: next });
     }
 
     // Keyboard navigation while lightbox is open.

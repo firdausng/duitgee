@@ -9,6 +9,9 @@
     import Plus from '@lucide/svelte/icons/plus';
     import ArrowRight from '@lucide/svelte/icons/arrow-right';
     import type { UnidentifiedExpenseSummary } from '$lib/server/api/expenses/getUnidentifiedExpensesHandler';
+    import { shallowModal } from '$lib/utils/shallow-modal.svelte';
+
+    const quickLog = shallowModal('quickLog');
 
     interface Member {
         userId: string;
@@ -27,7 +30,6 @@
     let { vaultId, members, currentUserId, formatCurrency, hasSharedMembers }: Props = $props();
 
     let refetchKey = $state(0);
-    let modalOpen = $state(false);
 
     const dataResource = resource(
         () => [vaultId, refetchKey] as const,
@@ -78,7 +80,7 @@
                             <em>{formatCurrency(totalAmount)}</em>.
                         </p>
                     </div>
-                    <Button size="sm" variant="almanac-ox" onclick={() => (modalOpen = true)}>
+                    <Button size="sm" variant="almanac-ox" onclick={() => quickLog.push()}>
                         <Plus class="size-3.5" />
                         Quick log
                     </Button>
@@ -128,7 +130,7 @@
     <div class="mb-3">
         <button
             type="button"
-            onclick={() => (modalOpen = true)}
+            onclick={() => quickLog.push()}
             class="dg-unid__quicklog"
         >
             <Plus class="size-3" />
@@ -286,6 +288,7 @@
     {vaultId}
     {currentUserId}
     {members}
-    bind:open={modalOpen}
+    open={quickLog.open}
+    onOpenChange={(o) => quickLog.bind(o)}
     onCreated={() => refetchKey++}
 />

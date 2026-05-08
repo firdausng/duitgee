@@ -13,6 +13,9 @@
     import { createVaultFormatters } from '$lib/vaultFormatting';
     import { QuickLogModal } from '$lib/components/unidentified';
     import { Eyebrow, Rule } from '$lib/components/almanac';
+    import { shallowModal } from '$lib/utils/shallow-modal.svelte';
+
+    const quickLog = shallowModal('quickLog');
 
     const vaultId = page.params.vaultId as string;
 
@@ -30,7 +33,6 @@
     let templates = $state<Client.ExpenseTemplate[]>([]);
     let isLoading = $state(true);
     let vault = $state<{ locale?: string; currency?: string } | null>(null);
-    let quickLogOpen = $state(false);
     const currentUserId = $derived(page.data.currentSession?.user?.id ?? '');
 
     const fmt = $derived(
@@ -128,7 +130,7 @@
             <!-- Quick log unidentified card -->
             <button
                 type="button"
-                onclick={() => (quickLogOpen = true)}
+                onclick={() => quickLog.push()}
                 class="group relative rounded-[var(--radius-md)] border border-dashed border-border bg-card p-2 hover:border-amber-300 hover:bg-amber-50/40 dark:hover:bg-amber-950/20 transition-colors text-center"
             >
                 <div class="flex flex-col items-center gap-1">
@@ -191,7 +193,8 @@
     <QuickLogModal
         {vaultId}
         {currentUserId}
-        bind:open={quickLogOpen}
+        open={quickLog.open}
+        onOpenChange={(o) => quickLog.bind(o)}
         onCreated={() => goto(returnToParam ?? `/vaults/${vaultId}/expenses`)}
     />
 {/if}

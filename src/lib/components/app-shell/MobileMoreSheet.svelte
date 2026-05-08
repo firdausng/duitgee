@@ -28,8 +28,9 @@
     }: MobileMoreSheetProps = $props();
 
     function navigate(href: string) {
-        onOpenChange(false);
-        goto(href);
+        // replaceState collapses the sheet-open shallow entry so back from the
+        // destination returns to the originating page, not a re-opened sheet.
+        goto(href, { replaceState: true });
     }
 </script>
 

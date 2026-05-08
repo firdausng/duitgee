@@ -18,18 +18,26 @@
         members?: Member[];
         /** Called after a successful create with the new expense id. */
         onCreated?: (id: string) => void;
-        /** Called when the user dismisses (Cancel / overlay click / Esc). */
+        /** Called when the user dismisses (Cancel / overlay click / Esc / submit). */
         onClose?: () => void;
+        /** Open-state callback — fires `false` whenever the modal wants to close. */
+        onOpenChange?: (open: boolean) => void;
     }
 
     let {
         vaultId,
         currentUserId,
-        open = $bindable(false),
+        open,
         members,
         onCreated,
         onClose,
+        onOpenChange,
     }: Props = $props();
+
+    function requestClose() {
+        onOpenChange?.(false);
+        onClose?.();
+    }
 
     let amount = $state<number | null>(null);
     let paidBy = $state<string | null>(currentUserId);
@@ -63,8 +71,7 @@
 
     function close() {
         if (submitting) return;
-        open = false;
-        onClose?.();
+        requestClose();
     }
 
     async function submit() {
@@ -87,7 +94,7 @@
                 return;
             }
             toast.success('Unidentified charge logged');
-            open = false;
+            requestClose();
             onCreated?.(r.data.id);
         } catch (err) {
             const msg =

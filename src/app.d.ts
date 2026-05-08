@@ -63,6 +63,22 @@ declare global {
             memberIds?: string[];
             fundId?: string;
         }
+
+        // Shallow-routing state — modals/drawers/dialogs that should close on
+        // browser back. Drives `<X open={shallow.open}>` via the shallow-modal
+        // helper. Each key is set with pushState; back pops the entry.
+        interface PageState {
+            quickAdd?: true;
+            mobileMore?: true;
+            scanModal?: true;
+            lightbox?: { id: string; index: number };
+            transfer?: true;
+            archiveFund?: true;
+            settle?: { ruleId: string };
+            recurringDelete?: { ruleId: string };
+            quickLog?: true;
+            duplicatePrompt?: true;
+        }
     }
 
     namespace Client {

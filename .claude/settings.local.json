@@ -125,7 +125,10 @@
       "Bash(grep -E \"CategoryBreakdownCard|breakdown-bars|home\\\\\\\\\\\\\\\\\\(?!.*\\\\.ts\\)\")",
       "Bash(grep -E \"CategoryBreakdown|home\\\\\\\\\\\\\\\\Cat|breakdown\")",
       "Bash(grep -iE \"categorybreakdown|home\\\\\\\\\\\\\\\\Cat|breakdown-bars\")",
-      "Bash(grep -iE \"scanAttachment|ScanScreenshot|expense-form|expenses\\\\\\\\\\\\\\\\new\\\\\\\\\\\\\\\\form\")"
+      "Bash(grep -iE \"scanAttachment|ScanScreenshot|expense-form|expenses\\\\\\\\\\\\\\\\new\\\\\\\\\\\\\\\\form\")",
+      "Bash(Get-ChildItem -Path \"D:\\\\projects\\\\duitgee-app\" -Recurse -Filter \"*.svelte\")",
+      "Bash(Select-Object -First 5)",
+      "Bash(grep -B1 -iE \"shallow-modal|quick-log-modal|MobileBottomBar|MobileMoreSheet|QuickAddSheet|ScanScreenshotModal|attachment-picker|expenses..new..form|funds..fundId|recurring..\\\\\\\\+page|unidentified-card|expenses..new..\\\\\\\\+page|\\\\\\\\\\(auth\\\\\\\\\\)..\\\\\\\\+layout\")"
     ]
   }
 }

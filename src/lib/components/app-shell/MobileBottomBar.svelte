@@ -32,6 +32,7 @@
     import QuickAddSheet from './QuickAddSheet.svelte';
     import Plus from '@lucide/svelte/icons/plus';
     import MenuIcon from '@lucide/svelte/icons/menu';
+    import { shallowModal } from '$lib/utils/shallow-modal.svelte';
 
     let {
         currentVaultId,
@@ -43,8 +44,10 @@
         onQuickLog,
     }: MobileBottomBarProps = $props();
 
-    let moreOpen = $state(false);
-    let quickAddOpen = $state(false);
+    // Shallow-routed sheets — back button (and swipe-down / tap-outside) closes
+    // the sheet first instead of navigating to the previous page.
+    const moreSheet = shallowModal('mobileMore');
+    const quickAddSheet = shallowModal('quickAdd');
 
     // Splits the 4 nav slots: 2 left of the centered ⊕, 2 right.
     const leftItems = $derived(MOBILE_BOTTOM_PRIMARY.slice(0, 2));
@@ -100,7 +103,7 @@
                 type="button"
                 aria-label="Add expense"
                 disabled={!quickAdd}
-                onclick={() => (quickAddOpen = true)}
+                onclick={() => quickAddSheet.push()}
                 class="dg-mbb__fab"
             >
                 <Plus class="size-6" />
@@ -138,7 +141,7 @@
         <!-- More button -->
         <button
             type="button"
-            onclick={() => (moreOpen = true)}
+            onclick={() => moreSheet.push()}
             aria-label="More sections"
             class={cn('dg-mbb__item dg-mbb__more', moreActive && 'is-active')}
         >
@@ -222,8 +225,8 @@
 </style>
 
 <MobileMoreSheet
-    open={moreOpen}
-    onOpenChange={(o) => (moreOpen = o)}
+    open={moreSheet.open}
+    onOpenChange={(o) => moreSheet.bind(o)}
     {currentVaultId}
     {linkVaultId}
     {currentPath}
@@ -233,8 +236,8 @@
 
 {#if quickAdd}
     <QuickAddSheet
-        open={quickAddOpen}
-        onOpenChange={(o) => (quickAddOpen = o)}
+        open={quickAddSheet.open}
+        onOpenChange={(o) => quickAddSheet.bind(o)}
         templates={quickAdd.templates}
         resolveTemplateHref={quickAdd.resolveTemplateHref}
         scratchHref={quickAdd.scratchHref}

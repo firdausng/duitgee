@@ -14,6 +14,7 @@
     import { FundPolicyLine } from '$lib/components/ui/fund-policy-line';
     import { BreakdownBars, type BreakdownRow } from '$lib/components/ui/breakdown-bars';
     import { TransferSheet, type TransferSheetFund } from '$lib/components/ui/transfer-sheet';
+    import { shallowModal } from '$lib/utils/shallow-modal.svelte';
     import { createVaultFormatters } from '$lib/vaultFormatting';
     import type { VaultWithMember } from '$lib/schemas/read/vaultWithMember';
     import type { Expense } from '../../types';
@@ -26,9 +27,11 @@
     let { vaultId, fundId } = page.params;
 
     let refetchKey = $state(0);
-    let showArchiveConfirm = $state(false);
     let isArchiving = $state(false);
-    let transferOpen = $state(false);
+
+    // Shallow-routed dialogs — back button closes them.
+    const archiveConfirm = shallowModal('archiveFund');
+    const transferSheet = shallowModal('transfer');
 
     const vaultResource = resource(
         () => [vaultId] as const,
@@ -172,8 +175,8 @@
     }
 
     async function handleArchive() {
-        if (!showArchiveConfirm) {
-            showArchiveConfirm = true;
+        if (!archiveConfirm.open) {
+            archiveConfirm.push();
             return;
         }
 
@@ -194,7 +197,7 @@
             toast.error(err?.data?.error || err?.message || 'Failed to archive fund');
         } finally {
             isArchiving = false;
-            showArchiveConfirm = false;
+            archiveConfirm.close();
         }
     }
 
@@ -337,7 +340,7 @@
                 </Button>
                 <Button
                     variant="outline"
-                    onclick={() => (transferOpen = true)}
+                    onclick={() => transferSheet.push()}
                     disabled={!hasTransferTargets}
                     class="flex-1"
                     title={hasTransferTargets ? 'Transfer balance to another fund' : 'No other active funds to transfer to'}
@@ -377,7 +380,7 @@
 
             <!-- Destructive: archive -->
             <div>
-                {#if showArchiveConfirm}
+                {#if archiveConfirm.open}
                     <div class="border border-destructive rounded-[var(--radius-md)] p-4 space-y-3 bg-destructive/5">
                         <p class="text-sm text-destructive font-medium">
                             Archive this fund? The active cycle will be closed and no more top-ups or new expenses can be tagged to it.
@@ -393,7 +396,7 @@
                             </Button>
                             <Button
                                 variant="outline"
-                                onclick={() => (showArchiveConfirm = false)}
+                                onclick={() => archiveConfirm.close()}
                                 disabled={isArchiving}
                             >
                                 Cancel
@@ -436,12 +439,12 @@
 
 {#if fund && fundId && vaultId}
     <TransferSheet
-        open={transferOpen}
+        open={transferSheet.open}
         vaultId={vaultId}
         fromFundId={fundId}
         funds={vaultFunds}
         formatCurrency={vaultFormatters.currency}
-        onOpenChange={(v) => (transferOpen = v)}
+        onOpenChange={(v) => transferSheet.bind(v)}
         onSuccess={() => refetchKey++}
     />
 {/if}

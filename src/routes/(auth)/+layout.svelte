@@ -17,6 +17,7 @@
     import { NotificationBell } from '$lib/components/notifications';
     import { QuickLogModal } from '$lib/components/unidentified';
     import type { ExpandableFabTemplate } from '$lib/components/ui/expandable-fab';
+    import { shallowModal } from '$lib/utils/shallow-modal.svelte';
 
     import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 
@@ -143,8 +144,8 @@
         await goto('/login');
     }
 
-    // Quick-log modal state. Triggered from AddExpenseMenu's onQuickLog callback.
-    let quickLogOpen = $state(false);
+    // Quick-log modal — shallow-routed so back button closes it.
+    const quickLog = shallowModal('quickLog');
     const currentUserId = $derived(data.user?.id ?? '');
 
     let stoppingImpersonation = $state(false);
@@ -228,7 +229,7 @@
                                 resolveTemplateHref={quickAdd.resolveTemplateHref}
                                 scratchHref={quickAdd.scratchHref}
                                 browseHref={quickAdd.browseHref}
-                                onQuickLog={chipVaultId ? () => (quickLogOpen = true) : undefined}
+                                onQuickLog={chipVaultId ? () => quickLog.push() : undefined}
                                 anchor="bottom"
                             />
                         {/if}
@@ -249,14 +250,15 @@
         {searchParams}
         badges={{ pendingRecurring }}
         {quickAdd}
-        onQuickLog={chipVaultId ? () => (quickLogOpen = true) : undefined}
+        onQuickLog={chipVaultId ? () => quickLog.push() : undefined}
     />
 
     {#if chipVaultId && currentUserId}
         <QuickLogModal
             vaultId={chipVaultId}
             {currentUserId}
-            bind:open={quickLogOpen}
+            open={quickLog.open}
+            onOpenChange={(o) => quickLog.bind(o)}
         />
     {/if}
 </div>

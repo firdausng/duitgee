@@ -31,6 +31,8 @@
     }: QuickAddSheetProps = $props();
 
     function handleQuickLog() {
+        // Close the drawer (parent uses shallow routing — bind() pops history)
+        // before opening the QuickLogModal so the two layers don't stack.
         onOpenChange(false);
         onQuickLog?.();
     }
@@ -47,8 +49,9 @@
     );
 
     function navigate(href: string) {
-        onOpenChange(false);
-        goto(href);
+        // replaceState collapses the drawer-open shallow entry so back from the
+        // destination returns to the page the user was on before tapping Add.
+        goto(href, { replaceState: true });
     }
 </script>
 

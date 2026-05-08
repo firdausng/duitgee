@@ -30,6 +30,11 @@
 	import X from '@lucide/svelte/icons/x';
 	import type { ScanAttachmentMultiResponse } from '$lib/schemas/scanAttachment';
 	import { ATTACHMENT_MAX_SIZE_BYTES } from '$lib/schemas/attachments';
+	import { shallowModal } from '$lib/utils/shallow-modal.svelte';
+
+	// Shallow-routed modals — back button closes them instead of leaving the page.
+	const scanModal = shallowModal('scanModal');
+	const duplicatePrompt = shallowModal('duplicatePrompt');
 
 	let { data } = $props();
 	let isLoading = $state(false);
@@ -45,7 +50,6 @@
 		createdBy: string;
 	};
 	let duplicateMatches = $state<DuplicateMatch[]>([]);
-	let duplicatePromptOpen = $state(false);
 	/** Snapshot of what we'd POST if user picks "Create new". */
 	let pendingPayload = $state<Record<string, unknown> | null>(null);
 
@@ -118,7 +122,6 @@
 	let rows = $state<ExpenseRowData[]>([createEmptyRow()]);
 
 	// --- Multi-scan (screenshot → multiple rows) state ---
-	let scanModalOpen = $state(false);
 	let scanLoading = $state(false);
 	let scanResult = $state<ScanAttachmentMultiResponse | null>(null);
 	/** Screenshot attachment ID — applied to every row generated from this scan. */
@@ -185,7 +188,7 @@
 			return;
 		}
 
-		scanModalOpen = true;
+		scanModal.push();
 		scanLoading = true;
 		// Replace any prior pending scan — picking a new file is intent-clear.
 		clearScan();
@@ -237,7 +240,7 @@
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Scan failed';
 			toast.error(message);
-			scanModalOpen = false;
+			scanModal.close();
 			clearScan();
 		} finally {
 			scanLoading = false;
@@ -246,7 +249,7 @@
 
 	function applyScannedItems(items: ScanReviewItem[], applySharedDate: boolean) {
 		if (!scanAttachmentId || items.length === 0) {
-			scanModalOpen = false;
+			scanModal.close();
 			return;
 		}
 
@@ -279,7 +282,7 @@
 		}
 
 		toast.success(`Added ${newRows.length} item${newRows.length === 1 ? '' : 's'} from screenshot`);
-		scanModalOpen = false;
+		scanModal.close();
 		// Apply consumes the scan — clear so the pending pill goes away.
 		clearScan();
 	}
@@ -287,12 +290,12 @@
 	function cancelScanModal() {
 		// Just close — keep scanResult, scanAttachmentId, and scanReviewItems so
 		// the pending-scan pill can offer a way back in.
-		scanModalOpen = false;
+		scanModal.close();
 	}
 
 	function reopenScanModal() {
 		if (!hasPendingScan) return;
-		scanModalOpen = true;
+		scanModal.push();
 	}
 
 	function discardPendingScan() {
@@ -421,7 +424,7 @@
 				);
 				if (r.success && r.data.length > 0) {
 					duplicateMatches = r.data;
-					duplicatePromptOpen = true;
+					duplicatePrompt.push();
 					return; // Pause submission until user picks an action.
 				}
 			} catch (err) {
@@ -509,7 +512,7 @@
 	}
 
 	function dismissDuplicatePrompt() {
-		duplicatePromptOpen = false;
+		duplicatePrompt.close();
 		duplicateMatches = [];
 	}
 
@@ -619,7 +622,7 @@
 					{/if}
 				</button>
 
-				{#if hasPendingScan && !scanModalOpen && !scanLoading}
+				{#if hasPendingScan && !scanModal.open && !scanLoading}
 					<div class="flex items-center justify-between gap-2 rounded-[var(--radius-sm)] border bg-muted/40 px-3 py-2 text-sm">
 						<div class="flex items-center gap-2 min-w-0">
 							<Sparkles class="size-3.5 text-primary shrink-0" />
@@ -920,7 +923,7 @@
 </div>
 
 <ScanScreenshotModal
-	open={scanModalOpen}
+	open={scanModal.open}
 	loading={scanLoading}
 	result={scanResult}
 	bind:items={scanReviewItems}
@@ -931,7 +934,7 @@
 	onCancel={cancelScanModal}
 />
 
-{#if duplicatePromptOpen}
+{#if duplicatePrompt.open}
 	<div
 		class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40"
 		role="dialog"
