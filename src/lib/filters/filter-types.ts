@@ -21,7 +21,8 @@ export type FilterField =
     | 'paidBy'
     | 'paymentType'
     | 'amount'
-    | 'tag';
+    | 'tag'
+    | 'template';
 
 /** Operators. Not every op is valid for every field — see FIELD_CONFIG below. */
 export type FilterOp = 'is' | 'gt' | 'lt' | 'between';
@@ -57,6 +58,7 @@ export const FIELD_CONFIG: Record<
     paymentType: { label: 'Payment type', kind: 'enum',   ops: ['is'] },
     amount:      { label: 'Amount',       kind: 'number', ops: ['gt', 'lt', 'between'] },
     tag:         { label: 'Tag',          kind: 'enum',   ops: ['is'], specialValues: { __none__: 'No tag' } },
+    template:    { label: 'Template',     kind: 'enum',   ops: ['is'], specialValues: { __none__: 'No template' } },
 };
 
 /** Pretty operator label for display. */

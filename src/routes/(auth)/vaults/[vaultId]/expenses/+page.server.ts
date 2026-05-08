@@ -3,6 +3,7 @@ import type { PageServerLoad } from './$types';
 import { getVault } from '$lib/server/api/vaults/getVaultHandler';
 import { getFunds } from '$lib/server/api/funds/getFundsHandler';
 import { getTags } from '$lib/server/api/tags/getTagsHandler';
+import { getExpenseTemplates } from '$lib/server/api/expense-templates/getExpenseTemplatesHandler';
 
 export const load: PageServerLoad = async ({ locals, platform, params }) => {
 	if (platform === undefined) {
@@ -17,10 +18,10 @@ export const load: PageServerLoad = async ({ locals, platform, params }) => {
 	const session = locals.currentSession;
 	const env = platform.env;
 
-	// Run all three reads in parallel — they're independent and each one is a
+	// Run all reads in parallel — they're independent and each one is a
 	// direct handler call (no self-fetch overhead, no auth re-validation, no
 	// JSON serialize/parse round-trip).
-	const [vaultResult, fundRows, tagRows] = await Promise.all([
+	const [vaultResult, fundRows, tagRows, templatesResult] = await Promise.all([
 		getVault(session, vaultId, env).catch((err) => {
 			console.error('Failed to load vault:', err);
 			return null;
@@ -32,6 +33,10 @@ export const load: PageServerLoad = async ({ locals, platform, params }) => {
 		getTags(session, vaultId, env).catch((err) => {
 			console.error('Failed to load tags:', err);
 			return [];
+		}),
+		getExpenseTemplates(session, { vaultId }, env).catch((err) => {
+			console.error('Failed to load templates:', err);
+			return { templates: [] };
 		}),
 	]);
 
@@ -55,11 +60,18 @@ export const load: PageServerLoad = async ({ locals, platform, params }) => {
 		color: t.color ?? null,
 	}));
 
+	const templates: Array<{ id: string; name: string; icon: string | null }> = (templatesResult?.templates ?? []).map((t) => ({
+		id: t.id,
+		name: t.name,
+		icon: t.icon ?? null,
+	}));
+
 	return {
 		vaultId,
 		vault,
 		members,
 		funds,
 		tags,
+		templates,
 	};
 };

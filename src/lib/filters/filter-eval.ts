@@ -18,6 +18,7 @@ export interface EvaluableExpense {
     fundName?: string | null;
     category?: { name?: string | null } | null;
     tags?: Array<{ id: string; name: string }> | null;
+    templateId?: string | null;
 }
 
 /** Apply the `pill` to a single expense. Returns true if kept. */
@@ -75,6 +76,14 @@ function matchPill(e: EvaluableExpense, pill: FilterPill): boolean {
             if (!hit && tags.length > 0 && realValues.length > 0) {
                 hit = tags.some((t) => realValues.includes(t.id) || realValues.includes(t.name));
             }
+            break;
+        }
+        case 'template': {
+            // __none__ matches expenses with no template (manually entered).
+            const hasNone = pill.values.includes('__none__');
+            const realValues = pill.values.filter((v) => v !== '__none__');
+            if (hasNone && !e.templateId) hit = true;
+            if (!hit && e.templateId && realValues.includes(e.templateId)) hit = true;
             break;
         }
     }

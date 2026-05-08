@@ -9,6 +9,7 @@
             paidBy: Array<{ id: string; name: string }>;
             paymentType: Array<{ value: string; label: string; icon?: string | null }>;
             tag: Array<{ id: string; name: string }>;
+            template: Array<{ id: string; name: string; icon?: string | null }>;
         };
         /** If set, popover opens in "edit" mode pre-filled with this pill. */
         editing?: FilterPill | null;
@@ -41,6 +42,8 @@
     let amountMin = $state<string>('');
     let amountMax = $state<string>('');
     let negated = $state(false);
+    let search = $state('');
+    let searchInputEl: HTMLInputElement | null = $state(null);
 
     function reset() {
         field = null;
@@ -49,7 +52,33 @@
         amountMin = '';
         amountMax = '';
         negated = false;
+        search = '';
     }
+
+    /** Show row when (a) it's currently selected (so picks don't disappear under search), or (b) its label matches the search query. */
+    function isShown(value: string, label: string): boolean {
+        if (selectedValues.includes(value)) return true;
+        const q = search.trim().toLowerCase();
+        if (!q) return true;
+        return label.toLowerCase().includes(q);
+    }
+
+    // Auto-focus the search input when entering step 2 — but skip on coarse
+    // pointers (mobile), where focusing immediately summons the keyboard and
+    // covers the picker.
+    $effect(() => {
+        if (!field || !searchInputEl) return;
+        if (typeof window === 'undefined') return;
+        if (window.matchMedia?.('(pointer: coarse)').matches) return;
+        searchInputEl.focus();
+    });
+
+    // Reset search when the field changes (back-arrow + new pick).
+    $effect(() => {
+        // Read `field` so this fires on field changes; reset search.
+        void field;
+        search = '';
+    });
 
     function hydrateFromEditing() {
         if (!editing) {
@@ -235,21 +264,36 @@
                             {/if}
                         </div>
                     {:else}
+                        <!-- Search input — narrows the list. Selected items stay visible
+                             via isShown() so toggling on/off mid-search isn't disorienting. -->
+                        <Input
+                            bind:ref={searchInputEl}
+                            type="text"
+                            placeholder="Search…"
+                            bind:value={search}
+                            class="h-8 text-sm"
+                        />
+
                         <!-- Enum multi-select -->
                         <div class="max-h-64 overflow-y-auto space-y-0.5">
                             {#if field === 'category'}
+                                {@const visible = options.category.filter((v) => isShown(v, v))}
                                 {#if options.category.length === 0}
                                     <p class="px-2 py-3 text-xs text-muted-foreground text-center">No categories available.</p>
                                 {:else}
-                                    {#each options.category as v (v)}
+                                    {#each visible as v (v)}
                                         {@const active = selectedValues.includes(v)}
                                         <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
                                             <Checkbox checked={active} onCheckedChange={() => toggleValue(v)} />
                                             <span class="truncate">{v || '—'}</span>
                                         </label>
                                     {/each}
+                                    {#if visible.length === 0}
+                                        <p class="px-2 py-3 text-xs text-muted-foreground text-center">No matches.</p>
+                                    {/if}
                                 {/if}
                             {:else if field === 'fund'}
+                                {@const visible = options.fund.filter((f) => isShown(f.id, f.name))}
                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
                                     <Checkbox checked={selectedValues.includes('__none__')} onCheckedChange={() => toggleValue('__none__')} />
                                     <span class="text-muted-foreground">No fund</span>
@@ -257,7 +301,7 @@
                                 {#if options.fund.length === 0}
                                     <p class="px-2 py-3 text-xs text-muted-foreground text-center">No funds in this vault.</p>
                                 {:else}
-                                    {#each options.fund as fund (fund.id)}
+                                    {#each visible as fund (fund.id)}
                                         {@const active = selectedValues.includes(fund.id)}
                                         <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
                                             <Checkbox checked={active} onCheckedChange={() => toggleValue(fund.id)} />
@@ -265,8 +309,12 @@
                                             <span class="truncate">{fund.name}</span>
                                         </label>
                                     {/each}
+                                    {#if visible.length === 0}
+                                        <p class="px-2 py-3 text-xs text-muted-foreground text-center">No matches.</p>
+                                    {/if}
                                 {/if}
                             {:else if field === 'paidBy'}
+                                {@const visible = options.paidBy.filter((m) => isShown(m.id, m.name))}
                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
                                     <Checkbox checked={selectedValues.includes('__vault__')} onCheckedChange={() => toggleValue('__vault__')} />
                                     <span class="text-muted-foreground">Vault-level</span>
@@ -274,19 +322,23 @@
                                 {#if options.paidBy.length === 0}
                                     <p class="px-2 py-3 text-xs text-muted-foreground text-center">No members in this vault yet.</p>
                                 {:else}
-                                    {#each options.paidBy as member (member.id)}
+                                    {#each visible as member (member.id)}
                                         {@const active = selectedValues.includes(member.id)}
                                         <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
                                             <Checkbox checked={active} onCheckedChange={() => toggleValue(member.id)} />
                                             <span class="truncate">{member.name}</span>
                                         </label>
                                     {/each}
+                                    {#if visible.length === 0}
+                                        <p class="px-2 py-3 text-xs text-muted-foreground text-center">No matches.</p>
+                                    {/if}
                                 {/if}
                             {:else if field === 'paymentType'}
+                                {@const visible = options.paymentType.filter((p) => isShown(p.value, p.label))}
                                 {#if options.paymentType.length === 0}
                                     <p class="px-2 py-3 text-xs text-muted-foreground text-center">No payment types configured.</p>
                                 {:else}
-                                    {#each options.paymentType as pt (pt.value)}
+                                    {#each visible as pt (pt.value)}
                                         {@const active = selectedValues.includes(pt.value)}
                                         <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
                                             <Checkbox checked={active} onCheckedChange={() => toggleValue(pt.value)} />
@@ -294,8 +346,12 @@
                                             <span class="truncate">{pt.label}</span>
                                         </label>
                                     {/each}
+                                    {#if visible.length === 0}
+                                        <p class="px-2 py-3 text-xs text-muted-foreground text-center">No matches.</p>
+                                    {/if}
                                 {/if}
                             {:else if field === 'tag'}
+                                {@const visible = options.tag.filter((t) => isShown(t.id, t.name))}
                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
                                     <Checkbox checked={selectedValues.includes('__none__')} onCheckedChange={() => toggleValue('__none__')} />
                                     <span class="text-muted-foreground">No tag</span>
@@ -303,13 +359,37 @@
                                 {#if options.tag.length === 0}
                                     <p class="px-2 py-3 text-xs text-muted-foreground text-center">No tags in this vault yet.</p>
                                 {:else}
-                                    {#each options.tag as t (t.id)}
+                                    {#each visible as t (t.id)}
                                         {@const active = selectedValues.includes(t.id)}
                                         <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
                                             <Checkbox checked={active} onCheckedChange={() => toggleValue(t.id)} />
                                             <span class="truncate">{t.name}</span>
                                         </label>
                                     {/each}
+                                    {#if visible.length === 0}
+                                        <p class="px-2 py-3 text-xs text-muted-foreground text-center">No matches.</p>
+                                    {/if}
+                                {/if}
+                            {:else if field === 'template'}
+                                {@const visible = options.template.filter((t) => isShown(t.id, t.name))}
+                                <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
+                                    <Checkbox checked={selectedValues.includes('__none__')} onCheckedChange={() => toggleValue('__none__')} />
+                                    <span class="text-muted-foreground">No template</span>
+                                </label>
+                                {#if options.template.length === 0}
+                                    <p class="px-2 py-3 text-xs text-muted-foreground text-center">No templates in this vault yet.</p>
+                                {:else}
+                                    {#each visible as t (t.id)}
+                                        {@const active = selectedValues.includes(t.id)}
+                                        <label class="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer hover:bg-muted text-sm">
+                                            <Checkbox checked={active} onCheckedChange={() => toggleValue(t.id)} />
+                                            <span>{t.icon ?? '📝'}</span>
+                                            <span class="truncate">{t.name}</span>
+                                        </label>
+                                    {/each}
+                                    {#if visible.length === 0}
+                                        <p class="px-2 py-3 text-xs text-muted-foreground text-center">No matches.</p>
+                                    {/if}
                                 {/if}
                             {/if}
                         </div>

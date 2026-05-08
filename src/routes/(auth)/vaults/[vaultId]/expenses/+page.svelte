@@ -164,6 +164,9 @@
         tag: [...(data.tags ?? [])]
             .map((t) => ({ id: t.id, name: t.name }))
             .sort((a, b) => a.name.localeCompare(b.name)),
+        template: [...(data.templates ?? [])]
+            .map((t) => ({ id: t.id, name: t.name, icon: t.icon }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
     });
 
     function writePills(next: FilterPillData[]) {
@@ -226,6 +229,15 @@
         if (pill.field === 'tag') {
             return pill.values
                 .map((v) => (v === '__none__' ? 'No tag' : filterOptions.tag.find((t) => t.id === v)?.name ?? v))
+                .join(', ');
+        }
+        if (pill.field === 'template') {
+            return pill.values
+                .map((v) =>
+                    v === '__none__'
+                        ? 'No template'
+                        : filterOptions.template.find((t) => t.id === v)?.name ?? '(deleted)',
+                )
                 .join(', ');
         }
         return pill.values.join(', ');
