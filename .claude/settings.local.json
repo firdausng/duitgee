@@ -124,7 +124,8 @@
       "Bash(grep -iE \"\\(vault.+vaultId..\\\\\\\\+page\\\\\\\\.svelte|recurring-expenses-api|vaults-api|getVaultStatisticsHandler|getRecurringSummaryHandler|recurringExpenses\\\\\\\\.ts:|vaults..vaultId..types\\\\\\\\.ts\\)\")",
       "Bash(grep -E \"CategoryBreakdownCard|breakdown-bars|home\\\\\\\\\\\\\\\\\\(?!.*\\\\.ts\\)\")",
       "Bash(grep -E \"CategoryBreakdown|home\\\\\\\\\\\\\\\\Cat|breakdown\")",
-      "Bash(grep -iE \"categorybreakdown|home\\\\\\\\\\\\\\\\Cat|breakdown-bars\")"
+      "Bash(grep -iE \"categorybreakdown|home\\\\\\\\\\\\\\\\Cat|breakdown-bars\")",
+      "Bash(grep -iE \"scanAttachment|ScanScreenshot|expense-form|expenses\\\\\\\\\\\\\\\\new\\\\\\\\\\\\\\\\form\")"
     ]
   }
 }

@@ -9,12 +9,16 @@ import {
     downloadAttachmentQuerySchema,
     ATTACHMENT_MAX_SIZE_BYTES,
 } from '$lib/schemas/attachments';
-import { scanAttachmentRequestSchema } from '$lib/schemas/scanAttachment';
+import {
+    scanAttachmentRequestSchema,
+    scanAttachmentMultiRequestSchema,
+} from '$lib/schemas/scanAttachment';
 import { uploadAttachment } from '$lib/server/api/attachments/uploadAttachmentHandler';
 import { setExpenseAttachments } from '$lib/server/api/attachments/setExpenseAttachmentsHandler';
 import { deleteAttachment } from '$lib/server/api/attachments/deleteAttachmentHandler';
 import { downloadAttachment } from '$lib/server/api/attachments/downloadAttachmentHandler';
 import { scanAttachment } from '$lib/server/api/attachments/scanAttachmentHandler';
+import { scanAttachmentMulti } from '$lib/server/api/attachments/scanAttachmentMultiHandler';
 
 const TAG = ['Attachment'];
 const common = { tags: TAG };
@@ -233,6 +237,39 @@ export const attachmentsApi = new Hono<App.Api>()
                 console.error({ message: 'Error scanning attachment', error });
                 const msg = error instanceof Error ? error.message : 'Failed to scan attachment';
                 // 402 = "plan required", 404 = not found, 429 = rate limited, 400 = validation/other
+                const status = msg.toLowerCase().includes('not found')
+                    ? 404
+                    : msg.toLowerCase().includes('limit reached')
+                      ? 429
+                      : msg.toLowerCase().includes('plan')
+                        ? 402
+                        : 400;
+                return c.json({ success: false, error: msg }, status);
+            }
+        },
+    )
+    /**
+     * Multi-expense scan — extract an array of expense candidates from a single
+     * screenshot (itemized receipt, multi-notification screenshot, group bill).
+     * Same gates as /scanAttachment; dedupe cache keyed separately.
+     */
+    .post(
+        '/scanAttachmentMulti',
+        describeRoute({
+            ...common,
+            description: 'Run AI on an uploaded image to extract MULTIPLE expense candidates from one screenshot.',
+            responses: successResponse,
+        }),
+        vValidator('json', scanAttachmentMultiRequestSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const data = c.req.valid('json');
+            try {
+                const result = await scanAttachmentMulti(session, data, c.env);
+                return c.json({ success: true, data: result });
+            } catch (error) {
+                console.error({ message: 'Error multi-scanning attachment', error });
+                const msg = error instanceof Error ? error.message : 'Failed to scan attachment';
                 const status = msg.toLowerCase().includes('not found')
                     ? 404
                     : msg.toLowerCase().includes('limit reached')

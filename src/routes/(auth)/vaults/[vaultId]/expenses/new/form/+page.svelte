@@ -25,6 +25,10 @@
 	import Plus from '@lucide/svelte/icons/plus';
 	import Copy from '@lucide/svelte/icons/copy';
 	import Loader2 from '@lucide/svelte/icons/loader-2';
+	import Sparkles from '@lucide/svelte/icons/sparkles';
+	import { ScanScreenshotModal, type ScanReviewItem } from '$lib/components/expense-form';
+	import type { ScanAttachmentMultiResponse } from '$lib/schemas/scanAttachment';
+	import { ATTACHMENT_MAX_SIZE_BYTES } from '$lib/schemas/attachments';
 
 	let { data } = $props();
 	let isLoading = $state(false);
@@ -111,6 +115,159 @@
 	}
 
 	let rows = $state<ExpenseRowData[]>([createEmptyRow()]);
+
+	// --- Multi-scan (screenshot → multiple rows) state ---
+	let scanModalOpen = $state(false);
+	let scanLoading = $state(false);
+	let scanResult = $state<ScanAttachmentMultiResponse | null>(null);
+	/** Screenshot attachment ID — applied to every row generated from this scan. */
+	let scanAttachmentId = $state<string | null>(null);
+	let scanFileInputEl: HTMLInputElement | null = $state(null);
+
+	const vaultCurrency = $derived(data.vault?.currency ?? 'USD');
+	const vaultLocale = $derived(data.vault?.locale ?? 'en-US');
+	const scanFormatter = $derived(
+		new Intl.NumberFormat(vaultLocale, { style: 'currency', currency: vaultCurrency }),
+	);
+
+	function isEmptyStarterRow(): boolean {
+		// True when the form has exactly one row that's untouched — safe to replace
+		// rather than leave a blank row above the scanned items.
+		if (rows.length !== 1) return false;
+		const r = rows[0];
+		return (
+			!r.amount &&
+			!r.note &&
+			!r.categoryName &&
+			(r.attachmentIds?.length ?? 0) === 0
+		);
+	}
+
+	const scanAvailableSlots = $derived(
+		isEmptyStarterRow() ? MAX_ROWS : MAX_ROWS - rows.length,
+	);
+
+	function openScanPicker() {
+		if (!canScan) {
+			toast.error('Receipt scanning is a Pro feature.');
+			return;
+		}
+		if (scanAvailableSlots <= 0) {
+			toast.error(`Form is full (${MAX_ROWS} items max).`);
+			return;
+		}
+		scanFileInputEl?.click();
+	}
+
+	async function handleScanFileSelected(e: Event) {
+		const input = e.target as HTMLInputElement;
+		const file = input.files?.[0];
+		// Reset the input so the same file can be re-picked later.
+		input.value = '';
+		if (!file) return;
+
+		if (file.size > ATTACHMENT_MAX_SIZE_BYTES) {
+			toast.error(`File too large: max ${ATTACHMENT_MAX_SIZE_BYTES / (1024 * 1024)} MB`);
+			return;
+		}
+
+		scanModalOpen = true;
+		scanLoading = true;
+		scanResult = null;
+		scanAttachmentId = null;
+
+		try {
+			// 1. Upload to R2 (orphaned attachment record).
+			const uploadParams = new URLSearchParams({
+				vaultId: data.vaultId,
+				fileName: file.name,
+				mimeType: file.type,
+			});
+			const uploadResp = await ofetch<{
+				success: boolean;
+				data?: { id: string };
+				error?: string;
+			}>(`/api/uploadAttachment?${uploadParams.toString()}`, {
+				method: 'POST',
+				body: file,
+				headers: {
+					'Content-Type': file.type,
+					'Content-Length': String(file.size),
+				},
+			});
+			if (!uploadResp.success || !uploadResp.data?.id) {
+				throw new Error(uploadResp.error || 'Upload failed');
+			}
+			const attachmentId = uploadResp.data.id;
+			scanAttachmentId = attachmentId;
+
+			// 2. Multi-scan the uploaded file.
+			const scanResp = await ofetch<{
+				success: boolean;
+				data?: ScanAttachmentMultiResponse;
+				error?: string;
+			}>('/api/scanAttachmentMulti', {
+				method: 'POST',
+				body: { vaultId: data.vaultId, attachmentId },
+				headers: { 'Content-Type': 'application/json' },
+			});
+			if (!scanResp.success || !scanResp.data) {
+				throw new Error(scanResp.error || 'Scan failed');
+			}
+			scanResult = scanResp.data;
+		} catch (err) {
+			const message = err instanceof Error ? err.message : 'Scan failed';
+			toast.error(message);
+			scanModalOpen = false;
+			scanAttachmentId = null;
+		} finally {
+			scanLoading = false;
+		}
+	}
+
+	function applyScannedItems(items: ScanReviewItem[], applySharedDate: boolean) {
+		if (!scanAttachmentId || items.length === 0) {
+			scanModalOpen = false;
+			return;
+		}
+
+		// If the screenshot's date should be the form's shared date and the user
+		// hasn't manually changed it (still equals the page-load default), apply.
+		// Note: we can't reliably detect "user touched it" without extra state, so
+		// we always honor the user's checkbox choice and overwrite $form.date.
+		if (applySharedDate && scanResult?.sourceDate) {
+			$form.date = scanResult.sourceDate;
+		}
+
+		const newRows: ExpenseRowData[] = items.map((it) => ({
+			id: crypto.randomUUID(),
+			amount: it.amount ?? undefined,
+			categoryName: it.suggestedCategory,
+			note: it.note ?? '',
+			expanded: false,
+			date: it.datetime ?? formatDatetimeLocal(new Date()),
+			// Same screenshot linked to every generated row — preserves audit trail
+			// per the design decision in the plan.
+			attachmentIds: [scanAttachmentId!],
+			errors: {},
+		}));
+
+		// Replace the empty starter row if present; otherwise append.
+		if (isEmptyStarterRow()) {
+			rows = newRows;
+		} else {
+			rows = [...rows, ...newRows].slice(0, MAX_ROWS);
+		}
+
+		toast.success(`Added ${newRows.length} item${newRows.length === 1 ? '' : 's'} from screenshot`);
+		scanModalOpen = false;
+	}
+
+	function cancelScanModal() {
+		scanModalOpen = false;
+		// Leave scanAttachmentId set — the orphan R2 record will expire via the
+		// project's existing cleanup. Same as cancelling a manual upload.
+	}
 
 	function addRow() {
 		if (rows.length >= MAX_ROWS) return;
@@ -410,6 +567,33 @@
 		<Rule variant="double" />
 		<div class="mb-4"></div>
 
+		<!-- Multi-scan entrypoint — uploads one screenshot, AI extracts N items -->
+		{#if canScan}
+			<div class="mb-3">
+				<button
+					type="button"
+					onclick={openScanPicker}
+					disabled={isLoading || scanLoading || scanAvailableSlots <= 0}
+					class="w-full flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-dashed border-primary/40 bg-primary/5 px-3 py-2.5 text-sm text-primary hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+				>
+					{#if scanLoading}
+						<Loader2 class="size-4 animate-spin" />
+						Scanning…
+					{:else}
+						<Sparkles class="size-4" />
+						Scan a screenshot for multiple items
+					{/if}
+				</button>
+				<input
+					bind:this={scanFileInputEl}
+					type="file"
+					accept="image/jpeg,image/png,image/webp,application/pdf"
+					class="hidden"
+					onchange={handleScanFileSelected}
+				/>
+			</div>
+		{/if}
+
 		<!-- Expense Items (primary content) -->
 		<div class="space-y-3 mb-4">
 			{#if rows.length > 1}
@@ -664,6 +848,17 @@
 		</div>
 	</div>
 </div>
+
+<ScanScreenshotModal
+	open={scanModalOpen}
+	loading={scanLoading}
+	result={scanResult}
+	vaultCurrency={vaultCurrency}
+	availableSlots={scanAvailableSlots}
+	formatCurrency={(n) => scanFormatter.format(n)}
+	onApply={applyScannedItems}
+	onCancel={cancelScanModal}
+/>
 
 {#if duplicatePromptOpen}
 	<div
