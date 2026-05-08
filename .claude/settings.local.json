@@ -123,7 +123,8 @@
       "Bash(grep -E \"\\(\\\\\\\\\\\\\\\\\\\\\\\\+page\\\\\\\\.svelte:|\\\\\\\\\\\\\\\\\\\\\\\\+page\\\\\\\\.server\\\\\\\\.ts:|api\\\\\\\\.ts:|Handler\\\\\\\\.ts:|recurringExpenses\\\\\\\\.ts:|types\\\\\\\\.ts:\\)\")",
       "Bash(grep -iE \"\\(vault.+vaultId..\\\\\\\\+page\\\\\\\\.svelte|recurring-expenses-api|vaults-api|getVaultStatisticsHandler|getRecurringSummaryHandler|recurringExpenses\\\\\\\\.ts:|vaults..vaultId..types\\\\\\\\.ts\\)\")",
       "Bash(grep -E \"CategoryBreakdownCard|breakdown-bars|home\\\\\\\\\\\\\\\\\\(?!.*\\\\.ts\\)\")",
-      "Bash(grep -E \"CategoryBreakdown|home\\\\\\\\\\\\\\\\Cat|breakdown\")"
+      "Bash(grep -E \"CategoryBreakdown|home\\\\\\\\\\\\\\\\Cat|breakdown\")",
+      "Bash(grep -iE \"categorybreakdown|home\\\\\\\\\\\\\\\\Cat|breakdown-bars\")"
     ]
   }
 }

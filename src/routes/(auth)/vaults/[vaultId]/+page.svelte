@@ -603,6 +603,8 @@
                 {vaultId}
                 categories={statistics?.byCategory ?? []}
                 templates={statistics?.byTemplate ?? []}
+                members={statistics?.byMember ?? []}
+                showMemberToggle={hasSharedMembers}
                 loading={isLoadingStats}
                 formatCurrency={vaultFormatters.currency}
                 currentSearch={page.url.search}

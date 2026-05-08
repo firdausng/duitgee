@@ -15,17 +15,27 @@
         count: number;
     };
 
+    export type CategoryBreakdownCardMember = {
+        userId: string | null;
+        displayName: string;
+        totalAmount: number;
+        count: number;
+    };
+
     export type CategoryBreakdownCardProps = {
         vaultId: string;
         categories: CategoryBreakdownCardCategory[];
         templates?: CategoryBreakdownCardTemplate[];
+        members?: CategoryBreakdownCardMember[];
+        /** When false, the Member toggle is hidden (solo vault). */
+        showMemberToggle?: boolean;
         loading?: boolean;
         formatCurrency: (amount: number) => string;
         /** Forwarded to /statistics when a row is clicked. */
         currentSearch?: string;
     };
 
-    type BreakdownMode = 'category' | 'template';
+    type BreakdownMode = 'category' | 'template' | 'member';
 </script>
 
 <script lang="ts">
@@ -38,6 +48,8 @@
         vaultId,
         categories,
         templates = [],
+        members = [],
+        showMemberToggle = false,
         loading = false,
         formatCurrency,
         currentSearch = '',
@@ -47,11 +59,20 @@
 
     let mode = $state<BreakdownMode>('category');
 
+    function isValidMode(v: string | null): v is BreakdownMode {
+        return v === 'category' || v === 'template' || v === 'member';
+    }
+
     $effect(() => {
         if (typeof window === 'undefined') return;
         const stored = window.localStorage.getItem(storageKey);
-        if (stored === 'template' || stored === 'category') {
-            mode = stored;
+        if (isValidMode(stored)) {
+            // Don't restore 'member' if the toggle is hidden — would leave the user stuck.
+            if (stored === 'member' && !showMemberToggle) {
+                mode = 'category';
+            } else {
+                mode = stored;
+            }
         }
     });
 
@@ -72,39 +93,55 @@
                   value: c.totalAmount,
                   count: c.count,
               }))
-            : templates
-                  .filter((t) => t.templateId !== null)
-                  .map((t) => ({
-                      id: t.templateId,
-                      label: t.templateName,
-                      icon: t.templateIcon ?? null,
-                      iconType: null,
-                      value: t.totalAmount,
-                      count: t.count,
-                  })),
+            : mode === 'template'
+              ? templates
+                    .filter((t) => t.templateId !== null)
+                    .map((t) => ({
+                        id: t.templateId,
+                        label: t.templateName,
+                        icon: t.templateIcon ?? null,
+                        iconType: null,
+                        value: t.totalAmount,
+                        count: t.count,
+                    }))
+              : members
+                    .filter((m) => m.userId !== null)
+                    .map((m) => ({
+                        id: m.userId,
+                        label: m.displayName,
+                        icon: null,
+                        iconType: null,
+                        value: m.totalAmount,
+                        count: m.count,
+                    })),
     );
 
     const total = $derived(rows.reduce((sum, r) => sum + r.value, 0));
 
-    const subline = $derived(
-        mode === 'category'
-            ? `across ${rows.length} categor${rows.length === 1 ? 'y' : 'ies'}`
-            : `across ${rows.length} template${rows.length === 1 ? '' : 's'}`,
-    );
+    const subline = $derived.by(() => {
+        const n = rows.length;
+        if (mode === 'category') return `across ${n} categor${n === 1 ? 'y' : 'ies'}`;
+        if (mode === 'template') return `across ${n} template${n === 1 ? '' : 's'}`;
+        return `across ${n} member${n === 1 ? '' : 's'}`;
+    });
 
-    const emptyCopy = $derived(
-        mode === 'category'
-            ? 'No spending in this period yet.'
-            : 'No expenses linked to a template in this period.',
-    );
+    const emptyCopy = $derived.by(() => {
+        if (mode === 'category') return 'No spending in this period yet.';
+        if (mode === 'template') return 'No expenses linked to a template in this period.';
+        return 'No expenses attributed to a member in this period.';
+    });
 
     function handleSelect(row: BreakdownRow) {
         const params = new URLSearchParams(currentSearch.startsWith('?') ? currentSearch.slice(1) : currentSearch);
         if (mode === 'category') {
             params.set('filterType', 'category');
             params.set('filterName', row.label);
-        } else {
+        } else if (mode === 'template') {
             params.set('filterType', 'template');
+            params.set('filterName', row.label);
+            if (row.id) params.set('filterId', row.id);
+        } else {
+            params.set('filterType', 'member');
             params.set('filterName', row.label);
             if (row.id) params.set('filterId', row.id);
         }
@@ -148,6 +185,19 @@
                 >
                     Template
                 </button>
+                {#if showMemberToggle}
+                    <span class="dg-cb__toggle-sep" aria-hidden="true">·</span>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={mode === 'member'}
+                        onclick={() => setMode('member')}
+                        class="dg-cb__toggle-btn"
+                        class:is-active={mode === 'member'}
+                    >
+                        Member
+                    </button>
+                {/if}
             </div>
             <button type="button" onclick={viewAll} class="dg-cb__link">
                 View all <ArrowRight class="size-3" />
