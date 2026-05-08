@@ -154,56 +154,64 @@
     }
 </script>
 
+{#snippet modeToggle(extraClass: string)}
+    <div class="dg-cb__toggle {extraClass}" role="tablist" aria-label="Group breakdown by">
+        <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'category'}
+            onclick={() => setMode('category')}
+            class="dg-cb__toggle-btn"
+            class:is-active={mode === 'category'}
+        >
+            Category
+        </button>
+        <span class="dg-cb__toggle-sep" aria-hidden="true">·</span>
+        <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'template'}
+            onclick={() => setMode('template')}
+            class="dg-cb__toggle-btn"
+            class:is-active={mode === 'template'}
+        >
+            Template
+        </button>
+        {#if showMemberToggle}
+            <span class="dg-cb__toggle-sep" aria-hidden="true">·</span>
+            <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'member'}
+                onclick={() => setMode('member')}
+                class="dg-cb__toggle-btn"
+                class:is-active={mode === 'member'}
+            >
+                Member
+            </button>
+        {/if}
+    </div>
+{/snippet}
+
 <section class="dg-cb space-y-2">
     <div class="flex items-end justify-between px-1 gap-2">
         <div class="min-w-0">
-            <p class="dg-cb__eyebrow">— Where it went —</p>
+            <p class="dg-cb__eyebrow whitespace-nowrap">— Where it went —</p>
             {#if total > 0}
                 <p class="dg-cb__total"><em>{formatCurrency(total)}</em> {subline}</p>
             {/if}
         </div>
         <div class="flex items-center gap-3 shrink-0">
-            <div class="dg-cb__toggle" role="tablist" aria-label="Group breakdown by">
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={mode === 'category'}
-                    onclick={() => setMode('category')}
-                    class="dg-cb__toggle-btn"
-                    class:is-active={mode === 'category'}
-                >
-                    Category
-                </button>
-                <span class="dg-cb__toggle-sep" aria-hidden="true">·</span>
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={mode === 'template'}
-                    onclick={() => setMode('template')}
-                    class="dg-cb__toggle-btn"
-                    class:is-active={mode === 'template'}
-                >
-                    Template
-                </button>
-                {#if showMemberToggle}
-                    <span class="dg-cb__toggle-sep" aria-hidden="true">·</span>
-                    <button
-                        type="button"
-                        role="tab"
-                        aria-selected={mode === 'member'}
-                        onclick={() => setMode('member')}
-                        class="dg-cb__toggle-btn"
-                        class:is-active={mode === 'member'}
-                    >
-                        Member
-                    </button>
-                {/if}
-            </div>
+            <!-- Desktop: toggle inline next to View all. Hidden on mobile. -->
+            {@render modeToggle('hidden sm:inline-flex')}
             <button type="button" onclick={viewAll} class="dg-cb__link">
                 View all <ArrowRight class="size-3" />
             </button>
         </div>
     </div>
+
+    <!-- Mobile: toggle on its own row, just under the header. -->
+    {@render modeToggle('flex sm:hidden px-1')}
 
     {#if loading}
         <div class="rounded-[var(--radius-md)] border bg-card p-4 space-y-2">
@@ -267,8 +275,11 @@
         flex-shrink: 0;
         padding: 0;
     }
+    /* `display` is owned by Tailwind utilities on the element itself
+       (`hidden sm:inline-flex` / `flex sm:hidden`) — Svelte scoped styles
+       have higher specificity than Tailwind, so setting display here would
+       break the responsive show/hide. */
     .dg-cb__toggle {
-        display: inline-flex;
         align-items: center;
         gap: 0.25rem;
         font-family: 'JetBrains Mono', monospace;
