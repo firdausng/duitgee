@@ -27,6 +27,7 @@
 	import Loader2 from '@lucide/svelte/icons/loader-2';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import { ScanScreenshotModal, type ScanReviewItem } from '$lib/components/expense-form';
+	import X from '@lucide/svelte/icons/x';
 	import type { ScanAttachmentMultiResponse } from '$lib/schemas/scanAttachment';
 	import { ATTACHMENT_MAX_SIZE_BYTES } from '$lib/schemas/attachments';
 
@@ -122,7 +123,20 @@
 	let scanResult = $state<ScanAttachmentMultiResponse | null>(null);
 	/** Screenshot attachment ID — applied to every row generated from this scan. */
 	let scanAttachmentId = $state<string | null>(null);
+	/** Per-item review state — kept across cancel→reopen so the user's untick decisions stick. */
+	let scanReviewItems = $state<ScanReviewItem[]>([]);
 	let scanFileInputEl: HTMLInputElement | null = $state(null);
+
+	const hasPendingScan = $derived(scanResult !== null && scanAttachmentId !== null);
+	const pendingSelectedCount = $derived(
+		scanReviewItems.filter((i) => i.selected && i.amount !== null).length,
+	);
+
+	function clearScan() {
+		scanResult = null;
+		scanAttachmentId = null;
+		scanReviewItems = [];
+	}
 
 	const vaultCurrency = $derived(data.vault?.currency ?? 'USD');
 	const vaultLocale = $derived(data.vault?.locale ?? 'en-US');
@@ -173,8 +187,8 @@
 
 		scanModalOpen = true;
 		scanLoading = true;
-		scanResult = null;
-		scanAttachmentId = null;
+		// Replace any prior pending scan — picking a new file is intent-clear.
+		clearScan();
 
 		try {
 			// 1. Upload to R2 (orphaned attachment record).
@@ -215,11 +229,16 @@
 				throw new Error(scanResp.error || 'Scan failed');
 			}
 			scanResult = scanResp.data;
+			// Seed per-item review state — selection survives cancel→reopen.
+			scanReviewItems = scanResp.data.items.map((it, i) => ({
+				...it,
+				selected: it.amount !== null && i < scanAvailableSlots,
+			}));
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Scan failed';
 			toast.error(message);
 			scanModalOpen = false;
-			scanAttachmentId = null;
+			clearScan();
 		} finally {
 			scanLoading = false;
 		}
@@ -261,12 +280,24 @@
 
 		toast.success(`Added ${newRows.length} item${newRows.length === 1 ? '' : 's'} from screenshot`);
 		scanModalOpen = false;
+		// Apply consumes the scan — clear so the pending pill goes away.
+		clearScan();
 	}
 
 	function cancelScanModal() {
+		// Just close — keep scanResult, scanAttachmentId, and scanReviewItems so
+		// the pending-scan pill can offer a way back in.
 		scanModalOpen = false;
-		// Leave scanAttachmentId set — the orphan R2 record will expire via the
-		// project's existing cleanup. Same as cancelling a manual upload.
+	}
+
+	function reopenScanModal() {
+		if (!hasPendingScan) return;
+		scanModalOpen = true;
+	}
+
+	function discardPendingScan() {
+		// Orphan R2 attachment is left behind; the project's existing cleanup catches it.
+		clearScan();
 	}
 
 	function addRow() {
@@ -569,7 +600,7 @@
 
 		<!-- Multi-scan entrypoint — uploads one screenshot, AI extracts N items -->
 		{#if canScan}
-			<div class="mb-3">
+			<div class="mb-3 space-y-2">
 				<button
 					type="button"
 					onclick={openScanPicker}
@@ -579,11 +610,50 @@
 					{#if scanLoading}
 						<Loader2 class="size-4 animate-spin" />
 						Scanning…
+					{:else if hasPendingScan}
+						<Sparkles class="size-4" />
+						Scan another screenshot
 					{:else}
 						<Sparkles class="size-4" />
 						Scan a screenshot for multiple items
 					{/if}
 				</button>
+
+				{#if hasPendingScan && !scanModalOpen && !scanLoading}
+					<div class="flex items-center justify-between gap-2 rounded-[var(--radius-sm)] border bg-muted/40 px-3 py-2 text-sm">
+						<div class="flex items-center gap-2 min-w-0">
+							<Sparkles class="size-3.5 text-primary shrink-0" />
+							<span class="truncate">
+								<span class="font-medium">Scan ready</span>
+								<span class="text-muted-foreground">
+									· {pendingSelectedCount} of {scanReviewItems.length} selected
+								</span>
+							</span>
+						</div>
+						<div class="flex items-center gap-1 shrink-0">
+							<Button
+								type="button"
+								variant="ghost"
+								size="sm"
+								onclick={reopenScanModal}
+								disabled={isLoading}
+							>
+								Review
+							</Button>
+							<button
+								type="button"
+								onclick={discardPendingScan}
+								disabled={isLoading}
+								aria-label="Discard scan result"
+								title="Discard scan result"
+								class="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+							>
+								<X class="size-3.5" />
+							</button>
+						</div>
+					</div>
+				{/if}
+
 				<input
 					bind:this={scanFileInputEl}
 					type="file"
@@ -853,6 +923,7 @@
 	open={scanModalOpen}
 	loading={scanLoading}
 	result={scanResult}
+	bind:items={scanReviewItems}
 	vaultCurrency={vaultCurrency}
 	availableSlots={scanAvailableSlots}
 	formatCurrency={(n) => scanFormatter.format(n)}

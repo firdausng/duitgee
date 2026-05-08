@@ -11,6 +11,8 @@
         loading: boolean;
         /** AI response — null while loading or before scan returns. */
         result: ScanAttachmentMultiResponse | null;
+        /** Per-item review state — owned by the parent so toggles survive cancel→reopen. */
+        items: ScanReviewItem[];
         /** Vault currency, used to flag mismatched currency rows. */
         vaultCurrency: string;
         /** How many rows can still be added to the form (MAX_ROWS - current). */
@@ -32,6 +34,7 @@
         open,
         loading,
         result,
+        items = $bindable([]),
         vaultCurrency,
         availableSlots,
         formatCurrency,
@@ -39,24 +42,10 @@
         onCancel,
     }: ScanScreenshotModalProps = $props();
 
-    // Local mutable copy of the AI items so the user can toggle selection.
-    let items = $state<ScanReviewItem[]>([]);
+    // applySharedDate is local — re-seeded each open from result.sourceDate.
     let applySharedDate = $state(true);
-
-    // Re-seed when a new scan result arrives.
     $effect(() => {
-        if (!result) {
-            items = [];
-            return;
-        }
-        items = result.items.map((it, i) => ({
-            ...it,
-            // Auto-deselect rows the AI couldn't price; user can still tick them
-            // but they'll be filtered out before apply since amount is required.
-            // Slot cap: pre-select up to availableSlots rows; rest start unticked.
-            selected: it.amount !== null && i < availableSlots,
-        }));
-        applySharedDate = !!result.sourceDate;
+        if (open) applySharedDate = !!result?.sourceDate;
     });
 
     const selectedCount = $derived(items.filter((i) => i.selected && i.amount !== null).length);
@@ -72,7 +61,7 @@
     }
 
     function toggle(idx: number) {
-        items = items.map((it, i) => (i === idx ? { ...it, selected: !it.selected } : it));
+        items[idx] = { ...items[idx], selected: !items[idx].selected };
     }
 
     function selectAll() {
