@@ -1,7 +1,7 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
-    import { onMount } from 'svelte';
+    import { onMount, untrack } from 'svelte';
     import { useSearchParams } from 'runed/kit';
     import { ofetch } from 'ofetch';
     import { resource } from 'runed';
@@ -133,13 +133,25 @@
         if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // Reset to page 1 whenever filter type / date range changes — otherwise users
-    // stuck on page 5 of "this year" hop to page 5 of "this week" and see nothing.
+    // Reset to page 1 whenever filter type / date range *actually* changes —
+    // otherwise users stuck on page 5 of "this year" hop to page 5 of "this
+    // week" and see nothing.
+    //
+    // Implementation note: the previous version read `currentPage` directly in
+    // the if-check, which made it a tracked dep — so every Next click caused
+    // the effect to re-fire and slam the URL back to page 1. Now we track only
+    // the filter key explicitly; the page-write happens inside untrack so it
+    // doesn't pull `params.page` into the dep set, and a sentinel prevents the
+    // initial mount from clobbering a user's `?page=N` deep link.
+    let prevFilterKey: string | undefined;
     $effect(() => {
-        // Track filter inputs but trigger reset only when they actually change.
-        const _trigger = `${filterType}|${params.startDate}|${params.endDate}`;
-        void _trigger;
-        if (currentPage !== 1) params.page = '1';
+        const key = `${filterType}|${params.startDate}|${params.endDate}`;
+        untrack(() => {
+            if (prevFilterKey !== undefined && prevFilterKey !== key) {
+                params.page = '1';
+            }
+            prevFilterKey = key;
+        });
     });
 
     // Filter pills — parsed from the URL's repeated ?f= params.
@@ -436,6 +448,7 @@
             title={groupByDay ? 'Turn off day grouping' : 'Group by day'}
         >
             <CalendarDays class="size-3.5" />
+            <span class="sm:hidden">Group</span>
             <span class="hidden sm:inline">Group by day</span>
         </Button>
         {#if hasAnyFilter}
@@ -559,36 +572,38 @@
                 {@render expenseRow(expense)}
             {/each}
         </div>
+    {/if}
 
-        <!-- Pagination — hidden when only one page worth of data. -->
-        {#if pagination.pages > 1}
-            <div class="mt-3 flex items-center justify-between gap-2 text-sm">
-                <span class="text-muted-foreground">
-                    Page {pagination.page} of {pagination.pages}
-                    <span class="opacity-60">· {pagination.total} total</span>
-                </span>
-                <div class="flex items-center gap-1">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onclick={() => gotoPage(currentPage - 1)}
-                        disabled={currentPage <= 1 || isLoading}
-                    >
-                        Prev
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onclick={() => gotoPage(currentPage + 1)}
-                        disabled={currentPage >= pagination.pages || isLoading}
-                    >
-                        Next
-                    </Button>
-                </div>
+    <!-- Pagination — sibling of the list/grouped views so it renders for both
+         flat and day-grouped layouts. Hidden while loading, when empty, or
+         when there's only a single server page worth of data. -->
+    {#if !isLoading && expenses.length > 0 && pagination.pages > 1}
+        <div class="mt-3 flex items-center justify-between gap-2 text-sm">
+            <span class="text-muted-foreground">
+                Page {pagination.page} of {pagination.pages}
+                <span class="opacity-60">· {pagination.total} total</span>
+            </span>
+            <div class="flex items-center gap-1">
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onclick={() => gotoPage(currentPage - 1)}
+                    disabled={currentPage <= 1 || isLoading}
+                >
+                    Prev
+                </Button>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onclick={() => gotoPage(currentPage + 1)}
+                    disabled={currentPage >= pagination.pages || isLoading}
+                >
+                    Next
+                </Button>
             </div>
-        {/if}
+        </div>
     {/if}
 </div>
 
