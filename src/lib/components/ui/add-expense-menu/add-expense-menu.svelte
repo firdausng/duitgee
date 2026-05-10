@@ -15,6 +15,8 @@
         scratchHref: string;
         /** Route for the full browse-all-templates page. */
         browseHref: string;
+        /** Route for "Scan a screenshot" (form route + ?scan=1). When omitted the entry is hidden. */
+        scanHref?: string;
         /** Optional: when set, renders a "Quick log" entry that calls this on click. */
         onQuickLog?: () => void;
         /** When true the button renders but is disabled. */
@@ -34,12 +36,14 @@
     import FilePlus from '@lucide/svelte/icons/file-plus';
     import ArrowRight from '@lucide/svelte/icons/arrow-right';
     import HelpCircle from '@lucide/svelte/icons/circle-help';
+    import Sparkles from '@lucide/svelte/icons/sparkles';
 
     let {
         templates,
         resolveTemplateHref,
         scratchHref,
         browseHref,
+        scanHref,
         onQuickLog,
         disabled = false,
         anchor = 'bottom',
@@ -183,6 +187,21 @@
                         <div class="text-xs text-muted-foreground">Blank form</div>
                     </div>
                 </a>
+                {#if scanHref}
+                    <a
+                        href={scanHref}
+                        role="menuitem"
+                        class="flex items-center gap-3 px-3 py-2.5 hover:bg-muted transition-colors"
+                    >
+                        <span class="flex items-center justify-center size-7 rounded-full bg-primary/10 shrink-0">
+                            <Sparkles class="size-4 text-primary" />
+                        </span>
+                        <div class="flex-1">
+                            <div class="font-medium">Scan a screenshot</div>
+                            <div class="text-xs text-muted-foreground">Multiple expenses, mixed templates</div>
+                        </div>
+                    </a>
+                {/if}
                 {#if hasQuickLog}
                     <button
                         type="button"

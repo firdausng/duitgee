@@ -135,6 +135,10 @@
                       `/vaults/${chipVaultId}/expenses/new/form?templateId=${templateId}&returnTo=${returnToParam}`,
                   scratchHref: `/vaults/${chipVaultId}/expenses/new/form?returnTo=${returnToParam}`,
                   browseHref: `/vaults/${chipVaultId}/expenses/new?returnTo=${returnToParam}`,
+                  // Routes to the form with auto-open file picker. Form's own
+                  // entitlement check still gates the actual scan action, so
+                  // free users land safely with a "Pro feature" toast.
+                  scanHref: `/vaults/${chipVaultId}/expenses/new/form?scan=1&returnTo=${returnToParam}`,
               }
             : null,
     );
@@ -229,6 +233,7 @@
                                 resolveTemplateHref={quickAdd.resolveTemplateHref}
                                 scratchHref={quickAdd.scratchHref}
                                 browseHref={quickAdd.browseHref}
+                                scanHref={quickAdd.scanHref}
                                 onQuickLog={chipVaultId ? () => quickLog.push() : undefined}
                                 anchor="bottom"
                             />
@@ -237,7 +242,13 @@
                 {/snippet}
             </DesktopAppBar>
 
-            <main class="flex-1 overflow-x-hidden bg-background pb-20 md:pb-0">
+            <!-- pb-20 (80px) covers MobileBottomBar's h-16 (64px) plus a 16px gap.
+                 But the bar also reserves env(safe-area-inset-bottom) for the iOS
+                 home-indicator (~34px on modern iPhones), which made content
+                 (e.g. expenses-page pagination) hide underneath. Add the
+                 safe-area inset to the padding so clearance is preserved on
+                 every device. md:pb-0 keeps desktop unchanged. -->
+            <main class="flex-1 overflow-x-hidden bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
                 {@render children?.()}
             </main>
         </div>

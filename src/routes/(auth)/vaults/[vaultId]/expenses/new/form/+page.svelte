@@ -130,6 +130,20 @@
 	let scanReviewItems = $state<ScanReviewItem[]>([]);
 	let scanFileInputEl: HTMLInputElement | null = $state(null);
 
+	// Deep-link entry: when arriving via /expenses/new/form?scan=1 (from the
+	// picker tile, QuickAddSheet, or AddExpenseMenu "Scan a screenshot"
+	// option), open the file picker as soon as the input element is wired up.
+	// Routed through openScanPicker so non-entitled users get the same toast
+	// they'd see clicking the in-form button. Fires once.
+	let autoScanFired = $state(false);
+	$effect(() => {
+		if (autoScanFired) return;
+		if (!scanFileInputEl) return;
+		if (pageState.url.searchParams.get('scan') !== '1') return;
+		autoScanFired = true;
+		openScanPicker();
+	});
+
 	const hasPendingScan = $derived(scanResult !== null && scanAttachmentId !== null);
 	const pendingSelectedCount = $derived(
 		scanReviewItems.filter((i) => i.selected && i.amount !== null).length,
@@ -233,9 +247,12 @@
 			}
 			scanResult = scanResp.data;
 			// Seed per-item review state — selection survives cancel→reopen.
+			// Per-row template defaults to the form's batch template (or null when
+			// "Start from scratch"); user can override per row in the modal.
 			scanReviewItems = scanResp.data.items.map((it, i) => ({
 				...it,
 				selected: it.amount !== null && i < scanAvailableSlots,
+				templateId: data.templateId ?? null,
 			}));
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Scan failed';
@@ -268,6 +285,9 @@
 			note: it.note ?? '',
 			expanded: false,
 			date: it.datetime ?? formatDatetimeLocal(new Date()),
+			// Per-row template (set in the review modal). Carried into createExpenses
+			// payload so a single batch can span multiple templates.
+			templateId: it.templateId ?? null,
 			// Same screenshot linked to every generated row — preserves audit trail
 			// per the design decision in the plan.
 			attachmentIds: [scanAttachmentId!],
@@ -469,6 +489,12 @@
 						: {}),
 					...(row.expanded && row.fundPaymentMode !== undefined
 						? { fundPaymentMode: row.fundPaymentMode }
+						: {}),
+					// Per-row template — only sent when explicitly set on the row
+					// (typically from the scan-modal picker). Server falls back
+					// to data.templateId otherwise.
+					...(row.templateId !== undefined
+						? { templateId: row.templateId }
 						: {}),
 					// Per-row attachments — each row's own receipts
 					...(row.attachmentIds && row.attachmentIds.length > 0
@@ -929,6 +955,8 @@
 	bind:items={scanReviewItems}
 	vaultCurrency={vaultCurrency}
 	availableSlots={scanAvailableSlots}
+	templates={data.templates ?? []}
+	defaultTemplateId={data.templateId ?? null}
 	formatCurrency={(n) => scanFormatter.format(n)}
 	onApply={applyScannedItems}
 	onCancel={cancelScanModal}

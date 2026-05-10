@@ -48,6 +48,8 @@
 		date?: string;
 		fundId?: string | null;
 		fundPaymentMode?: 'paid_by_fund' | 'pending_reimbursement' | null;
+		/** Per-row template override. When unset, the batch-level templateId applies. */
+		templateId?: string | null;
 		attachmentIds?: string[];
 		errors: { amount?: string; categoryName?: string };
 	};

@@ -14,6 +14,8 @@
             resolveTemplateHref: (templateId: string) => string;
             scratchHref: string;
             browseHref: string;
+            /** Optional. When set, QuickAddSheet renders a "Scan a screenshot" entry. */
+            scanHref?: string;
         } | null;
         /** Optional callback for the "Quick log" entry inside the quick-add sheet. */
         onQuickLog?: () => void;
@@ -242,6 +244,7 @@
         resolveTemplateHref={quickAdd.resolveTemplateHref}
         scratchHref={quickAdd.scratchHref}
         browseHref={quickAdd.browseHref}
+        scanHref={quickAdd.scanHref}
         {onQuickLog}
     />
 {/if}

@@ -22,6 +22,8 @@ interface ResolvedItem {
     paidBy: string | null;
     fundId: string | null;
     fundPaymentMode: string | null;
+    /** Effective template — item override ?? batch ?? null. */
+    templateId: string | null;
     attachmentIds: string[];
 }
 
@@ -55,6 +57,9 @@ export const createExpenses = async (
             item.fundPaymentMode !== undefined
                 ? item.fundPaymentMode
                 : (data.shared.fundPaymentMode ?? null),
+        // Per-row override beats the batch-level template. `undefined` means
+        // "use the batch default"; `null` is an explicit "no template" choice.
+        templateId: item.templateId !== undefined ? item.templateId : (data.templateId ?? null),
         attachmentIds: Array.from(new Set(item.attachmentIds ?? [])),
     }));
 
@@ -180,7 +185,7 @@ export const createExpenses = async (
                 date: item.date,
                 paidBy: item.paidBy,
                 vaultId: data.vaultId,
-                expenseTemplateId: data.templateId ?? null,
+                expenseTemplateId: item.templateId,
                 fundId: item.fundId,
                 fundPaymentMode: item.fundPaymentMode,
                 fundTransactionId: fundTxIds.get(item.expenseId) ?? null,
@@ -189,17 +194,27 @@ export const createExpenses = async (
         );
     }
 
-    // 4d. Template usage update
-    if (data.templateId) {
-        batchOps.push(
-            client
-                .update(expenseTemplates)
-                .set({
-                    usageCount: sql`${expenseTemplates.usageCount} + ${data.items.length}`,
-                    lastUsedAt: formatISO(new UTCDate()),
-                })
-                .where(eq(expenseTemplates.id, data.templateId)),
-        );
+    // 4d. Template usage updates — bump usageCount for each distinct template
+    // touched in this batch by the number of items that used it. Mixed-template
+    // batches (per-row overrides) result in N updates instead of one.
+    const templateUsageCounts = new Map<string, number>();
+    for (const item of resolvedItems) {
+        if (!item.templateId) continue;
+        templateUsageCounts.set(item.templateId, (templateUsageCounts.get(item.templateId) ?? 0) + 1);
+    }
+    if (templateUsageCounts.size > 0) {
+        const lastUsedAt = formatISO(new UTCDate());
+        for (const [templateId, count] of templateUsageCounts) {
+            batchOps.push(
+                client
+                    .update(expenseTemplates)
+                    .set({
+                        usageCount: sql`${expenseTemplates.usageCount} + ${count}`,
+                        lastUsedAt,
+                    })
+                    .where(eq(expenseTemplates.id, templateId)),
+            );
+        }
     }
 
     // 4e. Shared tag assignments — every expense gets every shared tag.

@@ -4,6 +4,14 @@
     export type ScanReviewItem = ScanAttachmentMultiItem & {
         /** Per-row UI selection — defaults to true when the AI returned an amount. */
         selected: boolean;
+        /** Per-row template — null = no template; undefined seeded → defaultTemplateId. */
+        templateId: string | null;
+    };
+
+    export type ScanModalTemplate = {
+        id: string;
+        name: string;
+        icon?: string | null;
     };
 
     export type ScanScreenshotModalProps = {
@@ -17,6 +25,10 @@
         vaultCurrency: string;
         /** How many rows can still be added to the form (MAX_ROWS - current). */
         availableSlots: number;
+        /** Vault's templates — drives the per-row template picker. Empty = picker hidden. */
+        templates?: ScanModalTemplate[];
+        /** Default template applied to a row when the user hasn't picked one. */
+        defaultTemplateId?: string | null;
         formatCurrency: (amount: number) => string;
         onApply: (items: ScanReviewItem[], applySharedDate: boolean) => void;
         onCancel: () => void;
@@ -37,6 +49,8 @@
         items = $bindable([]),
         vaultCurrency,
         availableSlots,
+        templates = [],
+        defaultTemplateId = null,
         formatCurrency,
         onApply,
         onCancel,
@@ -47,6 +61,38 @@
     $effect(() => {
         if (open) applySharedDate = !!result?.sourceDate;
     });
+
+    // Per-row template picker: which row's picker is currently expanded (-1 = none).
+    let templatePickerOpen = $state<number>(-1);
+    let templateSearch = $state('');
+    $effect(() => {
+        // Reset picker when a different row is opened or modal closes.
+        templatePickerOpen;
+        templateSearch = '';
+    });
+
+    const showTemplatePicker = $derived(templates.length > 0);
+    const templateById = $derived(new Map(templates.map((t) => [t.id, t])));
+
+    function templateLabel(id: string | null): string {
+        if (!id) return 'No template';
+        return templateById.get(id)?.name ?? '(deleted)';
+    }
+    function templateIcon(id: string | null): string {
+        if (!id) return '—';
+        return templateById.get(id)?.icon ?? '📝';
+    }
+
+    function setRowTemplate(idx: number, templateId: string | null) {
+        items[idx] = { ...items[idx], templateId };
+        templatePickerOpen = -1;
+    }
+
+    function visibleTemplates(query: string): ScanModalTemplate[] {
+        const q = query.trim().toLowerCase();
+        if (!q) return templates;
+        return templates.filter((t) => t.name.toLowerCase().includes(q));
+    }
 
     const selectedCount = $derived(items.filter((i) => i.selected && i.amount !== null).length);
     const overflow = $derived(selectedCount > availableSlots);
@@ -216,6 +262,58 @@
                                                 <AlertTriangle class="size-2.5" />
                                                 {item.currency} ≠ {vaultCurrency}
                                             </span>
+                                        {/if}
+                                        {#if showTemplatePicker}
+                                            <div class="relative">
+                                                <button
+                                                    type="button"
+                                                    onclick={() => (templatePickerOpen = templatePickerOpen === i ? -1 : i)}
+                                                    class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-muted/50 text-[10px] hover:bg-muted transition-colors"
+                                                    title="Pick a template for this expense"
+                                                >
+                                                    <span>{templateIcon(item.templateId)}</span>
+                                                    <span class="truncate max-w-[8rem]">{templateLabel(item.templateId)}</span>
+                                                    <span class="opacity-50">▾</span>
+                                                </button>
+                                                {#if templatePickerOpen === i}
+                                                    <div
+                                                        class="absolute z-10 left-0 top-full mt-1 w-56 rounded-[var(--radius-sm)] border bg-popover shadow-lg p-1"
+                                                        role="menu"
+                                                    >
+                                                        <input
+                                                            type="text"
+                                                            bind:value={templateSearch}
+                                                            placeholder="Search templates…"
+                                                            class="w-full h-7 rounded-[var(--radius-sm)] border border-input bg-background px-2 text-xs mb-1 focus:outline-none focus:ring-2 focus:ring-ring"
+                                                        />
+                                                        <div class="max-h-48 overflow-y-auto">
+                                                            <button
+                                                                type="button"
+                                                                role="menuitem"
+                                                                onclick={() => setRowTemplate(i, null)}
+                                                                class="w-full flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] hover:bg-muted text-left text-xs"
+                                                            >
+                                                                <span class="text-muted-foreground">— No template</span>
+                                                            </button>
+                                                            {#each visibleTemplates(templateSearch) as t (t.id)}
+                                                                <button
+                                                                    type="button"
+                                                                    role="menuitem"
+                                                                    onclick={() => setRowTemplate(i, t.id)}
+                                                                    class="w-full flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] hover:bg-muted text-left text-xs"
+                                                                    class:bg-muted={item.templateId === t.id}
+                                                                >
+                                                                    <span>{t.icon ?? '📝'}</span>
+                                                                    <span class="truncate">{t.name}</span>
+                                                                </button>
+                                                            {/each}
+                                                            {#if visibleTemplates(templateSearch).length === 0}
+                                                                <p class="px-2 py-2 text-[10px] text-muted-foreground text-center">No matches.</p>
+                                                            {/if}
+                                                        </div>
+                                                    </div>
+                                                {/if}
+                                            </div>
                                         {/if}
                                     </div>
                                 </div>

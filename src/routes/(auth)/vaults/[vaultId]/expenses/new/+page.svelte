@@ -6,6 +6,7 @@
     import { Card } from '$lib/components/ui/card';
     import { page } from '$app/state';
     import FilePlus from '@lucide/svelte/icons/file-plus';
+    import Sparkles from '@lucide/svelte/icons/sparkles';
     import Pencil from '@lucide/svelte/icons/pencil';
     import Plus from '@lucide/svelte/icons/plus';
     import HelpCircle from '@lucide/svelte/icons/circle-help';
@@ -28,6 +29,17 @@
         if (returnToParam) params.set('returnTo', returnToParam);
         const qs = params.toString();
         return `/vaults/${vaultId}/expenses/new/form${qs ? `?${qs}` : ''}`;
+    }
+
+    function scanFormUrl(): string {
+        const params = new URLSearchParams();
+        params.set('scan', '1');
+        if (returnToParam) params.set('returnTo', returnToParam);
+        return `/vaults/${vaultId}/expenses/new/form?${params.toString()}`;
+    }
+
+    function handleScan() {
+        goto(scanFormUrl());
     }
 
     let templates = $state<Client.ExpenseTemplate[]>([]);
@@ -124,6 +136,22 @@
                     </div>
                     <div class="text-xs font-medium truncate w-full">Start from scratch</div>
                     <p class="text-[10px] text-muted-foreground">Blank form</p>
+                </div>
+            </button>
+
+            <!-- Scan a screenshot card — multi-template extraction. Goes via
+                 ?scan=1 so the form auto-opens its file picker on mount. -->
+            <button
+                type="button"
+                onclick={handleScan}
+                class="group relative rounded-[var(--radius-md)] border border-dashed border-primary/40 bg-primary/5 p-2 hover:border-primary/70 hover:bg-primary/10 transition-colors text-center"
+            >
+                <div class="flex flex-col items-center gap-1">
+                    <div class="flex items-center justify-center size-9 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                        <Sparkles class="size-4 text-primary" />
+                    </div>
+                    <div class="text-xs font-medium truncate w-full">Scan screenshot</div>
+                    <p class="text-[10px] text-muted-foreground">Multiple at once</p>
                 </div>
             </button>
 

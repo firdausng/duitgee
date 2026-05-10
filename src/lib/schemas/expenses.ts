@@ -90,6 +90,10 @@ export const createExpenseItemSchema = v.object({
     date: v.optional(v.string()),
     fundId: v.optional(v.nullable(v.string())),
     fundPaymentMode: v.optional(v.nullable(v.picklist(['paid_by_fund', 'pending_reimbursement']))),
+    // Per-row template override. Lets a single batch span multiple templates
+    // (e.g. a screenshot with mixed transactions tagged to different templates).
+    // When set, takes precedence over the batch-level templateId.
+    templateId: v.optional(v.nullable(v.string())),
     // Per-row attachments — each row's own receipts/files. No shared option:
     // batch creates are typically heterogeneous (different expenses, different receipts).
     attachmentIds: v.optional(v.array(v.string())),

@@ -4,6 +4,7 @@ import { sharedExpenseDefaultsSchema } from '$lib/schemas/expenses';
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getExpenseTemplate } from '$lib/server/api/expense-templates/getExpenseTemplateHandler';
+import { getExpenseTemplates } from '$lib/server/api/expense-templates/getExpenseTemplatesHandler';
 import { getVault } from '$lib/server/api/vaults/getVaultHandler';
 import { getFunds } from '$lib/server/api/funds/getFundsHandler';
 import { getTags } from '$lib/server/api/tags/getTagsHandler';
@@ -34,9 +35,9 @@ export const load: PageServerLoad = async ({ params, url, locals, platform }) =>
 	const session = locals.currentSession;
 	const env = platform.env;
 
-	// All four reads can run in parallel — they're independent. Each is a direct
+	// All reads can run in parallel — they're independent. Each is a direct
 	// handler call (no self-fetch overhead, no auth re-validation).
-	const [templateResult, vaultResult, fundRows, tagRows] = await Promise.all([
+	const [templateResult, vaultResult, fundRows, tagRows, templatesResult] = await Promise.all([
 		templateId
 			? getExpenseTemplate(session, { vaultId, id: templateId }, env).catch((err) => {
 					console.error('Failed to load template:', err);
@@ -54,6 +55,12 @@ export const load: PageServerLoad = async ({ params, url, locals, platform }) =>
 		getTags(session, vaultId, env).catch((err) => {
 			console.error('Failed to load tags:', err);
 			return [];
+		}),
+		// Full template list — drives the per-row template picker in the scan
+		// review modal so a single screenshot can map items to multiple templates.
+		getExpenseTemplates(session, { vaultId }, env).catch((err) => {
+			console.error('Failed to load templates list:', err);
+			return { templates: [] };
 		}),
 	]);
 
@@ -96,6 +103,12 @@ export const load: PageServerLoad = async ({ params, url, locals, platform }) =>
 		color: t.color ?? null,
 	}));
 
+	const templates: Array<{ id: string; name: string; icon: string | null }> = (templatesResult?.templates ?? []).map((t) => ({
+		id: t.id,
+		name: t.name,
+		icon: t.icon ?? null,
+	}));
+
 	const vault = vaultResult?.vaults
 		? {
 				currency: vaultResult.vaults.currency || 'USD',
@@ -112,6 +125,7 @@ export const load: PageServerLoad = async ({ params, url, locals, platform }) =>
 		members,
 		funds,
 		tags,
+		templates,
 		currentUserId,
 		returnTo,
 	};

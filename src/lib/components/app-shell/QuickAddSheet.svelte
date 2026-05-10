@@ -7,6 +7,9 @@
         resolveTemplateHref: (templateId: string) => string;
         scratchHref: string;
         browseHref: string;
+        /** Route for "Scan a screenshot" — typically the form route with ?scan=1.
+         *  When omitted, the entry is hidden (e.g. for vaults without scan entitlement). */
+        scanHref?: string;
         onOpenChange: (open: boolean) => void;
         /** Optional: when set, renders a "Quick log" entry that calls this on click. */
         onQuickLog?: () => void;
@@ -19,6 +22,7 @@
     import FilePlus from '@lucide/svelte/icons/file-plus';
     import ArrowRight from '@lucide/svelte/icons/arrow-right';
     import HelpCircle from '@lucide/svelte/icons/circle-help';
+    import Sparkles from '@lucide/svelte/icons/sparkles';
 
     let {
         open,
@@ -26,6 +30,7 @@
         resolveTemplateHref,
         scratchHref,
         browseHref,
+        scanHref,
         onOpenChange,
         onQuickLog,
     }: QuickAddSheetProps = $props();
@@ -105,6 +110,23 @@
                         </div>
                     </button>
                 </li>
+                {#if scanHref}
+                    <li>
+                        <button
+                            type="button"
+                            onclick={() => navigate(scanHref!)}
+                            class="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-accent transition-colors text-left"
+                        >
+                            <span class="flex items-center justify-center size-9 rounded-full bg-primary/10 shrink-0">
+                                <Sparkles class="size-4 text-primary" />
+                            </span>
+                            <div class="flex-1">
+                                <div class="font-medium text-sm">Scan a screenshot</div>
+                                <div class="text-xs text-muted-foreground">Multiple expenses, mixed templates</div>
+                            </div>
+                        </button>
+                    </li>
+                {/if}
                 {#if onQuickLog}
                     <li>
                         <button
