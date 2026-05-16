@@ -13,6 +13,8 @@
     import { Toaster } from '$lib/components/ui/sonner';
     import { CalculatorInput } from '$lib/components/ui/calculator-input';
     import * as Select from '$lib/components/ui/select';
+    import { IconCombobox } from '$lib/components/ui/icon-combobox';
+    import { iconData } from '$lib/configurations/icons';
     import { toast } from 'svelte-sonner';
     import Plus from '@lucide/svelte/icons/plus';
     import Pencil from '@lucide/svelte/icons/pencil';
@@ -235,17 +237,19 @@
                             </Select.Content>
                         </Select.Root>
                     </div>
-                    <div class="grid grid-cols-[1fr_80px] gap-2">
-                        <div class="space-y-1">
-                            <Label for="tpl-name">Name <span class="text-destructive">*</span></Label>
-                            <Input id="tpl-name" bind:value={formName} disabled={saving} placeholder="e.g., Salary - Firdaus" />
-                        </div>
-                        <div class="space-y-1">
-                            <Label for="tpl-icon">Icon</Label>
-                            <Input id="tpl-icon" bind:value={formIcon} disabled={saving} placeholder="💰" />
-                        </div>
+                    <div class="space-y-1">
+                        <Label for="tpl-name">Name <span class="text-destructive">*</span></Label>
+                        <Input id="tpl-name" bind:value={formName} disabled={saving} placeholder="e.g., Salary - Firdaus" />
                     </div>
                 </div>
+                <IconCombobox
+                    name="tpl-icon"
+                    label="Icon"
+                    icons={iconData.icons}
+                    bind:value={formIcon}
+                    disabled={saving}
+                    placeholder="Search icons..."
+                />
 
                 <div class="grid gap-3 sm:grid-cols-2">
                     <div class="space-y-1">

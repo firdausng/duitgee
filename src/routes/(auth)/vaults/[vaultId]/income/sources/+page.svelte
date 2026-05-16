@@ -10,6 +10,8 @@
     import { EmptyState } from '$lib/components/ui/empty-state';
     import { Eyebrow, Rule } from '$lib/components/almanac';
     import { Toaster } from '$lib/components/ui/sonner';
+    import { IconCombobox } from '$lib/components/ui/icon-combobox';
+    import { iconData } from '$lib/configurations/icons';
     import { toast } from 'svelte-sonner';
     import Plus from '@lucide/svelte/icons/plus';
     import Pencil from '@lucide/svelte/icons/pencil';
@@ -149,19 +151,23 @@
                 <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     {isCreating ? 'New source' : 'Edit source'}
                 </p>
-                <div class="grid gap-3 sm:grid-cols-[1fr_120px_auto]">
+                <div class="grid gap-3 sm:grid-cols-2">
                     <div class="space-y-1">
                         <Label for="src-name">Name</Label>
                         <Input id="src-name" bind:value={formName} disabled={saving} placeholder="e.g., Salary" />
                     </div>
-                    <div class="space-y-1">
-                        <Label for="src-icon">Icon</Label>
-                        <Input id="src-icon" bind:value={formIcon} disabled={saving} placeholder="💰" />
-                    </div>
-                    <div class="flex items-end gap-2">
-                        <Button variant="outline" size="sm" onclick={cancelEdit} disabled={saving}>Cancel</Button>
-                        <Button size="sm" onclick={saveForm} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
-                    </div>
+                    <IconCombobox
+                        name="src-icon"
+                        label="Icon"
+                        icons={iconData.icons}
+                        bind:value={formIcon}
+                        disabled={saving}
+                        placeholder="Search icons..."
+                    />
+                </div>
+                <div class="flex justify-end gap-2">
+                    <Button variant="outline" size="sm" onclick={cancelEdit} disabled={saving}>Cancel</Button>
+                    <Button size="sm" onclick={saveForm} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
                 </div>
             </CardContent>
         </Card>

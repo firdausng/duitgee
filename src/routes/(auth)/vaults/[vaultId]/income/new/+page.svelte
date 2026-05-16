@@ -12,6 +12,8 @@
     import { Eyebrow, Rule } from '$lib/components/almanac';
     import { CalculatorInput } from '$lib/components/ui/calculator-input';
     import { DateTimePicker } from '$lib/components/ui/date-time-picker';
+    import { IconCombobox } from '$lib/components/ui/icon-combobox';
+    import { iconData } from '$lib/configurations/icons';
     import { Toaster } from '$lib/components/ui/sonner';
     import { toast } from 'svelte-sonner';
     import { localDatetimeToUtcIso } from '$lib/utils';
@@ -227,26 +229,23 @@
                             </div>
                         {/if}
                     {:else if templateMode === 'new'}
-                        <div class="grid gap-3 sm:grid-cols-[1fr_120px]">
-                            <div class="space-y-2">
-                                <Label for="newTemplateName">New template name <span class="text-destructive">*</span></Label>
-                                <Input
-                                    id="newTemplateName"
-                                    bind:value={newTemplateName}
-                                    disabled={$delayed}
-                                    placeholder="e.g., Salary - Firdaus"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label for="newTemplateIcon">Icon</Label>
-                                <Input
-                                    id="newTemplateIcon"
-                                    bind:value={newTemplateIcon}
-                                    disabled={$delayed}
-                                    placeholder="💰"
-                                />
-                            </div>
+                        <div class="space-y-2">
+                            <Label for="newTemplateName">New template name <span class="text-destructive">*</span></Label>
+                            <Input
+                                id="newTemplateName"
+                                bind:value={newTemplateName}
+                                disabled={$delayed}
+                                placeholder="e.g., Salary - Firdaus"
+                            />
                         </div>
+                        <IconCombobox
+                            name="newTemplateIcon"
+                            label="New template icon"
+                            icons={iconData.icons}
+                            bind:value={newTemplateIcon}
+                            disabled={$delayed}
+                            placeholder="Search icons..."
+                        />
                     {/if}
                 {/if}
 
