@@ -25,6 +25,7 @@
     import ArrowLeft from '@lucide/svelte/icons/arrow-left';
     import Link2 from '@lucide/svelte/icons/link-2';
     import Repeat from '@lucide/svelte/icons/repeat';
+    import Copy from '@lucide/svelte/icons/copy';
     import MoreVertical from '@lucide/svelte/icons/more-vertical';
 
     let { data } = $props();
@@ -194,6 +195,24 @@
             refetchKey++;
         } catch (error: any) {
             toast.error(error?.data?.error || error?.message || 'Failed to delete');
+        }
+    }
+
+    async function handleDuplicate(t: Template) {
+        try {
+            const response = await ofetch('/api/duplicateIncomeTemplate', {
+                method: 'POST',
+                body: { vaultId, id: t.id },
+                headers: { 'Content-Type': 'application/json' },
+            });
+            if (response.success === false) {
+                toast.error(response.error || 'Failed to duplicate');
+                return;
+            }
+            toast.success(`Duplicated as "${response.data?.name ?? t.name + ' (copy)'}"`);
+            refetchKey++;
+        } catch (error: any) {
+            toast.error(error?.data?.error || error?.message || 'Failed to duplicate');
         }
     }
 
@@ -517,6 +536,10 @@
                         <DropdownMenu.Item onclick={() => startEdit(tpl)}>
                             <Pencil class="size-3.5" />
                             <span>Edit</span>
+                        </DropdownMenu.Item>
+                        <DropdownMenu.Item onclick={() => handleDuplicate(tpl)}>
+                            <Copy class="size-3.5" />
+                            <span>Duplicate</span>
                         </DropdownMenu.Item>
                         {#if !tpl.endedAt}
                             <DropdownMenu.Item onclick={() => handleReplace(tpl)}>

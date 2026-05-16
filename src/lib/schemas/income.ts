@@ -135,6 +135,16 @@ export const deleteIncomeTemplateSchema = v.object({
 });
 export type DeleteIncomeTemplateRequest = v.InferOutput<typeof deleteIncomeTemplateSchema>;
 
+// Duplicate: clones a template under the same source. Fresh usage counters,
+// no lineage carried over (a copy is an independent thing, not a continuation).
+export const duplicateIncomeTemplateSchema = v.object({
+    id: v.string(),
+    vaultId: v.string(),
+    // Optional new name; defaults to "${source.name} (copy)" server-side.
+    name: v.optional(v.pipe(v.string(), v.minLength(1))),
+});
+export type DuplicateIncomeTemplateRequest = v.InferOutput<typeof duplicateIncomeTemplateSchema>;
+
 // Replace: marks a template as ended (sets endedAt). Terminal — hides it from
 // pickers but keeps the row for history and lineage queries. Use when a salary
 // stream ends (job change). The follow-up new template carries previousTemplateId.

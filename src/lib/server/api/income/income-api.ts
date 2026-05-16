@@ -11,6 +11,7 @@ import {
     createIncomeTemplateSchema,
     updateIncomeTemplateSchema,
     deleteIncomeTemplateSchema,
+    duplicateIncomeTemplateSchema,
     replaceIncomeTemplateSchema,
     linkIncomeTemplateSchema,
     getIncomeTemplatesQuerySchema,
@@ -30,6 +31,7 @@ import { getIncomeSource } from './getIncomeSourceHandler';
 import { createIncomeTemplate } from './createIncomeTemplateHandler';
 import { updateIncomeTemplate } from './updateIncomeTemplateHandler';
 import { deleteIncomeTemplate } from './deleteIncomeTemplateHandler';
+import { duplicateIncomeTemplate } from './duplicateIncomeTemplateHandler';
 import { replaceIncomeTemplate } from './replaceIncomeTemplateHandler';
 import { linkIncomeTemplate } from './linkIncomeTemplateHandler';
 import { getIncomeTemplates } from './getIncomeTemplatesHandler';
@@ -223,6 +225,22 @@ export const incomeApi = new Hono<App.Api>()
                 return c.json({ success: true, data });
             } catch (error) {
                 const { message, status } = errorHandler('deleting income template')(error);
+                return c.json({ success: false, error: message }, status as 400);
+            }
+        },
+    )
+    .post(
+        '/duplicateIncomeTemplate',
+        describeRoute({ ...common, description: 'Clone a template (same source + defaults, fresh usage counters, no lineage)' }),
+        vValidator('json', duplicateIncomeTemplateSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const body = c.req.valid('json');
+            try {
+                const data = await duplicateIncomeTemplate(session, body, c.env);
+                return c.json({ success: true, data }, 201);
+            } catch (error) {
+                const { message, status } = errorHandler('duplicating income template')(error);
                 return c.json({ success: false, error: message }, status as 400);
             }
         },
