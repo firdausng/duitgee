@@ -328,6 +328,62 @@ export const incomeEntries = sqliteTable('income_entries', {
     recurringIdx: index('idx_income_entries_recurring').on(table.recurringIncomeId),
 }));
 
+// RecurringIncome - rules that generate income entries on a schedule.
+// Structurally mirrors recurringExpenses but simpler: no endAfterCount
+// (income is open-ended per the plan), no settle, no lineage. The engine
+// reads template.defaultAllowances / defaultDeductions to materialize a
+// breakdown on each generated entry.
+export const recurringIncome = sqliteTable('recurring_income', {
+    id: text('id').primaryKey().$defaultFn(() => createId()),
+    vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
+    templateId: text('template_id').notNull().references(() => incomeTemplates.id, { onDelete: 'cascade' }),
+    name: text('name'), // Display label; falls back to template.name
+    amountOverride: real('amount_override'), // null = use template.defaultAmount (the base salary)
+    // Schedule
+    scheduleUnit: text('schedule_unit').notNull(), // 'day' | 'week' | 'month' | 'year'
+    scheduleInterval: integer('schedule_interval').notNull().default(1),
+    anchorDate: text('anchor_date').notNull(),
+    // Mode + lifecycle
+    generationMode: text('generation_mode').notNull(), // 'auto' | 'queue'
+    status: text('status').notNull().default('active'), // 'active' | 'paused' | 'ended'
+    endDate: text('end_date'), // Optional, inclusive — for fixed-term contracts
+    // Tracking
+    nextOccurrenceAt: text('next_occurrence_at'),
+    lastGeneratedAt: text('last_generated_at'),
+    occurrenceCount: integer('occurrence_count').notNull().default(0),
+    // Audit fields
+    createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
+    createdBy: text('created_by').notNull(),
+    updatedAt: text('updated_at').$defaultFn(() => formatISO(new UTCDate())),
+    updatedBy: text('updated_by'),
+    deletedAt: text('deleted_at'),
+    deletedBy: text('deleted_by'),
+}, (table) => ({
+    vaultIdIdx: index('idx_recurring_income_vault').on(table.vaultId),
+    templateIdIdx: index('idx_recurring_income_template').on(table.templateId),
+    scanIdx: index('idx_recurring_income_scan').on(table.status, table.nextOccurrenceAt),
+}));
+
+// pendingRecurringIncomeOccurrences — queue mode inbox.
+export const pendingRecurringIncomeOccurrences = sqliteTable('pending_recurring_income_occurrences', {
+    id: text('id').primaryKey().$defaultFn(() => createId()),
+    vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
+    recurringIncomeId: text('recurring_income_id').notNull().references(() => recurringIncome.id, { onDelete: 'cascade' }),
+    dueDate: text('due_date').notNull(),
+    suggestedAmount: real('suggested_amount').notNull(),
+    status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'skipped'
+    approvedEntryId: text('approved_entry_id'), // Soft ref to incomeEntries.id when approved
+    // Audit fields
+    createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
+    createdBy: text('created_by').notNull(),
+    updatedAt: text('updated_at').$defaultFn(() => formatISO(new UTCDate())),
+    updatedBy: text('updated_by'),
+}, (table) => ({
+    vaultIdIdx: index('idx_pending_income_vault').on(table.vaultId),
+    recurringIdx: index('idx_pending_income_rule').on(table.recurringIncomeId),
+    statusIdx: index('idx_pending_income_status').on(table.vaultId, table.status),
+}));
+
 export const invitation = sqliteTable("invitation", {
     id: text("id").primaryKey(),
     vaultId: text("vault_id")

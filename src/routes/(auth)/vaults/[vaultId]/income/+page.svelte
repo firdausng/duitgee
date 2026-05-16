@@ -21,6 +21,7 @@
     import TrendingUp from '@lucide/svelte/icons/trending-up';
     import Tags from '@lucide/svelte/icons/tags';
     import FileText from '@lucide/svelte/icons/file-text';
+    import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 
     const vaultId = $derived(page.params.vaultId);
 
@@ -139,6 +140,10 @@
             <Button variant="ghost" size="sm" onclick={() => goto(`/vaults/${vaultId}/income/templates`)} title="Manage templates">
                 <FileText class="size-4" />
                 <span class="hidden sm:inline">Templates</span>
+            </Button>
+            <Button variant="ghost" size="sm" onclick={() => goto(`/vaults/${vaultId}/income/recurring`)} title="Recurring income rules">
+                <RotateCcw class="size-4" />
+                <span class="hidden sm:inline">Recurring</span>
             </Button>
             <Button size="sm" onclick={() => goto(`/vaults/${vaultId}/income/new`)}>
                 <Plus class="size-4" />

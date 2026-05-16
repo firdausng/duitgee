@@ -7,6 +7,7 @@ export type Entitlement =
     | 'recurring:create'
     | 'recurring:custom_interval'
     | 'recurring:auto_generation'
+    | 'income:auto_generation'
     | 'attachment:scan'
     | 'expense:export'
     | 'expense:import'
@@ -67,6 +68,7 @@ export const PLANS: Plan[] = [
             'recurring:create',
             'recurring:custom_interval',
             'recurring:auto_generation',
+            'income:auto_generation',
             'attachment:scan',
             'expense:export',
             'expense:import',
@@ -137,6 +139,10 @@ export const ENTITLEMENT_LABELS: Record<Entitlement, { name: string; description
     'recurring:auto_generation': {
         name: 'Auto-generate recurring expenses',
         description: 'Skip manual entry — recurring items appear on schedule.',
+    },
+    'income:auto_generation': {
+        name: 'Auto-generate recurring income',
+        description: 'Salary and other recurring income land on schedule without manual entry. Free tier uses approval queue.',
     },
     'attachment:scan': {
         name: 'Scan receipts with AI',
