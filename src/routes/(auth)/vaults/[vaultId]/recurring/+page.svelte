@@ -34,6 +34,7 @@
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
     import { DateTimePicker } from '$lib/components/ui/date-time-picker';
+    import { CheckboxRow } from '$lib/components/ui/checkbox-row';
     import { formatDatetimeLocal, localDatetimeToUtcIso } from '$lib/utils';
     import Play from '@lucide/svelte/icons/play';
     import Pause from '@lucide/svelte/icons/pause';
@@ -42,6 +43,9 @@
     import RefreshCw from '@lucide/svelte/icons/refresh-cw';
     import Check from '@lucide/svelte/icons/check';
     import X from '@lucide/svelte/icons/x';
+    import XCircle from '@lucide/svelte/icons/x-circle';
+    import Link2 from '@lucide/svelte/icons/link-2';
+    import Repeat from '@lucide/svelte/icons/repeat';
     import Search from '@lucide/svelte/icons/search';
     import Sparkles from '@lucide/svelte/icons/sparkles';
     import { hasEntitlement, getPlanLimit } from '$lib/configurations/plans';
@@ -52,6 +56,8 @@
     // Shallow-routed dialogs — back button closes them.
     const settleDialog = shallowModal('settle');
     const deleteDialog = shallowModal('recurringDelete');
+    const cancelDialog = shallowModal('recurringCancel');
+    const linkDialog = shallowModal('recurringLink');
 
     const vaultId = $derived(page.params.vaultId);
 
@@ -70,6 +76,9 @@
         endAfterCount: number | null;
         nextOccurrenceAt: string | null;
         occurrenceCount: number;
+        previousRuleId: string | null;
+        updatedAt: string | null;
+        lastGeneratedAt: string | null;
         template: {
             name: string | null;
             icon: string | null;
@@ -377,6 +386,118 @@
         } catch (error: any) {
             toast.error(error?.data?.error || error?.message || 'Failed to skip');
         }
+    }
+
+    // ── Cancel rule (terminal, no final expense) ─────────────────────────
+    let cancelling = $state(false);
+    const cancelTarget = $derived(
+        cancelDialog.value ? allRules.find((r) => r.id === cancelDialog.value!.ruleId) ?? null : null,
+    );
+
+    function askCancel(rule: Rule) {
+        cancelDialog.push({ ruleId: rule.id });
+    }
+
+    function dismissCancel() {
+        if (cancelling) return;
+        cancelDialog.close();
+    }
+
+    async function confirmCancel() {
+        if (!cancelTarget) return;
+        cancelling = true;
+        try {
+            await ofetch('/api/cancelRecurringExpense', {
+                method: 'POST',
+                body: { vaultId, id: cancelTarget.id },
+                headers: { 'Content-Type': 'application/json' },
+            });
+            toast.success(
+                cancelTarget.endAfterCount === null
+                    ? 'Subscription cancelled'
+                    : 'Installment cancelled',
+            );
+            cancelDialog.close();
+            refetchKey++;
+        } catch (error: any) {
+            toast.error(error?.data?.error || error?.message || 'Failed to cancel');
+        } finally {
+            cancelling = false;
+        }
+    }
+
+    // ── Link to previous rule (lineage picker) ──────────────────────────
+    let linking = $state(false);
+    let linkSelection = $state<string | null>(null);
+    let linkShowAll = $state(false);
+    const linkTarget = $derived(
+        linkDialog.value ? allRules.find((r) => r.id === linkDialog.value!.ruleId) ?? null : null,
+    );
+    const linkCandidates = $derived.by(() => {
+        if (!linkTarget) return [];
+        const same = allRules
+            .filter((r) => r.id !== linkTarget.id)
+            // exclude descendants to keep the picker cycle-free at the UI layer too
+            .filter((r) => !isAncestorOf(linkTarget, r, allRules));
+        const list = linkShowAll
+            ? same.filter((r) => r.status === 'ended' || r.id === linkTarget.previousRuleId)
+            : same.filter(
+                  (r) =>
+                      r.templateId === linkTarget.templateId &&
+                      (r.status === 'ended' || r.id === linkTarget.previousRuleId),
+              );
+        return list.sort((a, b) =>
+            (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''),
+        );
+    });
+
+    function isAncestorOf(potentialAncestor: Rule, candidate: Rule, all: Rule[]): boolean {
+        // Walk up candidate's chain — if we hit potentialAncestor.id, candidate is a descendant.
+        let cursor: string | null = candidate.previousRuleId;
+        let hops = 0;
+        while (cursor && hops < 32) {
+            if (cursor === potentialAncestor.id) return true;
+            const parent = all.find((r) => r.id === cursor);
+            cursor = parent?.previousRuleId ?? null;
+            hops++;
+        }
+        return false;
+    }
+
+    function askLink(rule: Rule) {
+        linkSelection = rule.previousRuleId;
+        linkShowAll = false;
+        linkDialog.push({ ruleId: rule.id });
+    }
+
+    function dismissLink() {
+        if (linking) return;
+        linkDialog.close();
+    }
+
+    async function confirmLink() {
+        if (!linkTarget) return;
+        linking = true;
+        try {
+            await ofetch('/api/linkRecurringExpense', {
+                method: 'POST',
+                body: { vaultId, id: linkTarget.id, previousRuleId: linkSelection },
+                headers: { 'Content-Type': 'application/json' },
+            });
+            toast.success(linkSelection ? 'Linked to previous rule' : 'Lineage link cleared');
+            linkDialog.close();
+            refetchKey++;
+        } catch (error: any) {
+            toast.error(error?.data?.error || error?.message || 'Failed to update link');
+        } finally {
+            linking = false;
+        }
+    }
+
+    // ── Lineage display helpers ─────────────────────────────────────────
+    function previousRule(rule: Rule): Rule | null {
+        if (!rule.previousRuleId) return null;
+        return allRules.find((r) => r.id === rule.previousRuleId) ?? null;
     }
 
     let deleting = $state(false);
@@ -952,7 +1073,7 @@
     </div>
 {/snippet}
 
-{#snippet kebabCell(rule: Rule)}
+{#snippet ruleActions(rule: Rule)}
     <DropdownMenu.Root>
         <DropdownMenu.Trigger
             class="p-1 rounded-[var(--radius-sm)] hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center"
@@ -986,7 +1107,26 @@
                     <span>Settle in full…</span>
                 </DropdownMenu.Item>
             {/if}
+            {#if rule.status !== 'ended'}
+                <DropdownMenu.Item onclick={() => askCancel(rule)}>
+                    <XCircle class="size-3.5" />
+                    <span>{rule.endAfterCount === null ? 'Cancel subscription…' : 'Cancel installment…'}</span>
+                </DropdownMenu.Item>
+            {/if}
+            {#if rule.status === 'ended'}
+                <DropdownMenu.Item
+                    disabled={atRecurringLimit}
+                    onclick={() => goto(`/vaults/${vaultId}/recurring/new?continueFrom=${rule.id}`)}
+                >
+                    <Repeat class="size-3.5" />
+                    <span>Subscribe again{atRecurringLimit ? ' (Pro)' : ''}</span>
+                </DropdownMenu.Item>
+            {/if}
             <DropdownMenu.Separator />
+            <DropdownMenu.Item onclick={() => askLink(rule)}>
+                <Link2 class="size-3.5" />
+                <span>{rule.previousRuleId ? 'Change linked previous rule…' : 'Link to previous rule…'}</span>
+            </DropdownMenu.Item>
             <DropdownMenu.Item destructive onclick={() => handleDeleteRule(rule)}>
                 <Trash2 class="size-3.5" />
                 <span>Delete rule…</span>
@@ -1103,7 +1243,7 @@
                                 <span class="text-muted-foreground">—</span>
                             {/if}
                         </td>
-                        <td class="px-2 py-2 w-10">{@render kebabCell(rule)}</td>
+                        <td class="px-2 py-2 w-10">{@render ruleActions(rule)}</td>
                     </tr>
                 {/each}
             </tbody>
@@ -1174,7 +1314,7 @@
                                 <span class="text-muted-foreground">—</span>
                             {/if}
                         </td>
-                        <td class="px-2 py-2 w-10">{@render kebabCell(rule)}</td>
+                        <td class="px-2 py-2 w-10">{@render ruleActions(rule)}</td>
                     </tr>
                 {/each}
             </tbody>
@@ -1221,6 +1361,15 @@
                     {fmt.currency(ruleAmount(rule))}
                 </span>
             </p>
+            {#if rule.previousRuleId}
+                {@const prev = previousRule(rule)}
+                {#if prev}
+                    <p class="text-[11px] text-muted-foreground mt-0.5 inline-flex items-center gap-1">
+                        <Link2 class="size-3" aria-hidden="true" />
+                        <span>Continuation of <span class="font-medium text-foreground/80">{displayName(prev)}</span></span>
+                    </p>
+                {/if}
+            {/if}
             {#if isInstallment}
                 {@const paid = rule.progress.paidCount}
                 {@const total = rule.endAfterCount ?? 0}
@@ -1304,46 +1453,7 @@
                     <Play class="size-3.5" />
                 </button>
             {/if}
-            <DropdownMenu.Root>
-                <DropdownMenu.Trigger
-                    class="p-1.5 rounded-[var(--radius-sm)] hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center"
-                    aria-label="More actions"
-                    title="More"
-                >
-                    <MoreVertical class="size-3.5" />
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Content align="end" class="min-w-[13rem]">
-                    <DropdownMenu.Item
-                        disabled={atRecurringLimit}
-                        onclick={() => goto(`/vaults/${vaultId}/recurring/new?duplicateFrom=${rule.id}`)}
-                    >
-                        <Copy class="size-3.5" />
-                        <span>Duplicate{atRecurringLimit ? ' (Pro)' : ''}</span>
-                    </DropdownMenu.Item>
-                    {#if rule.status === 'active'}
-                        <DropdownMenu.Separator />
-                        <DropdownMenu.Item onclick={() => askSkipNext(rule)}>
-                            <SkipForward class="size-3.5" />
-                            <span>Skip next occurrence</span>
-                        </DropdownMenu.Item>
-                        <DropdownMenu.Item onclick={() => askPauseRule(rule)}>
-                            <Pause class="size-3.5" />
-                            <span>Pause rule</span>
-                        </DropdownMenu.Item>
-                    {/if}
-                    {#if rule.endAfterCount !== null && rule.status !== 'ended'}
-                        <DropdownMenu.Item onclick={() => askSettle(rule)}>
-                            <CircleCheck class="size-3.5" />
-                            <span>Settle in full…</span>
-                        </DropdownMenu.Item>
-                    {/if}
-                    <DropdownMenu.Separator />
-                    <DropdownMenu.Item destructive onclick={() => handleDeleteRule(rule)}>
-                        <Trash2 class="size-3.5" />
-                        <span>Delete rule…</span>
-                    </DropdownMenu.Item>
-                </DropdownMenu.Content>
-            </DropdownMenu.Root>
+            {@render ruleActions(rule)}
         </div>
     </div>
 {/snippet}
@@ -1475,6 +1585,136 @@
                 </Button>
                 <Button size="sm" onclick={confirmSettle} disabled={settling}>
                     Settle
+                </Button>
+            </div>
+        </div>
+    </div>
+{/if}
+
+{#if cancelTarget}
+    {@const rule = cancelTarget}
+    {@const isInstallment = rule.endAfterCount !== null}
+    {@const paidCount = rule.progress.paidCount}
+    {@const pendingCount = rule.progress.pendingCount}
+    <div
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+    >
+        <button
+            type="button"
+            class="fixed inset-0 bg-black/50"
+            onclick={dismissCancel}
+            aria-label="Close"
+        ></button>
+        <div class="relative z-10 w-full max-w-md rounded-[var(--radius-md)] border bg-card shadow-lg">
+            <div class="p-5 space-y-3">
+                <h3 class="text-base font-semibold">
+                    {isInstallment ? 'Cancel installment' : 'Cancel subscription'} "{displayName(rule)}"?
+                </h3>
+                <p class="text-sm text-muted-foreground">
+                    {#if isInstallment}
+                        Stop this installment without recording a final payment. The rule moves to <span class="font-medium text-foreground">Ended</span> and cannot be resumed.
+                    {:else}
+                        Stop this recurring rule. No more expenses will be generated. Existing history is kept.
+                    {/if}
+                </p>
+                <div class="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
+                    <p>This will:</p>
+                    <ul class="list-disc pl-5 space-y-0.5">
+                        <li>End the rule (no more firings)</li>
+                        <li><span class="font-medium text-foreground">No</span> final expense will be created</li>
+                        {#if paidCount > 0}
+                            <li>Keep all {paidCount} generated expense{paidCount === 1 ? '' : 's'} as history</li>
+                        {/if}
+                        {#if pendingCount > 0}
+                            <li>Sweep {pendingCount} pending approval{pendingCount === 1 ? '' : 's'} for this rule</li>
+                        {/if}
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t p-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button variant="outline" size="sm" onclick={dismissCancel} disabled={cancelling}>
+                    Keep active
+                </Button>
+                <Button variant="destructive" size="sm" onclick={confirmCancel} disabled={cancelling}>
+                    Yes, cancel
+                </Button>
+            </div>
+        </div>
+    </div>
+{/if}
+
+{#if linkTarget}
+    {@const rule = linkTarget}
+    <div
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+    >
+        <button
+            type="button"
+            class="fixed inset-0 bg-black/50"
+            onclick={dismissLink}
+            aria-label="Close"
+        ></button>
+        <div class="relative z-10 w-full max-w-md rounded-[var(--radius-md)] border bg-card shadow-lg">
+            <div class="p-5 space-y-3">
+                <h3 class="text-base font-semibold">
+                    Link "{displayName(rule)}" to a previous rule
+                </h3>
+                <p class="text-xs text-muted-foreground">
+                    Use this when this rule is the continuation of an older one — they'll be shown as the same lineage.
+                </p>
+                <div class="flex items-center gap-2 text-xs">
+                    <CheckboxRow id="link-show-all" bind:checked={linkShowAll}>
+                        {#snippet label()}
+                            Show all ended rules (not only same service)
+                        {/snippet}
+                    </CheckboxRow>
+                </div>
+                <div class="max-h-64 overflow-y-auto rounded-md border divide-y">
+                    <button
+                        type="button"
+                        onclick={() => (linkSelection = null)}
+                        class="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-muted/40 {linkSelection === null ? 'bg-muted/40' : ''}"
+                    >
+                        <span class="size-4 rounded-full border {linkSelection === null ? 'bg-primary border-primary' : 'border-muted-foreground/40'}"></span>
+                        <span class="font-medium">None — not a continuation</span>
+                    </button>
+                    {#each linkCandidates as candidate (candidate.id)}
+                        <button
+                            type="button"
+                            onclick={() => (linkSelection = candidate.id)}
+                            class="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-muted/40 {linkSelection === candidate.id ? 'bg-muted/40' : ''}"
+                        >
+                            <span class="size-4 rounded-full border {linkSelection === candidate.id ? 'bg-primary border-primary' : 'border-muted-foreground/40'}"></span>
+                            <span class="text-base shrink-0" aria-hidden="true">{candidate.template.icon ?? '🔁'}</span>
+                            <span class="flex-1 min-w-0">
+                                <span class="font-medium block truncate">{displayName(candidate)}</span>
+                                <span class="text-[11px] text-muted-foreground">
+                                    {candidate.status}
+                                    {#if candidate.updatedAt}
+                                        · {fmt.date(candidate.updatedAt)}
+                                    {/if}
+                                </span>
+                            </span>
+                        </button>
+                    {:else}
+                        <div class="px-3 py-4 text-xs text-muted-foreground text-center">
+                            {linkShowAll
+                                ? 'No ended rules in this vault yet.'
+                                : 'No ended rules using the same service. Toggle "Show all" to widen the search.'}
+                        </div>
+                    {/each}
+                </div>
+            </div>
+            <div class="border-t p-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button variant="outline" size="sm" onclick={dismissLink} disabled={linking}>
+                    Cancel
+                </Button>
+                <Button size="sm" onclick={confirmLink} disabled={linking}>
+                    Save
                 </Button>
             </div>
         </div>

@@ -213,6 +213,15 @@
         </div>
     {/if}
 
+    {#if data.continuingFrom}
+        <div class="mb-4 rounded-[var(--radius-md)] border border-dashed bg-primary/5 border-primary/30 p-3 flex items-start gap-2">
+            <span class="text-xl leading-none shrink-0" aria-hidden="true">{data.continuingFrom.icon}</span>
+            <p class="text-sm">
+                Continuing <span class="font-medium">{data.continuingFrom.name}</span> — this new rule will be linked to the previous one as part of the same lineage. The old rule stays as history.
+            </p>
+        </div>
+    {/if}
+
     <Card>
         <CardHeader>
             <CardTitle>Rule Details</CardTitle>

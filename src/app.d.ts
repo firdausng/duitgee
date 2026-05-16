@@ -76,6 +76,8 @@ declare global {
             archiveFund?: true;
             settle?: { ruleId: string };
             recurringDelete?: { ruleId: string };
+            recurringCancel?: { ruleId: string };
+            recurringLink?: { ruleId: string };
             quickLog?: true;
             duplicatePrompt?: true;
         }

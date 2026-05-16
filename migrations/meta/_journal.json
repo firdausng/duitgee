@@ -169,6 +169,13 @@
       "when": 1777716643766,
       "tag": "0023_skinny_violations",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1778886028364,
+      "tag": "0024_gifted_rafael_vega",
+      "breakpoints": true
     }
   ]
 }

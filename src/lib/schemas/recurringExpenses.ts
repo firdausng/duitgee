@@ -27,6 +27,7 @@ export const recurringExpenseSchema = v.object({
     nextOccurrenceAt: v.nullable(v.string()),
     lastGeneratedAt: v.nullable(v.string()),
     occurrenceCount: v.number(),
+    previousRuleId: v.nullable(v.string()),
     createdAt: v.nullable(v.string()),
     createdBy: v.string(),
     updatedAt: v.nullable(v.string()),
@@ -58,6 +59,8 @@ export const createRecurringExpenseSchema = v.object({
         v.integer(),
         v.minValue(1, 'End after count must be at least 1'),
     ))),
+    // Lineage — set when this rule continues a prior one (resubscription or fork).
+    previousRuleId: v.optional(v.nullable(v.string())),
 });
 
 export type CreateRecurringExpenseRequest = v.InferOutput<typeof createRecurringExpenseSchema>;
@@ -103,6 +106,8 @@ export const createRecurringExpenseWithTemplateSchema = v.object({
     // Back-fill past occurrences (from anchor to now) as pending queue items.
     // Only takes effect when generationMode = 'queue'. Capped server-side at 12.
     backfill: v.optional(v.boolean(), false),
+    // Lineage — set when this rule continues a prior one (resubscription or fork).
+    previousRuleId: v.optional(v.nullable(v.string())),
 });
 
 export type CreateRecurringExpenseWithTemplateRequest = v.InferOutput<typeof createRecurringExpenseWithTemplateSchema>;
@@ -173,6 +178,8 @@ export const updateRecurringExpenseSchema = v.object({
         v.integer(),
         v.minValue(1),
     ))),
+    // previousRuleId is intentionally NOT in the update schema — use the
+    // dedicated linkRecurringExpense endpoint, which runs cycle prevention.
 });
 
 export type UpdateRecurringExpenseRequest = v.InferOutput<typeof updateRecurringExpenseSchema>;
@@ -210,6 +217,25 @@ export const settleRecurringExpenseSchema = v.object({
     note: v.optional(v.nullable(v.string())),
 });
 export type SettleRecurringExpenseRequest = v.InferOutput<typeof settleRecurringExpenseSchema>;
+
+// Cancel: terminal action that ends the rule without booking a final expense.
+// Works for both installments (abandoned BNPL) and subscriptions (Netflix-style cancel).
+export const cancelRecurringExpenseSchema = v.object({
+    id: v.string(),
+    vaultId: v.string(),
+    // Optional free-text reason; surfaces on the ended-rule detail badge.
+    reason: v.optional(v.nullable(v.string())),
+});
+export type CancelRecurringExpenseRequest = v.InferOutput<typeof cancelRecurringExpenseSchema>;
+
+// Link: sets/clears previousRuleId on an existing rule. Used by the manual
+// "Link to previous rule" picker on the rule detail page.
+export const linkRecurringExpenseSchema = v.object({
+    id: v.string(),
+    vaultId: v.string(),
+    previousRuleId: v.nullable(v.string()),
+});
+export type LinkRecurringExpenseRequest = v.InferOutput<typeof linkRecurringExpenseSchema>;
 
 export const approvePendingOccurrenceSchema = v.object({
     vaultId: v.string(),

@@ -63,6 +63,22 @@ export const createRecurringExpenseWithTemplate = async (
         }
     }
 
+    // Validate optional lineage pointer — target must exist in same vault.
+    if (data.previousRuleId) {
+        const [target] = await client
+            .select({ id: recurringExpenses.id })
+            .from(recurringExpenses)
+            .where(
+                and(
+                    eq(recurringExpenses.id, data.previousRuleId),
+                    eq(recurringExpenses.vaultId, data.vaultId),
+                    isNull(recurringExpenses.deletedAt),
+                ),
+            )
+            .limit(1);
+        if (!target) throw new Error('Previous rule not found in this vault');
+    }
+
     const templateId = createId();
     const ruleId = createId();
 
@@ -121,6 +137,7 @@ export const createRecurringExpenseWithTemplate = async (
             endAfterCount: data.endAfterCount ?? null,
             nextOccurrenceAt: initialNextOccurrenceIso,
             occurrenceCount: 0,
+            previousRuleId: data.previousRuleId ?? null,
             ...audit,
         }),
     ] as any);

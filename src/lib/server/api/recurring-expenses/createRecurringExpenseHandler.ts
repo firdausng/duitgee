@@ -70,6 +70,22 @@ export const createRecurringExpense = async (
         }
     }
 
+    // Validate optional lineage pointer — target must exist in same vault.
+    if (data.previousRuleId) {
+        const [target] = await client
+            .select({ id: recurringExpenses.id })
+            .from(recurringExpenses)
+            .where(
+                and(
+                    eq(recurringExpenses.id, data.previousRuleId),
+                    eq(recurringExpenses.vaultId, data.vaultId),
+                    isNull(recurringExpenses.deletedAt),
+                ),
+            )
+            .limit(1);
+        if (!target) throw new Error('Previous rule not found in this vault');
+    }
+
     // The initial nextOccurrenceAt is the anchor itself (first occurrence).
     // If the anchor is already in the past, processDueRecurringExpenses will
     // immediately catch it up on the next run.
@@ -103,6 +119,7 @@ export const createRecurringExpense = async (
             endAfterCount: data.endAfterCount ?? null,
             nextOccurrenceAt: formatISO(new UTCDate(nextOccurrence)),
             occurrenceCount: 0,
+            previousRuleId: data.previousRuleId ?? null,
             ...initialAuditFields({ userId }),
         })
         .returning();

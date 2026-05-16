@@ -11,6 +11,7 @@ import { getFunds } from '$lib/server/api/funds/getFundsHandler';
 type SourceRule = {
     id: string;
     name: string | null;
+    status: 'active' | 'paused' | 'ended';
     scheduleUnit: 'day' | 'week' | 'month' | 'year';
     scheduleInterval: number;
     generationMode: 'auto' | 'queue';
@@ -33,14 +34,20 @@ export const load: PageServerLoad = async ({ params, url, locals, platform }) =>
     if (!locals.currentUser) throw error(401, 'Unauthorized');
 
     const vaultId = params.vaultId;
+    // Two prefill modes:
+    //   ?duplicateFrom=<id>  — clone style: name gets "(copy)", no lineage link
+    //   ?continueFrom=<id>   — resubscribe style: name stays, previousRuleId set on submit
     const duplicateFromId = url.searchParams.get('duplicateFrom');
+    const continueFromId = url.searchParams.get('continueFrom');
+    const sourceId = continueFromId ?? duplicateFromId;
+    const isContinuation = !!continueFromId;
     const session = locals.currentSession;
     const env = platform.env;
 
     // All independent reads in parallel via direct handler calls.
     const [sourceResult, vaultResult, fundRows] = await Promise.all([
-        duplicateFromId
-            ? getRecurringExpense(session, { vaultId, id: duplicateFromId }, env).catch(() => null)
+        sourceId
+            ? getRecurringExpense(session, { vaultId, id: sourceId }, env).catch(() => null)
             : Promise.resolve(null),
         getVault(session, vaultId, env).catch((err) => {
             console.error('Failed to load vault:', err);
@@ -55,10 +62,19 @@ export const load: PageServerLoad = async ({ params, url, locals, platform }) =>
     const source = sourceResult as SourceRule | null;
 
     const baseName = source?.name ?? source?.template.name ?? '';
+    // Continuation keeps the name as-is (it's the same service); duplicate appends "(copy)".
+    const initialName = source
+        ? isContinuation
+            ? baseName
+            : baseName
+              ? `${baseName} (copy)`
+              : ''
+        : '';
+
     const defaults = source
         ? {
               vaultId,
-              name: baseName ? `${baseName} (copy)` : '',
+              name: initialName,
               icon: source.template.icon ?? '🔁',
               defaultAmount: source.template.defaultAmount ?? 0,
               defaultCategoryName: source.template.defaultCategoryName ?? '',
@@ -73,11 +89,13 @@ export const load: PageServerLoad = async ({ params, url, locals, platform }) =>
                   | undefined,
               scheduleUnit: source.scheduleUnit,
               scheduleInterval: source.scheduleInterval,
-              // Anchor always resets to "now" — a duplicate starts fresh unless user edits.
+              // Anchor always resets to "now" — a duplicate / resubscription starts fresh.
               anchorDate: formatDatetimeLocal(new Date()),
               generationMode: source.generationMode,
-              endAfterCount: source.endAfterCount,
+              // For continuations, leave end conditions blank — user re-decides.
+              endAfterCount: isContinuation ? null : source.endAfterCount,
               backfill: false,
+              previousRuleId: isContinuation ? source.id : null,
           }
         : {
               vaultId,
@@ -114,9 +132,12 @@ export const load: PageServerLoad = async ({ params, url, locals, platform }) =>
         .filter((f) => f.status === 'active')
         .map(({ status, ...rest }) => rest);
 
-    const duplicatingFrom = source
+    const duplicatingFrom = source && !isContinuation
+        ? { name: baseName || 'rule', icon: source.template.icon ?? '🔁' }
+        : null;
+    const continuingFrom = source && isContinuation
         ? { name: baseName || 'rule', icon: source.template.icon ?? '🔁' }
         : null;
 
-    return { form, vaultId, members, funds, duplicatingFrom };
+    return { form, vaultId, members, funds, duplicatingFrom, continuingFrom };
 };

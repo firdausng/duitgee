@@ -12,6 +12,8 @@ import {
     resumeRecurringExpenseSchema,
     skipNextOccurrenceSchema,
     settleRecurringExpenseSchema,
+    cancelRecurringExpenseSchema,
+    linkRecurringExpenseSchema,
     approvePendingOccurrenceSchema,
     skipPendingOccurrenceSchema,
     getRecurringExpensesQuerySchema,
@@ -29,6 +31,8 @@ import { pauseRecurringExpense } from './pauseRecurringExpenseHandler';
 import { resumeRecurringExpense } from './resumeRecurringExpenseHandler';
 import { skipNextOccurrence } from './skipNextOccurrenceHandler';
 import { settleRecurringExpense } from './settleRecurringExpenseHandler';
+import { cancelRecurringExpense } from './cancelRecurringExpenseHandler';
+import { linkRecurringExpense } from './linkRecurringExpenseHandler';
 import { approvePendingOccurrence } from './approvePendingOccurrenceHandler';
 import { skipPendingOccurrence } from './skipPendingOccurrenceHandler';
 import { getRecurringExpenses } from './getRecurringExpensesHandler';
@@ -280,6 +284,38 @@ export const recurringExpensesApi = new Hono<App.Api>()
                 return c.json({ success: true, data }, 201);
             } catch (error) {
                 const { message, status } = errorHandler('settling recurring rule')(error);
+                return c.json({ success: false, error: message }, status as 400);
+            }
+        },
+    )
+    .post(
+        '/cancelRecurringExpense',
+        describeRoute({ ...common, description: 'End a recurring rule without booking a final expense (Netflix-style cancel)' }),
+        vValidator('json', cancelRecurringExpenseSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const body = c.req.valid('json');
+            try {
+                const data = await cancelRecurringExpense(session, body, c.env);
+                return c.json({ success: true, data });
+            } catch (error) {
+                const { message, status } = errorHandler('cancelling recurring rule')(error);
+                return c.json({ success: false, error: message }, status as 400);
+            }
+        },
+    )
+    .post(
+        '/linkRecurringExpense',
+        describeRoute({ ...common, description: 'Set or clear previousRuleId on a rule (lineage)' }),
+        vValidator('json', linkRecurringExpenseSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const body = c.req.valid('json');
+            try {
+                const data = await linkRecurringExpense(session, body, c.env);
+                return c.json({ success: true, data });
+            } catch (error) {
+                const { message, status } = errorHandler('linking recurring rule')(error);
                 return c.json({ success: false, error: message }, status as 400);
             }
         },

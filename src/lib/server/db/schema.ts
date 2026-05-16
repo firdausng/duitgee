@@ -164,6 +164,10 @@ export const recurringExpenses = sqliteTable('recurring_expenses', {
     nextOccurrenceAt: text('next_occurrence_at'), // Cache for scan efficiency; null when status != 'active'
     lastGeneratedAt: text('last_generated_at'),
     occurrenceCount: integer('occurrence_count').notNull().default(0),
+    // Lineage — points at the predecessor rule when this is a resubscription or fork.
+    // Soft FK (no references()) so a hard-deleted parent doesn't break the child row;
+    // lineage walks tolerate dangling pointers.
+    previousRuleId: text('previous_rule_id'),
     // Audit fields
     createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
     createdBy: text('created_by').notNull(),
@@ -175,6 +179,7 @@ export const recurringExpenses = sqliteTable('recurring_expenses', {
     vaultIdIdx: index('idx_recurring_expenses_vault').on(table.vaultId),
     templateIdIdx: index('idx_recurring_expenses_template').on(table.templateId),
     scanIdx: index('idx_recurring_expenses_scan').on(table.status, table.nextOccurrenceAt),
+    previousIdx: index('idx_recurring_expenses_previous').on(table.previousRuleId),
 }));
 
 // PendingRecurringOccurrences - queue mode inbox for recurring rules that require approval
