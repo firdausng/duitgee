@@ -268,12 +268,21 @@
         writePills([]);
     }
 
+    const hideDeductions = $derived(params.hideDeductions === 'true');
+
+    function toggleHideDeductions() {
+        params.hideDeductions = hideDeductions ? '' : 'true';
+    }
+
     // Client-side search + pill filter (on top of server-side date filter)
     const visibleExpenses = $derived.by(() => {
         const afterPills = applyFilters(expenses, pills);
-        if (!searchQuery.trim()) return afterPills;
+        const afterDeductions = hideDeductions
+            ? afterPills.filter((e) => !e.incomeEntryId)
+            : afterPills;
+        if (!searchQuery.trim()) return afterDeductions;
         const q = searchQuery.toLowerCase();
-        return afterPills.filter((e) => {
+        return afterDeductions.filter((e) => {
             const note = (e.note ?? '').toLowerCase();
             const cat = e.category?.name?.toLowerCase() ?? '';
             const fund = (e.fundName ?? '').toLowerCase();
@@ -281,6 +290,10 @@
             return note.includes(q) || cat.includes(q) || fund.includes(q) || payer.includes(q);
         });
     });
+
+    // Count of deduction expenses in the current page — surfaced on the toggle
+    // so the user knows the chip will hide something.
+    const deductionCount = $derived(expenses.filter((e) => e.incomeEntryId).length);
 
     function handleDateRangeChange(next: {
         filter: DateFilter;
@@ -376,6 +389,16 @@
             <p class="dg-page-sub">
                 {visibleExpenses.length.toLocaleString()} {visibleExpenses.length === 1 ? 'entry' : 'entries'}
                 · <span class="font-mono not-italic">{fmt.currency(visibleTotal)}</span>
+                {#if deductionCount > 0}
+                    <button
+                        type="button"
+                        onclick={toggleHideDeductions}
+                        class="ml-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide transition-colors {hideDeductions ? 'border-primary bg-primary/10 text-primary hover:bg-primary/15' : 'border-input bg-background text-muted-foreground hover:bg-muted'}"
+                        title={hideDeductions ? 'Showing discretionary spending only — click to include salary deductions' : 'Click to hide salary deduction rows (auto-generated from income)'}
+                    >
+                        {hideDeductions ? '✓ Hiding deductions' : `Hide ${deductionCount} deduction${deductionCount === 1 ? '' : 's'}`}
+                    </button>
+                {/if}
             </p>
         </header>
         <div class="flex items-center gap-2">

@@ -5,6 +5,7 @@ import { getMemberBreakdown } from './getMemberBreakdownHandler';
 import { getPaymentTypeBreakdown } from './getPaymentTypeBreakdownHandler';
 import { getFundSpendTrend } from './getFundSpendTrendHandler';
 import { getTemplateBreakdown } from './getTemplateBreakdownHandler';
+import { getCashFlowSummary, type CashFlowSummary } from './getCashFlowSummaryHandler';
 import type {
     SpendTrendResponse,
     CategoryTrendResponse,
@@ -31,6 +32,11 @@ export interface StatisticsDashboardResponse {
     paymentTypeBreakdown: PaymentTypeBreakdownItem[];
     fundSpendTrend: FundSpendTrendResponse;
     templateBreakdown: TemplateBreakdownItem[];
+    /**
+     * Null when the requesting member doesn't have canViewIncome. The dashboard
+     * page renders the Cash flow card only when this is present.
+     */
+    cashFlow: CashFlowSummary | null;
 }
 
 /**
@@ -57,6 +63,10 @@ export const getStatisticsDashboard = async (
         paymentTypeBreakdown,
         fundSpendTrend,
         templateBreakdown,
+        // Cash flow is permission-gated. Catch the "no canViewIncome" rejection
+        // and fall back to null so the rest of the dashboard still renders for
+        // members without income visibility.
+        cashFlow,
     ] = await Promise.all([
         getSpendTrend(vaultId, session, env, {
             ...baseRange,
@@ -80,6 +90,7 @@ export const getStatisticsDashboard = async (
             granularity: query.granularity,
         }),
         getTemplateBreakdown(vaultId, session, env, baseRange),
+        getCashFlowSummary(vaultId, session, env, baseRange).catch(() => null),
     ]);
 
     return {
@@ -90,5 +101,6 @@ export const getStatisticsDashboard = async (
         paymentTypeBreakdown,
         fundSpendTrend,
         templateBreakdown,
+        cashFlow,
     };
 };

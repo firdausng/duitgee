@@ -30,6 +30,9 @@
         templateId: string | null;
         sourceId: string | null;
         amount: number;
+        baseAmount: number | null;
+        allowances: string | null;   // JSON-stringified array
+        deductions: string | null;   // JSON-stringified array
         date: string;
         paidTo: string | null;
         note: string | null;
@@ -37,6 +40,18 @@
         template: { name: string | null; icon: string | null } | null;
         source: { name: string | null; icon: string | null } | null;
     };
+
+    // Parse breakdown JSON and sum the computed amounts. Returns 0 when null/empty.
+    function sumBreakdown(raw: string | null): number {
+        if (!raw) return 0;
+        try {
+            const parsed = JSON.parse(raw) as Array<{ computedAmount?: number }>;
+            if (!Array.isArray(parsed)) return 0;
+            return Math.round(parsed.reduce((s, l) => s + (l.computedAmount ?? 0), 0) * 100) / 100;
+        } catch {
+            return 0;
+        }
+    }
 
     let refetchKey = $state(0);
 
@@ -220,6 +235,22 @@
                                     <span class="truncate">{entry.note}</span>
                                 {/if}
                             </p>
+                            {#if sumBreakdown(entry.allowances) > 0 || sumBreakdown(entry.deductions) > 0}
+                                {@const allowanceTotal = sumBreakdown(entry.allowances)}
+                                {@const deductionTotal = sumBreakdown(entry.deductions)}
+                                <p class="text-[11px] mt-0.5 flex gap-1 flex-wrap">
+                                    {#if allowanceTotal > 0}
+                                        <span class="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-950/40 px-1.5 py-0.5 text-emerald-700 dark:text-emerald-400 font-medium">
+                                            +<span class="font-mono">{fmt.currency(allowanceTotal)}</span> allowances
+                                        </span>
+                                    {/if}
+                                    {#if deductionTotal > 0}
+                                        <span class="inline-flex items-center rounded-full bg-rose-100 dark:bg-rose-950/40 px-1.5 py-0.5 text-rose-700 dark:text-rose-400 font-medium">
+                                            −<span class="font-mono">{fmt.currency(deductionTotal)}</span> deductions
+                                        </span>
+                                    {/if}
+                                </p>
+                            {/if}
                         </div>
                         <div class="shrink-0 text-right">
                             <Amount

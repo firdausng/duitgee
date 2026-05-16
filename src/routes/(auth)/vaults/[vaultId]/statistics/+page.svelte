@@ -118,6 +118,17 @@
 
     type Resp<T> = { success: boolean; data: T };
 
+    type CashFlowPayload = {
+        income: number;
+        expense: number;
+        expenseExDeductions: number;
+        deductions: number;
+        net: number;
+        netExDeductions: number;
+        start: string;
+        end: string;
+    };
+
     type DashboardPayload = {
         spendTrend: SpendTrendResponse;
         categoryTrend: CategoryTrendResponse;
@@ -126,6 +137,7 @@
         paymentTypeBreakdown: PaymentTypeBreakdownItem[];
         fundSpendTrend: FundSpendTrendResponse;
         templateBreakdown: TemplateBreakdownItem[];
+        cashFlow: CashFlowPayload | null;
     };
 
     // One round-trip — composite handler runs all sections in parallel server-side.
@@ -176,6 +188,7 @@
         loading: dashboardResource.loading,
         current: dashboardResource.current?.templateBreakdown,
     });
+    const cashFlow = $derived(dashboardResource.current?.cashFlow ?? null);
 
     const TEMPLATE_TOP_N = 10;
     let templateOtherExpanded = $state(false);
@@ -379,6 +392,74 @@
         end={range.end}
         canUseAi={canUseAiInsights}
     />
+
+    <!-- Cash flow — income, expense, deductions, net (canViewIncome only). -->
+    {#if cashFlow}
+        {@const positive = cashFlow.net >= 0}
+        <Card>
+            <CardHeader class="pb-2">
+                <CardTitle class="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    Cash flow
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div class="grid gap-4 md:grid-cols-4">
+                    <div>
+                        <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Income</p>
+                        <Amount
+                            value={cashFlow.income}
+                            sign="positive"
+                            showSign={false}
+                            size="lg"
+                            locale={vault?.locale || 'en-US'}
+                            currency={vault?.currency || 'USD'}
+                        />
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Expense</p>
+                        <Amount
+                            value={-cashFlow.expense}
+                            sign="negative"
+                            showSign={false}
+                            size="lg"
+                            locale={vault?.locale || 'en-US'}
+                            currency={vault?.currency || 'USD'}
+                        />
+                        {#if cashFlow.deductions > 0}
+                            <p class="text-[11px] text-muted-foreground mt-0.5">
+                                incl. <span class="font-mono">{fmt.currency(cashFlow.deductions)}</span> salary deductions
+                            </p>
+                        {/if}
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Discretionary</p>
+                        <Amount
+                            value={-cashFlow.expenseExDeductions}
+                            sign="negative"
+                            showSign={false}
+                            size="lg"
+                            locale={vault?.locale || 'en-US'}
+                            currency={vault?.currency || 'USD'}
+                        />
+                        <p class="text-[11px] text-muted-foreground mt-0.5">expense excluding deductions</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Net</p>
+                        <Amount
+                            value={cashFlow.net}
+                            sign={positive ? 'positive' : 'negative'}
+                            size="lg"
+                            locale={vault?.locale || 'en-US'}
+                            currency={vault?.currency || 'USD'}
+                        />
+                        <p class="text-[11px] text-muted-foreground mt-0.5">
+                            {positive ? 'saved this period' : 'over budget this period'}
+                        </p>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    {/if}
 
     <!-- Spend Hero — almanac plate with mono eyebrow + huge MoneyDisplay -->
     <Card>
