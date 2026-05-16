@@ -257,7 +257,10 @@ export const getScenarioBaseline = async (
 
     const oneOffExpensesResult: ScenarioOneOffExpense[] = oneOffExpenseRows.map((row) => ({
         id: row.id,
-        name: row.templateName ?? row.note ?? row.categoryName ?? 'Expense',
+        // Per-expense label follows the app-wide convention: own note first,
+        // then category, then a generic fallback. Template name belongs on
+        // the group header, not on the individual row.
+        name: row.note ?? row.categoryName ?? 'Expense',
         icon: row.templateIcon ?? null,
         amount: Number(row.amount ?? 0),
         date: row.date,
