@@ -559,6 +559,7 @@
                                     name="anchorDate"
                                     bind:value={$form.anchorDate}
                                     disabled={$delayed}
+                                    showTime={false}
                                 />
                                 {#if $errors.anchorDate}
                                     <p class="text-sm text-destructive">{$errors.anchorDate}</p>

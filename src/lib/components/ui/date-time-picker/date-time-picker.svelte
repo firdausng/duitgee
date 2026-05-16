@@ -67,7 +67,10 @@
         const mm = String(d.month).padStart(2, '0');
         const dd = String(d.day).padStart(2, '0');
         const datePart = `${yyyy}-${mm}-${dd}`;
-        return showTime ? `${datePart}T${t}` : datePart;
+        // Always emit datetime-local form so consumers can pass the value
+        // straight through `localDatetimeToUtcIso` without branching on
+        // showTime. When showTime is false, internalTime stays at "00:00".
+        return `${datePart}T${t}`;
     }
 
     function formatDisplay(): string {
