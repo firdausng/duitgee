@@ -126,26 +126,26 @@
 </svelte:head>
 
 <div class="container mx-auto py-6 px-4 [&>*+*]:mt-6">
-    <div class="flex items-end gap-2 mb-2">
-        <header class="flex-1">
+    <div class="flex flex-col gap-3 md:flex-row md:items-end md:gap-2 mb-2">
+        <header class="flex-1 min-w-0">
             <Eyebrow tone="muted">— The household ledger —</Eyebrow>
             <h1 class="dg-page-title">The <em>income</em> ledger.</h1>
             <p class="dg-page-sub">Money coming in — salary, side income, refunds, gifts.</p>
         </header>
-        <div class="flex gap-2 items-center">
+        <div class="flex flex-wrap gap-2 items-center justify-start md:justify-end shrink-0">
             <Button variant="ghost" size="sm" onclick={() => goto(`/vaults/${vaultId}/income/sources`)} title="Manage sources">
                 <Tags class="size-4" />
-                <span class="hidden sm:inline">Sources</span>
+                <span>Sources</span>
             </Button>
             <Button variant="ghost" size="sm" onclick={() => goto(`/vaults/${vaultId}/income/templates`)} title="Manage templates">
                 <FileText class="size-4" />
-                <span class="hidden sm:inline">Templates</span>
+                <span>Templates</span>
             </Button>
             <Button variant="ghost" size="sm" onclick={() => goto(`/vaults/${vaultId}/income/recurring`)} title="Recurring income rules">
                 <RotateCcw class="size-4" />
-                <span class="hidden sm:inline">Recurring</span>
+                <span>Recurring</span>
             </Button>
-            <Button size="sm" onclick={() => goto(`/vaults/${vaultId}/income/new`)}>
+            <Button size="sm" onclick={() => goto(`/vaults/${vaultId}/income/new`)} class="ml-auto md:ml-0">
                 <Plus class="size-4" />
                 <span>New income</span>
             </Button>
