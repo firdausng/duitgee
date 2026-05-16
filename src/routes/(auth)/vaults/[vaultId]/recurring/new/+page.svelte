@@ -23,10 +23,20 @@
     import { computeNextOccurrence, computeFinalOccurrence } from '$lib/utils/recurringSchedule';
     import type { VaultWithMember } from '$lib/schemas/read/vaultWithMember';
     import { CheckboxRow } from '$lib/components/ui/checkbox-row';
+    import { CalculatorInput } from '$lib/components/ui/calculator-input';
     import * as Tabs from '$lib/components/ui/tabs';
+    import * as Select from '$lib/components/ui/select';
+    import * as RadioGroup from '$lib/components/ui/radio-group';
     import { DateTimePicker } from '$lib/components/ui/date-time-picker';
     import ArrowRight from '@lucide/svelte/icons/arrow-right';
     import Sparkles from '@lucide/svelte/icons/sparkles';
+
+    const FREQUENCY_LABEL: Record<'day' | 'week' | 'month' | 'year', string> = {
+        day: 'Daily',
+        week: 'Weekly',
+        month: 'Monthly',
+        year: 'Yearly',
+    };
 
     const BACKFILL_CAP = 50;
 
@@ -293,16 +303,13 @@
                 <!-- Amount -->
                 <div class="space-y-2">
                     <Label for="defaultAmount">Amount <span class="text-destructive">*</span></Label>
-                    <Input
+                    <CalculatorInput
                         id="defaultAmount"
                         name="defaultAmount"
-                        type="number"
-                        step="0.01"
-                        min="0"
                         bind:value={$form.defaultAmount}
                         disabled={$delayed}
                         placeholder="0.00"
-                        class={$errors.defaultAmount ? 'border-destructive' : ''}
+                        error={!!$errors.defaultAmount}
                     />
                     {#if $errors.defaultAmount}
                         <p class="text-sm text-destructive">{$errors.defaultAmount}</p>
@@ -480,18 +487,23 @@
                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div class="space-y-2">
                             <Label for="scheduleUnit">Frequency <span class="text-destructive">*</span></Label>
-                            <select
-                                id="scheduleUnit"
-                                name="scheduleUnit"
-                                bind:value={$form.scheduleUnit}
-                                disabled={$delayed}
-                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            <input type="hidden" name="scheduleUnit" value={$form.scheduleUnit} />
+                            <Select.Root
+                                type="single"
+                                value={$form.scheduleUnit}
+                                onValueChange={(v: string | undefined) =>
+                                    ($form.scheduleUnit = (v ?? 'month') as 'day' | 'week' | 'month' | 'year')}
                             >
-                                <option value="day">Daily</option>
-                                <option value="week">Weekly</option>
-                                <option value="month">Monthly</option>
-                                <option value="year">Yearly</option>
-                            </select>
+                                <Select.Trigger id="scheduleUnit" class="w-full" disabled={$delayed}>
+                                    {FREQUENCY_LABEL[$form.scheduleUnit]}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    <Select.Item value="day" label="Daily" />
+                                    <Select.Item value="week" label="Weekly" />
+                                    <Select.Item value="month" label="Monthly" />
+                                    <Select.Item value="year" label="Yearly" />
+                                </Select.Content>
+                            </Select.Root>
                         </div>
                         <div class="space-y-2">
                             <Label for="scheduleInterval" class="inline-flex items-center gap-1.5 flex-wrap">
@@ -553,42 +565,24 @@
 
                     <div class="space-y-2">
                         <Label>Generation mode <span class="text-destructive">*</span></Label>
-                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                            <label
-                                class="flex items-start gap-2 rounded-md border p-3 cursor-pointer hover:bg-muted/50"
-                                class:ring-2={$form.generationMode === 'queue'}
-                                class:ring-primary={$form.generationMode === 'queue'}
-                            >
-                                <input
-                                    type="radio"
-                                    name="generationMode"
-                                    value="queue"
-                                    bind:group={$form.generationMode}
-                                    disabled={$delayed}
-                                    class="mt-0.5"
-                                />
-                                <div>
-                                    <p class="text-sm font-medium">Queue for approval</p>
-                                    <p class="text-xs text-muted-foreground">
+                        <input type="hidden" name="generationMode" value={$form.generationMode} />
+                        <RadioGroup.Root
+                            value={$form.generationMode}
+                            onValueChange={(v) => ($form.generationMode = (v ?? 'queue') as 'auto' | 'queue')}
+                            disabled={$delayed}
+                            class="grid grid-cols-1 gap-2 sm:grid-cols-2"
+                        >
+                            <RadioGroup.Item value="queue" variant="card">
+                                {#snippet children()}
+                                    <span class="block text-sm font-medium">Queue for approval</span>
+                                    <span class="mt-0.5 block text-xs text-muted-foreground">
                                         Lands in "Pending approvals" for review.
-                                    </p>
-                                </div>
-                            </label>
-                            <label
-                                class="flex items-start gap-2 rounded-md border p-3 cursor-pointer hover:bg-muted/50"
-                                class:ring-2={$form.generationMode === 'auto'}
-                                class:ring-primary={$form.generationMode === 'auto'}
-                            >
-                                <input
-                                    type="radio"
-                                    name="generationMode"
-                                    value="auto"
-                                    bind:group={$form.generationMode}
-                                    disabled={$delayed}
-                                    class="mt-0.5"
-                                />
-                                <div>
-                                    <p class="text-sm font-medium inline-flex items-center gap-1.5 flex-wrap">
+                                    </span>
+                                {/snippet}
+                            </RadioGroup.Item>
+                            <RadioGroup.Item value="auto" variant="card">
+                                {#snippet children()}
+                                    <span class="block text-sm font-medium inline-flex items-center gap-1.5 flex-wrap">
                                         <span>Auto-create</span>
                                         {#if !canAutoGeneration}
                                             <a
@@ -601,13 +595,13 @@
                                                 Pro
                                             </a>
                                         {/if}
-                                    </p>
-                                    <p class="text-xs text-muted-foreground">
+                                    </span>
+                                    <span class="mt-0.5 block text-xs text-muted-foreground">
                                         Auto-records the expense on schedule.
-                                    </p>
-                                </div>
-                            </label>
-                        </div>
+                                    </span>
+                                {/snippet}
+                            </RadioGroup.Item>
+                        </RadioGroup.Root>
                         {#if showAutoUpsell}
                             <a
                                 href="/settings/plan"
@@ -660,46 +654,29 @@
 
                     <div class="space-y-2">
                         <Label>Rule type <span class="text-destructive">*</span></Label>
-                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                            <label
-                                class="flex items-start gap-2 rounded-md border p-3 cursor-pointer hover:bg-muted/50"
-                                class:ring-2={ruleType === 'subscription'}
-                                class:ring-primary={ruleType === 'subscription'}
-                            >
-                                <input
-                                    type="radio"
-                                    bind:group={ruleType}
-                                    value="subscription"
-                                    disabled={$delayed}
-                                    class="mt-0.5"
-                                />
-                                <div>
-                                    <p class="text-sm font-medium">Subscription</p>
-                                    <p class="text-xs text-muted-foreground">
+                        <RadioGroup.Root
+                            value={ruleType}
+                            onValueChange={(v) => (ruleType = (v ?? 'subscription') as 'subscription' | 'installment')}
+                            disabled={$delayed}
+                            class="grid grid-cols-1 gap-2 sm:grid-cols-2"
+                        >
+                            <RadioGroup.Item value="subscription" variant="card">
+                                {#snippet children()}
+                                    <span class="block text-sm font-medium">Subscription</span>
+                                    <span class="mt-0.5 block text-xs text-muted-foreground">
                                         Ongoing — like a phone bill or Netflix.
-                                    </p>
-                                </div>
-                            </label>
-                            <label
-                                class="flex items-start gap-2 rounded-md border p-3 cursor-pointer hover:bg-muted/50"
-                                class:ring-2={ruleType === 'installment'}
-                                class:ring-primary={ruleType === 'installment'}
-                            >
-                                <input
-                                    type="radio"
-                                    bind:group={ruleType}
-                                    value="installment"
-                                    disabled={$delayed}
-                                    class="mt-0.5"
-                                />
-                                <div>
-                                    <p class="text-sm font-medium">Installment</p>
-                                    <p class="text-xs text-muted-foreground">
+                                    </span>
+                                {/snippet}
+                            </RadioGroup.Item>
+                            <RadioGroup.Item value="installment" variant="card">
+                                {#snippet children()}
+                                    <span class="block text-sm font-medium">Installment</span>
+                                    <span class="mt-0.5 block text-xs text-muted-foreground">
                                         Finite — like a 12-month credit card plan.
-                                    </p>
-                                </div>
-                            </label>
-                        </div>
+                                    </span>
+                                {/snippet}
+                            </RadioGroup.Item>
+                        </RadioGroup.Root>
                     </div>
 
                     {#if ruleType === 'installment'}
