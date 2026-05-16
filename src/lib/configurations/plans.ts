@@ -24,6 +24,7 @@ export interface PlanLimits {
     maxRecurringPerVault: number;
     maxAttachmentsPerExpense: number;
     maxIncomeSourcesPerVault: number;
+    maxIncomeTemplatesPerVault: number;
 }
 
 export interface Plan {
@@ -50,7 +51,8 @@ export const PLANS: Plan[] = [
             maxFundsPerVault: 1,
             maxRecurringPerVault: 5,
             maxAttachmentsPerExpense: 5,
-            maxIncomeSourcesPerVault: 3,
+            maxIncomeSourcesPerVault: 5,
+            maxIncomeTemplatesPerVault: 10,
         },
     },
     {
@@ -80,6 +82,7 @@ export const PLANS: Plan[] = [
             maxRecurringPerVault: -1,
             maxAttachmentsPerExpense: 20,
             maxIncomeSourcesPerVault: -1,
+            maxIncomeTemplatesPerVault: -1,
         },
     },
 ];

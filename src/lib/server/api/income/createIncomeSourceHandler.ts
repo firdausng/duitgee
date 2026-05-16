@@ -17,7 +17,6 @@ export const createIncomeSource = async (
 
     await requireVaultPermission(session, data.vaultId, 'canManageIncome', env);
 
-    // Per-vault source cap (Free: 3, Pro: unlimited via -1)
     const cap = await getVaultPlanLimit(data.vaultId, 'maxIncomeSourcesPerVault', env);
     if (cap !== -1) {
         const [existing] = await client
@@ -43,11 +42,6 @@ export const createIncomeSource = async (
             name: data.name,
             icon: data.icon ?? '💰',
             iconType: 'emoji',
-            defaultAmount: data.defaultAmount ?? null,
-            defaultPaidTo: data.defaultPaidTo ?? null,
-            defaultFundId: data.defaultFundId ?? null,
-            defaultNote: data.defaultNote ?? null,
-            usageCount: 0,
             ...initialAuditFields({ userId }),
         })
         .returning();

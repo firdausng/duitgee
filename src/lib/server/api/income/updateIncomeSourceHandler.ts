@@ -29,18 +29,13 @@ export const updateIncomeSource = async (
         .limit(1);
     if (!existing) throw new Error('Income source not found');
 
-    const next = {
-        name: data.name ?? existing.name,
-        icon: data.icon !== undefined ? data.icon : existing.icon,
-        defaultAmount: data.defaultAmount !== undefined ? data.defaultAmount : existing.defaultAmount,
-        defaultPaidTo: data.defaultPaidTo !== undefined ? data.defaultPaidTo : existing.defaultPaidTo,
-        defaultFundId: data.defaultFundId !== undefined ? data.defaultFundId : existing.defaultFundId,
-        defaultNote: data.defaultNote !== undefined ? data.defaultNote : existing.defaultNote,
-    };
-
     const [updated] = await client
         .update(incomeSources)
-        .set({ ...next, ...updateAuditFields({ userId }) })
+        .set({
+            name: data.name ?? existing.name,
+            icon: data.icon !== undefined ? data.icon : existing.icon,
+            ...updateAuditFields({ userId }),
+        })
         .where(eq(incomeSources.id, data.id))
         .returning();
 

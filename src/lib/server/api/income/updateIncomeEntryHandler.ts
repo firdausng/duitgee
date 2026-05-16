@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/server/db/schema';
-import { incomeEntries, incomeSources } from '$lib/server/db/schema';
+import { incomeEntries, incomeSources, incomeTemplates } from '$lib/server/db/schema';
 import { and, eq, isNull } from 'drizzle-orm';
 import { updateAuditFields } from '$lib/server/utils/audit';
 import { requireVaultPermission } from '$lib/server/utils/vaultPermissions';
@@ -8,16 +8,13 @@ import { attachFundToIncome, detachFundFromIncome } from '$lib/server/api/funds/
 import type { UpdateIncomeEntryRequest } from '$lib/schemas/income';
 
 /**
- * Edit a single income entry. Fund integration rewires the top-up transaction
- * when fundId or amount changes:
- *   - fundId added       → attach new top-up
- *   - fundId removed     → detach existing top-up
- *   - fundId changed     → detach + attach
- *   - same fund, new amt → detach + attach (simpler than computing a delta)
+ * Edit a single income entry. Template attribution rules:
+ *   - If templateId is set, sourceId is derived from the template.
+ *   - If only sourceId is set, template is cleared.
+ *   - Both null is allowed (fully ad-hoc).
  *
- * The delta path used for paid_by_fund expenses isn't strictly necessary here;
- * top-ups always commit the full new amount, so a clean detach + re-attach is
- * both correct and easier to reason about.
+ * Fund integration rewires the top-up transaction when fundId or amount
+ * changes — detach + re-attach (simpler than computing a delta for top-ups).
  */
 export const updateIncomeEntry = async (
     session: App.AuthSession,
@@ -42,23 +39,51 @@ export const updateIncomeEntry = async (
         .limit(1);
     if (!existing) throw new Error('Income entry not found');
 
-    if (data.sourceId) {
-        const [source] = await client
-            .select({ id: incomeSources.id })
-            .from(incomeSources)
-            .where(
-                and(
-                    eq(incomeSources.id, data.sourceId),
-                    eq(incomeSources.vaultId, data.vaultId),
-                    isNull(incomeSources.deletedAt),
-                ),
-            )
-            .limit(1);
-        if (!source) throw new Error('Income source not found in this vault');
+    let nextTemplateId: string | null = existing.templateId;
+    let nextSourceId: string | null = existing.sourceId;
+
+    if (data.templateId !== undefined) {
+        nextTemplateId = data.templateId;
+        if (data.templateId) {
+            const [template] = await client
+                .select({ sourceId: incomeTemplates.sourceId })
+                .from(incomeTemplates)
+                .where(
+                    and(
+                        eq(incomeTemplates.id, data.templateId),
+                        eq(incomeTemplates.vaultId, data.vaultId),
+                        isNull(incomeTemplates.deletedAt),
+                    ),
+                )
+                .limit(1);
+            if (!template) throw new Error('Income template not found in this vault');
+            nextSourceId = template.sourceId;
+        } else {
+            // Cleared the template — fall back to whatever sourceId was provided
+            // (or keep existing source if neither field changed simultaneously).
+            nextSourceId = data.sourceId !== undefined ? data.sourceId : existing.sourceId;
+        }
+    } else if (data.sourceId !== undefined) {
+        if (data.sourceId) {
+            const [source] = await client
+                .select({ id: incomeSources.id })
+                .from(incomeSources)
+                .where(
+                    and(
+                        eq(incomeSources.id, data.sourceId),
+                        eq(incomeSources.vaultId, data.vaultId),
+                        isNull(incomeSources.deletedAt),
+                    ),
+                )
+                .limit(1);
+            if (!source) throw new Error('Income source not found in this vault');
+        }
+        nextSourceId = data.sourceId;
     }
 
     const next = {
-        sourceId: data.sourceId !== undefined ? data.sourceId : existing.sourceId,
+        templateId: nextTemplateId,
+        sourceId: nextSourceId,
         amount: data.amount ?? existing.amount,
         date: data.date ?? existing.date,
         paidTo: data.paidTo !== undefined ? data.paidTo : existing.paidTo,
@@ -68,20 +93,18 @@ export const updateIncomeEntry = async (
 
     const fundChanged = next.fundId !== existing.fundId;
     const amountChanged = next.amount !== existing.amount;
-    const needsRewire = next.fundId && (fundChanged || amountChanged);
 
     let newTxnId: string | null = existing.fundTransactionId;
 
     if (fundChanged || amountChanged) {
-        // Reverse the prior top-up (no-op if there wasn't one).
         await detachFundFromIncome(existing.fundTransactionId, userId, env);
         newTxnId = null;
     }
-    if (needsRewire) {
+    if (next.fundId && (fundChanged || amountChanged)) {
         newTxnId = await attachFundToIncome(
             existing.id,
             existing.vaultId,
-            next.fundId!,
+            next.fundId,
             next.amount,
             userId,
             env,

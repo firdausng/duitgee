@@ -1,10 +1,7 @@
 <script lang="ts">
     import { superForm } from 'sveltekit-superforms';
     import { valibotClient } from 'sveltekit-superforms/adapters';
-    import {
-        createIncomeEntrySchema,
-        createIncomeEntryWithSourceSchema,
-    } from '$lib/schemas/income';
+    import { createIncomeEntrySchema } from '$lib/schemas/income';
     import { goto } from '$app/navigation';
     import { ofetch } from 'ofetch';
     import { Button } from '$lib/components/ui/button';
@@ -30,25 +27,29 @@
                 toast.error('Please fix the highlighted fields');
                 return;
             }
+            if (templateMode === 'new' && !newTemplateName.trim()) {
+                toast.error('Enter a name for the new template');
+                return;
+            }
+            if (templateMode === 'new' && !form.data.sourceId) {
+                toast.error('Pick a source for the new template');
+                return;
+            }
 
             try {
-                if (mode === 'new-source') {
-                    // Combined create — new source + new entry in one batch.
-                    if (!newSourceName.trim()) {
-                        toast.error('Enter a name for the new source');
-                        return;
-                    }
+                if (templateMode === 'new') {
                     const payload = {
                         vaultId: data.vaultId,
-                        sourceName: newSourceName.trim(),
-                        sourceIcon: newSourceIcon || '💰',
+                        sourceId: form.data.sourceId,
+                        templateName: newTemplateName.trim(),
+                        templateIcon: newTemplateIcon || '💰',
                         amount: form.data.amount,
                         date: localDatetimeToUtcIso(form.data.date),
                         paidTo: form.data.paidTo,
                         note: form.data.note,
                         fundId: form.data.fundId,
                     };
-                    const response = await ofetch('/api/createIncomeEntryWithSource', {
+                    const response = await ofetch('/api/createIncomeEntryWithTemplate', {
                         method: 'POST',
                         body: payload,
                         headers: { 'Content-Type': 'application/json' },
@@ -57,7 +58,7 @@
                         toast.error(response.error || 'Failed to create');
                         return;
                     }
-                    toast.success('Income recorded · new source created');
+                    toast.success('Income recorded · new template created');
                 } else {
                     const payload = {
                         ...form.data,
@@ -81,21 +82,35 @@
         },
     });
 
-    type Mode = 'existing-source' | 'new-source' | 'ad-hoc';
-    // Default to existing-source when any sources exist, otherwise prompt for new.
-    let mode = $state<Mode>(data.sources.length > 0 ? 'existing-source' : 'new-source');
-    let newSourceName = $state('');
-    let newSourceIcon = $state('💰');
+    type TemplateMode = 'existing' | 'new' | 'none';
+    // Default to existing when templates exist for any source; otherwise default to 'none'.
+    let templateMode = $state<TemplateMode>(data.templates.length > 0 ? 'existing' : 'none');
+    let newTemplateName = $state('');
+    let newTemplateIcon = $state('💰');
 
-    function pickSource(sourceId: string) {
-        const src = data.sources.find((s) => s.id === sourceId);
-        if (!src) return;
-        $form.sourceId = src.id;
-        // Pre-fill from source defaults when fields are unset.
-        if (!$form.amount && src.defaultAmount) $form.amount = src.defaultAmount;
-        if (!$form.paidTo && src.defaultPaidTo) $form.paidTo = src.defaultPaidTo;
-        if (!$form.fundId && src.defaultFundId) $form.fundId = src.defaultFundId;
-        if (!$form.note && src.defaultNote) $form.note = src.defaultNote;
+    // Templates filtered by the selected source.
+    const filteredTemplates = $derived(
+        $form.sourceId ? data.templates.filter((t) => t.sourceId === $form.sourceId) : [],
+    );
+
+    function pickSource(sourceId: string | null) {
+        $form.sourceId = sourceId;
+        // Clear the chosen template when source changes — it might not belong.
+        if ($form.templateId && !data.templates.find((t) => t.id === $form.templateId && t.sourceId === sourceId)) {
+            $form.templateId = null;
+        }
+    }
+
+    function pickTemplate(templateId: string) {
+        const tpl = data.templates.find((t) => t.id === templateId);
+        if (!tpl) return;
+        $form.templateId = tpl.id;
+        $form.sourceId = tpl.sourceId;
+        // Pre-fill the entry fields from template defaults.
+        if (!$form.amount && tpl.defaultAmount) $form.amount = tpl.defaultAmount;
+        if (!$form.paidTo && tpl.defaultPaidTo) $form.paidTo = tpl.defaultPaidTo;
+        if (!$form.fundId && tpl.defaultFundId) $form.fundId = tpl.defaultFundId;
+        if (!$form.note && tpl.defaultNote) $form.note = tpl.defaultNote;
     }
 
     function handleBack() {
@@ -116,88 +131,123 @@
     <Rule variant="double" />
     <div class="mb-6"></div>
 
+    {#if data.sources.length === 0}
+        <Card class="mb-4">
+            <CardContent class="py-6 text-center space-y-3">
+                <p class="text-sm text-muted-foreground">No income sources yet. Create at least one source (e.g. "Salary") before recording income.</p>
+                <Button size="sm" onclick={() => goto(`/vaults/${data.vaultId}/income/sources`)}>
+                    <Plus class="size-4" />
+                    Manage sources
+                </Button>
+            </CardContent>
+        </Card>
+    {/if}
+
     <Card>
         <CardHeader>
             <CardTitle>Income</CardTitle>
             <CardDescription>
-                Pick an existing source or create a new one. Optionally route the amount into a fund as a top-up.
+                Pick the source (kind) and optionally a template for pre-fills. Templates speed up recurring entries; ad-hoc income tags a source but skips the template.
             </CardDescription>
         </CardHeader>
         <CardContent>
             <form method="POST" use:enhance class="space-y-6">
                 <input type="hidden" name="vaultId" bind:value={$form.vaultId} />
 
-                <!-- Mode toggle -->
+                <!-- Source picker (taxonomy) -->
                 <div class="space-y-2">
-                    <Label>Source</Label>
-                    <div class="inline-flex rounded-md border overflow-hidden" role="group" aria-label="Source mode">
-                        <button
-                            type="button"
-                            onclick={() => { mode = 'existing-source'; }}
-                            disabled={$delayed || data.sources.length === 0}
-                            class="px-3 py-1.5 text-xs {mode === 'existing-source' ? 'bg-muted text-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
-                        >
-                            Existing
-                        </button>
-                        <button
-                            type="button"
-                            onclick={() => { mode = 'new-source'; $form.sourceId = null; }}
-                            disabled={$delayed}
-                            class="px-3 py-1.5 text-xs border-l {mode === 'new-source' ? 'bg-muted text-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
-                        >
-                            <Plus class="size-3 inline -mt-0.5" /> New source
-                        </button>
-                        <button
-                            type="button"
-                            onclick={() => { mode = 'ad-hoc'; $form.sourceId = null; }}
-                            disabled={$delayed}
-                            class="px-3 py-1.5 text-xs border-l {mode === 'ad-hoc' ? 'bg-muted text-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
-                        >
-                            Ad-hoc (no source)
-                        </button>
+                    <Label>Source <span class="text-destructive">*</span></Label>
+                    <input type="hidden" name="sourceId" value={$form.sourceId ?? ''} />
+                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {#each data.sources as src}
+                            <button
+                                type="button"
+                                onclick={() => pickSource(src.id)}
+                                disabled={$delayed}
+                                class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+                                    {$form.sourceId === src.id ? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-1' : 'border-input'}"
+                            >
+                                <span class="text-xl">{src.icon ?? '💰'}</span>
+                                <span class="leading-tight line-clamp-2">{src.name}</span>
+                            </button>
+                        {/each}
                     </div>
                 </div>
 
-                {#if mode === 'existing-source'}
-                    {#if data.sources.length === 0}
-                        <p class="text-xs text-muted-foreground">No sources yet — switch to "New source" to create one.</p>
-                    {:else}
-                        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                            {#each data.sources as src}
-                                <button
-                                    type="button"
-                                    onclick={() => pickSource(src.id)}
-                                    disabled={$delayed}
-                                    class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
-                                        {$form.sourceId === src.id ? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-1' : 'border-input'}"
-                                >
-                                    <span class="text-xl">{src.icon ?? '💰'}</span>
-                                    <span class="leading-tight line-clamp-2">{src.name}</span>
-                                </button>
-                            {/each}
-                        </div>
-                    {/if}
-                {:else if mode === 'new-source'}
-                    <div class="grid gap-3 sm:grid-cols-[1fr_120px]">
-                        <div class="space-y-2">
-                            <Label for="newSourceName">New source name <span class="text-destructive">*</span></Label>
-                            <Input
-                                id="newSourceName"
-                                bind:value={newSourceName}
+                <!-- Template mode toggle (only meaningful when a source is picked) -->
+                {#if $form.sourceId}
+                    <div class="space-y-2">
+                        <Label>Template</Label>
+                        <div class="inline-flex rounded-md border overflow-hidden" role="group" aria-label="Template mode">
+                            <button
+                                type="button"
+                                onclick={() => { templateMode = 'existing'; }}
+                                disabled={$delayed || filteredTemplates.length === 0}
+                                class="px-3 py-1.5 text-xs {templateMode === 'existing' ? 'bg-muted text-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
+                            >
+                                Existing
+                            </button>
+                            <button
+                                type="button"
+                                onclick={() => { templateMode = 'new'; $form.templateId = null; }}
                                 disabled={$delayed}
-                                placeholder="e.g., Salary - Firdaus"
-                            />
-                        </div>
-                        <div class="space-y-2">
-                            <Label for="newSourceIcon">Icon</Label>
-                            <Input
-                                id="newSourceIcon"
-                                bind:value={newSourceIcon}
+                                class="px-3 py-1.5 text-xs border-l {templateMode === 'new' ? 'bg-muted text-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
+                            >
+                                <Plus class="size-3 inline -mt-0.5" /> New template
+                            </button>
+                            <button
+                                type="button"
+                                onclick={() => { templateMode = 'none'; $form.templateId = null; }}
                                 disabled={$delayed}
-                                placeholder="💰"
-                            />
+                                class="px-3 py-1.5 text-xs border-l {templateMode === 'none' ? 'bg-muted text-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
+                            >
+                                Skip template
+                            </button>
                         </div>
                     </div>
+
+                    {#if templateMode === 'existing'}
+                        {#if filteredTemplates.length === 0}
+                            <p class="text-xs text-muted-foreground">No templates under this source yet — switch to "New template" or "Skip".</p>
+                        {:else}
+                            <input type="hidden" name="templateId" value={$form.templateId ?? ''} />
+                            <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                {#each filteredTemplates as tpl}
+                                    <button
+                                        type="button"
+                                        onclick={() => pickTemplate(tpl.id)}
+                                        disabled={$delayed}
+                                        class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+                                            {$form.templateId === tpl.id ? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-1' : 'border-input'}"
+                                    >
+                                        <span class="text-xl">{tpl.icon ?? '💰'}</span>
+                                        <span class="leading-tight line-clamp-2">{tpl.name}</span>
+                                    </button>
+                                {/each}
+                            </div>
+                        {/if}
+                    {:else if templateMode === 'new'}
+                        <div class="grid gap-3 sm:grid-cols-[1fr_120px]">
+                            <div class="space-y-2">
+                                <Label for="newTemplateName">New template name <span class="text-destructive">*</span></Label>
+                                <Input
+                                    id="newTemplateName"
+                                    bind:value={newTemplateName}
+                                    disabled={$delayed}
+                                    placeholder="e.g., Salary - Firdaus"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label for="newTemplateIcon">Icon</Label>
+                                <Input
+                                    id="newTemplateIcon"
+                                    bind:value={newTemplateIcon}
+                                    disabled={$delayed}
+                                    placeholder="💰"
+                                />
+                            </div>
+                        </div>
+                    {/if}
                 {/if}
 
                 <!-- Amount -->
@@ -292,11 +342,6 @@
                                 </button>
                             {/each}
                         </div>
-                        {#if $form.fundId}
-                            <p class="text-xs text-muted-foreground">
-                                This income will appear as a top-up on the chosen fund's balance.
-                            </p>
-                        {/if}
                     </div>
                 {/if}
 

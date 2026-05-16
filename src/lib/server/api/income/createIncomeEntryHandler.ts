@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/server/db/schema';
-import { incomeEntries, incomeSources } from '$lib/server/db/schema';
+import { incomeEntries, incomeSources, incomeTemplates } from '$lib/server/db/schema';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { formatISO } from 'date-fns';
@@ -10,6 +10,15 @@ import { requireVaultPermission } from '$lib/server/utils/vaultPermissions';
 import { attachFundToIncome } from '$lib/server/api/funds/fundIncomeHelpers';
 import type { CreateIncomeEntryRequest } from '$lib/schemas/income';
 
+/**
+ * Record a single income entry. Source attribution rules:
+ *   - templateId provided → sourceId is derived from template.sourceId.
+ *   - templateId null, sourceId provided → ad-hoc-with-source (no template).
+ *   - both null → fully ad-hoc.
+ *
+ * Picking a template bumps its usageCount + lastUsedAt so the picker can sort
+ * by most-used.
+ */
 export const createIncomeEntry = async (
     session: App.AuthSession,
     data: CreateIncomeEntryRequest,
@@ -20,8 +29,24 @@ export const createIncomeEntry = async (
 
     await requireVaultPermission(session, data.vaultId, 'canManageIncome', env);
 
-    // If a source is provided, validate it lives in the same vault.
-    if (data.sourceId) {
+    let resolvedSourceId: string | null = data.sourceId ?? null;
+
+    if (data.templateId) {
+        const [template] = await client
+            .select({ id: incomeTemplates.id, sourceId: incomeTemplates.sourceId })
+            .from(incomeTemplates)
+            .where(
+                and(
+                    eq(incomeTemplates.id, data.templateId),
+                    eq(incomeTemplates.vaultId, data.vaultId),
+                    isNull(incomeTemplates.deletedAt),
+                ),
+            )
+            .limit(1);
+        if (!template) throw new Error('Income template not found in this vault');
+        // Template's source wins, even if the caller also passed sourceId.
+        resolvedSourceId = template.sourceId;
+    } else if (data.sourceId) {
         const [source] = await client
             .select({ id: incomeSources.id })
             .from(incomeSources)
@@ -55,7 +80,8 @@ export const createIncomeEntry = async (
         .values({
             id: entryId,
             vaultId: data.vaultId,
-            sourceId: data.sourceId ?? null,
+            templateId: data.templateId ?? null,
+            sourceId: resolvedSourceId,
             amount: data.amount,
             date: data.date,
             paidTo: data.paidTo ?? null,
@@ -66,16 +92,15 @@ export const createIncomeEntry = async (
         })
         .returning();
 
-    // Bump source usage stats so pickers can sort by recency-of-use.
-    if (data.sourceId) {
+    if (data.templateId) {
         await client
-            .update(incomeSources)
+            .update(incomeTemplates)
             .set({
-                usageCount: sql`${incomeSources.usageCount} + 1`,
+                usageCount: sql`${incomeTemplates.usageCount} + 1`,
                 lastUsedAt: formatISO(new UTCDate()),
                 ...updateAuditFields({ userId }),
             })
-            .where(eq(incomeSources.id, data.sourceId));
+            .where(eq(incomeTemplates.id, data.templateId));
     }
 
     return entry;

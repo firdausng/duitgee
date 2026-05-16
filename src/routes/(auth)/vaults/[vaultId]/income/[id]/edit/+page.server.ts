@@ -7,6 +7,7 @@ import type { PageServerLoad } from './$types';
 import { getVault } from '$lib/server/api/vaults/getVaultHandler';
 import { getFunds } from '$lib/server/api/funds/getFundsHandler';
 import { getIncomeSources } from '$lib/server/api/income/getIncomeSourcesHandler';
+import { getIncomeTemplates } from '$lib/server/api/income/getIncomeTemplatesHandler';
 import { getIncomeEntry } from '$lib/server/api/income/getIncomeEntryHandler';
 
 export const load: PageServerLoad = async ({ params, locals, platform }) => {
@@ -17,7 +18,7 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
     const session = locals.currentSession;
     const env = platform.env;
 
-    const [entryResult, vaultResult, fundRows, sourceRows] = await Promise.all([
+    const [entryResult, vaultResult, fundRows, sourceRows, templateRows] = await Promise.all([
         getIncomeEntry(session, { vaultId, id }, env).catch(() => null),
         getVault(session, vaultId, env).catch((err) => {
             console.error('Failed to load vault:', err);
@@ -31,6 +32,10 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
             console.error('Failed to load income sources:', err);
             return [];
         }),
+        getIncomeTemplates(session, { vaultId }, env).catch((err) => {
+            console.error('Failed to load income templates:', err);
+            return [];
+        }),
     ]);
 
     if (!entryResult) throw error(404, 'Income entry not found');
@@ -40,6 +45,7 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
             defaults: {
                 id,
                 vaultId,
+                templateId: entryResult.templateId,
                 sourceId: entryResult.sourceId,
                 amount: entryResult.amount,
                 date: utcToLocalDatetimeString(entryResult.date),
@@ -72,5 +78,12 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
         icon: s.icon,
     }));
 
-    return { form, vaultId, id, entry: entryResult, members, funds, sources };
+    const templates = (templateRows ?? []).map((t: any) => ({
+        id: t.id,
+        sourceId: t.sourceId,
+        name: t.name,
+        icon: t.icon,
+    }));
+
+    return { form, vaultId, id, entry: entryResult, members, funds, sources, templates };
 };

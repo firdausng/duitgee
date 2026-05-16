@@ -8,8 +8,13 @@ import {
     deleteIncomeSourceSchema,
     getIncomeSourcesQuerySchema,
     getIncomeSourceQuerySchema,
+    createIncomeTemplateSchema,
+    updateIncomeTemplateSchema,
+    deleteIncomeTemplateSchema,
+    getIncomeTemplatesQuerySchema,
+    getIncomeTemplateQuerySchema,
     createIncomeEntrySchema,
-    createIncomeEntryWithSourceSchema,
+    createIncomeEntryWithTemplateSchema,
     updateIncomeEntrySchema,
     deleteIncomeEntrySchema,
     getIncomeEntriesQuerySchema,
@@ -20,8 +25,13 @@ import { updateIncomeSource } from './updateIncomeSourceHandler';
 import { deleteIncomeSource } from './deleteIncomeSourceHandler';
 import { getIncomeSources } from './getIncomeSourcesHandler';
 import { getIncomeSource } from './getIncomeSourceHandler';
+import { createIncomeTemplate } from './createIncomeTemplateHandler';
+import { updateIncomeTemplate } from './updateIncomeTemplateHandler';
+import { deleteIncomeTemplate } from './deleteIncomeTemplateHandler';
+import { getIncomeTemplates } from './getIncomeTemplatesHandler';
+import { getIncomeTemplate } from './getIncomeTemplateHandler';
 import { createIncomeEntry } from './createIncomeEntryHandler';
-import { createIncomeEntryWithSource } from './createIncomeEntryWithSourceHandler';
+import { createIncomeEntryWithTemplate } from './createIncomeEntryWithTemplateHandler';
 import { updateIncomeEntry } from './updateIncomeEntryHandler';
 import { deleteIncomeEntry } from './deleteIncomeEntryHandler';
 import { getIncomeEntries } from './getIncomeEntriesHandler';
@@ -49,10 +59,10 @@ function errorHandler(action: string) {
 }
 
 export const incomeApi = new Hono<App.Api>()
-    // ── Sources ────────────────────────────────────────────────────────
+    // ── Sources (taxonomy) ─────────────────────────────────────────────
     .get(
         '/getIncomeSources',
-        describeRoute({ ...common, description: 'List income sources for a vault' }),
+        describeRoute({ ...common, description: 'List income sources (taxonomy) for a vault' }),
         vValidator('query', getIncomeSourcesQuerySchema),
         async (c) => {
             const session = c.get('currentSession');
@@ -117,7 +127,7 @@ export const incomeApi = new Hono<App.Api>()
     )
     .post(
         '/deleteIncomeSource',
-        describeRoute({ ...common, description: 'Soft delete an income source' }),
+        describeRoute({ ...common, description: 'Soft delete a source (cascades to its templates)' }),
         vValidator('json', deleteIncomeSourceSchema),
         async (c) => {
             const session = c.get('currentSession');
@@ -131,10 +141,92 @@ export const incomeApi = new Hono<App.Api>()
             }
         },
     )
+    // ── Templates (reusable pre-fills) ─────────────────────────────────
+    .get(
+        '/getIncomeTemplates',
+        describeRoute({ ...common, description: 'List income templates (optionally filtered by source)' }),
+        vValidator('query', getIncomeTemplatesQuerySchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const query = c.req.valid('query');
+            try {
+                const data = await getIncomeTemplates(session, query, c.env);
+                return c.json({ success: true, data });
+            } catch (error) {
+                const { message, status } = errorHandler('fetching income templates')(error);
+                return c.json({ success: false, error: message }, status as 400);
+            }
+        },
+    )
+    .get(
+        '/getIncomeTemplate',
+        describeRoute({ ...common, description: 'Get a single income template' }),
+        vValidator('query', getIncomeTemplateQuerySchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const query = c.req.valid('query');
+            try {
+                const data = await getIncomeTemplate(session, query, c.env);
+                if (!data) return c.json({ success: false, error: 'Not found' }, 404);
+                return c.json({ success: true, data });
+            } catch (error) {
+                const { message, status } = errorHandler('fetching income template')(error);
+                return c.json({ success: false, error: message }, status as 400);
+            }
+        },
+    )
+    .post(
+        '/createIncomeTemplate',
+        describeRoute({ ...common, description: 'Create an income template under a source' }),
+        vValidator('json', createIncomeTemplateSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const body = c.req.valid('json');
+            try {
+                const data = await createIncomeTemplate(session, body, c.env);
+                return c.json({ success: true, data }, 201);
+            } catch (error) {
+                const { message, status } = errorHandler('creating income template')(error);
+                return c.json({ success: false, error: message }, status as 400);
+            }
+        },
+    )
+    .post(
+        '/updateIncomeTemplate',
+        describeRoute({ ...common, description: 'Update an income template' }),
+        vValidator('json', updateIncomeTemplateSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const body = c.req.valid('json');
+            try {
+                const data = await updateIncomeTemplate(session, body, c.env);
+                return c.json({ success: true, data });
+            } catch (error) {
+                const { message, status } = errorHandler('updating income template')(error);
+                return c.json({ success: false, error: message }, status as 400);
+            }
+        },
+    )
+    .post(
+        '/deleteIncomeTemplate',
+        describeRoute({ ...common, description: 'Soft delete an income template' }),
+        vValidator('json', deleteIncomeTemplateSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const body = c.req.valid('json');
+            try {
+                const data = await deleteIncomeTemplate(session, body, c.env);
+                return c.json({ success: true, data });
+            } catch (error) {
+                const { message, status } = errorHandler('deleting income template')(error);
+                return c.json({ success: false, error: message }, status as 400);
+            }
+        },
+    )
     // ── Entries ────────────────────────────────────────────────────────
     .get(
         '/getIncomeEntries',
-        describeRoute({ ...common, description: 'List income entries for a vault (optional date range + source filter)' }),
+        describeRoute({ ...common, description: 'List income entries (optional date range + source/template filter)' }),
         vValidator('query', getIncomeEntriesQuerySchema),
         async (c) => {
             const session = c.get('currentSession');
@@ -182,17 +274,17 @@ export const incomeApi = new Hono<App.Api>()
         },
     )
     .post(
-        '/createIncomeEntryWithSource',
-        describeRoute({ ...common, description: 'Create both a new income source and an entry in one batch' }),
-        vValidator('json', createIncomeEntryWithSourceSchema),
+        '/createIncomeEntryWithTemplate',
+        describeRoute({ ...common, description: 'Create both a new template and an entry in one batch (source must already exist)' }),
+        vValidator('json', createIncomeEntryWithTemplateSchema),
         async (c) => {
             const session = c.get('currentSession');
             const body = c.req.valid('json');
             try {
-                const data = await createIncomeEntryWithSource(session, body, c.env);
+                const data = await createIncomeEntryWithTemplate(session, body, c.env);
                 return c.json({ success: true, data }, 201);
             } catch (error) {
-                const { message, status } = errorHandler('creating income source + entry')(error);
+                const { message, status } = errorHandler('creating income template + entry')(error);
                 return c.json({ success: false, error: message }, status as 400);
             }
         },

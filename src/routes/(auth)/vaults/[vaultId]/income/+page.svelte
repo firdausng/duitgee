@@ -19,18 +19,22 @@
     import Trash2 from '@lucide/svelte/icons/trash-2';
     import Wallet from '@lucide/svelte/icons/wallet';
     import TrendingUp from '@lucide/svelte/icons/trending-up';
+    import Tags from '@lucide/svelte/icons/tags';
+    import FileText from '@lucide/svelte/icons/file-text';
 
     const vaultId = $derived(page.params.vaultId);
 
     type IncomeEntry = {
         id: string;
         vaultId: string;
+        templateId: string | null;
         sourceId: string | null;
         amount: number;
         date: string;
         paidTo: string | null;
         note: string | null;
         fundId: string | null;
+        template: { name: string | null; icon: string | null } | null;
         source: { name: string | null; icon: string | null } | null;
     };
 
@@ -112,10 +116,20 @@
             <h1 class="dg-page-title">The <em>income</em> ledger.</h1>
             <p class="dg-page-sub">Money coming in — salary, side income, refunds, gifts.</p>
         </header>
-        <Button size="sm" onclick={() => goto(`/vaults/${vaultId}/income/new`)}>
-            <Plus class="size-4" />
-            <span>New income</span>
-        </Button>
+        <div class="flex gap-2 items-center">
+            <Button variant="ghost" size="sm" onclick={() => goto(`/vaults/${vaultId}/income/sources`)} title="Manage sources">
+                <Tags class="size-4" />
+                <span class="hidden sm:inline">Sources</span>
+            </Button>
+            <Button variant="ghost" size="sm" onclick={() => goto(`/vaults/${vaultId}/income/templates`)} title="Manage templates">
+                <FileText class="size-4" />
+                <span class="hidden sm:inline">Templates</span>
+            </Button>
+            <Button size="sm" onclick={() => goto(`/vaults/${vaultId}/income/new`)}>
+                <Plus class="size-4" />
+                <span>New income</span>
+            </Button>
+        </div>
     </div>
     <Rule variant="double" />
 
@@ -179,11 +193,16 @@
                         class="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                     >
                         <span class="text-xl leading-none shrink-0" aria-hidden="true">
-                            {entry.source?.icon ?? '💰'}
+                            {entry.template?.icon ?? entry.source?.icon ?? '💰'}
                         </span>
                         <div class="flex-1 min-w-0">
                             <p class="font-medium break-words">
-                                {entry.source?.name ?? 'Ad-hoc income'}
+                                {entry.template?.name ?? entry.source?.name ?? 'Ad-hoc income'}
+                                {#if entry.source && entry.template}
+                                    <span class="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide ml-1.5 text-muted-foreground align-middle">
+                                        {entry.source.name}
+                                    </span>
+                                {/if}
                             </p>
                             <p class="text-xs text-muted-foreground mt-0.5">
                                 {fmt.date(entry.date)}

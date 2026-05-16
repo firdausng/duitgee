@@ -1,11 +1,14 @@
 import * as v from 'valibot';
 import { FREE_PLAN_ID, getPlanLimit } from '$lib/configurations/plans';
 
-// Free plan cap on income sources per vault. Pro is unlimited. Server enforces
-// via getVaultPlanLimit(..., 'maxIncomeSourcesPerVault').
+// Free plan caps. Server enforces via getVaultPlanLimit(...).
 export const INCOME_SOURCES_MAX_PER_VAULT_FREE = getPlanLimit(
     FREE_PLAN_ID,
     'maxIncomeSourcesPerVault',
+);
+export const INCOME_TEMPLATES_MAX_PER_VAULT_FREE = getPlanLimit(
+    FREE_PLAN_ID,
+    'maxIncomeTemplatesPerVault',
 );
 
 // ─── Runtime shapes ────────────────────────────────────────────────────────
@@ -13,6 +16,22 @@ export const INCOME_SOURCES_MAX_PER_VAULT_FREE = getPlanLimit(
 export const incomeSourceSchema = v.object({
     id: v.string(),
     vaultId: v.string(),
+    name: v.string(),
+    icon: v.nullable(v.string()),
+    iconType: v.nullable(v.string()),
+    createdAt: v.nullable(v.string()),
+    createdBy: v.string(),
+    updatedAt: v.nullable(v.string()),
+    updatedBy: v.nullable(v.string()),
+    deletedAt: v.nullable(v.string()),
+    deletedBy: v.nullable(v.string()),
+});
+export type IncomeSource = v.InferOutput<typeof incomeSourceSchema>;
+
+export const incomeTemplateSchema = v.object({
+    id: v.string(),
+    vaultId: v.string(),
+    sourceId: v.string(),
     name: v.string(),
     icon: v.nullable(v.string()),
     iconType: v.nullable(v.string()),
@@ -29,11 +48,12 @@ export const incomeSourceSchema = v.object({
     deletedAt: v.nullable(v.string()),
     deletedBy: v.nullable(v.string()),
 });
-export type IncomeSource = v.InferOutput<typeof incomeSourceSchema>;
+export type IncomeTemplate = v.InferOutput<typeof incomeTemplateSchema>;
 
 export const incomeEntrySchema = v.object({
     id: v.string(),
     vaultId: v.string(),
+    templateId: v.nullable(v.string()),
     sourceId: v.nullable(v.string()),
     amount: v.number(),
     date: v.string(),
@@ -52,16 +72,12 @@ export const incomeEntrySchema = v.object({
 });
 export type IncomeEntry = v.InferOutput<typeof incomeEntrySchema>;
 
-// ─── Commands — sources ───────────────────────────────────────────────────
+// ─── Commands — sources (taxonomy) ────────────────────────────────────────
 
 export const createIncomeSourceSchema = v.object({
     vaultId: v.string(),
     name: v.pipe(v.string(), v.minLength(1, 'Name is required')),
     icon: v.optional(v.nullable(v.string()), '💰'),
-    defaultAmount: v.optional(v.nullable(v.number())),
-    defaultPaidTo: v.optional(v.nullable(v.string())),
-    defaultFundId: v.optional(v.nullable(v.string())),
-    defaultNote: v.optional(v.nullable(v.string())),
 });
 export type CreateIncomeSourceRequest = v.InferOutput<typeof createIncomeSourceSchema>;
 
@@ -70,10 +86,6 @@ export const updateIncomeSourceSchema = v.object({
     vaultId: v.string(),
     name: v.optional(v.pipe(v.string(), v.minLength(1, 'Name is required'))),
     icon: v.optional(v.nullable(v.string())),
-    defaultAmount: v.optional(v.nullable(v.number())),
-    defaultPaidTo: v.optional(v.nullable(v.string())),
-    defaultFundId: v.optional(v.nullable(v.string())),
-    defaultNote: v.optional(v.nullable(v.string())),
 });
 export type UpdateIncomeSourceRequest = v.InferOutput<typeof updateIncomeSourceSchema>;
 
@@ -83,10 +95,46 @@ export const deleteIncomeSourceSchema = v.object({
 });
 export type DeleteIncomeSourceRequest = v.InferOutput<typeof deleteIncomeSourceSchema>;
 
+// ─── Commands — templates (pre-fills) ─────────────────────────────────────
+
+export const createIncomeTemplateSchema = v.object({
+    vaultId: v.string(),
+    sourceId: v.pipe(v.string(), v.minLength(1, 'Source is required')),
+    name: v.pipe(v.string(), v.minLength(1, 'Name is required')),
+    icon: v.optional(v.nullable(v.string()), '💰'),
+    defaultAmount: v.optional(v.nullable(v.number())),
+    defaultPaidTo: v.optional(v.nullable(v.string())),
+    defaultFundId: v.optional(v.nullable(v.string())),
+    defaultNote: v.optional(v.nullable(v.string())),
+});
+export type CreateIncomeTemplateRequest = v.InferOutput<typeof createIncomeTemplateSchema>;
+
+export const updateIncomeTemplateSchema = v.object({
+    id: v.string(),
+    vaultId: v.string(),
+    sourceId: v.optional(v.pipe(v.string(), v.minLength(1, 'Source is required'))),
+    name: v.optional(v.pipe(v.string(), v.minLength(1, 'Name is required'))),
+    icon: v.optional(v.nullable(v.string())),
+    defaultAmount: v.optional(v.nullable(v.number())),
+    defaultPaidTo: v.optional(v.nullable(v.string())),
+    defaultFundId: v.optional(v.nullable(v.string())),
+    defaultNote: v.optional(v.nullable(v.string())),
+});
+export type UpdateIncomeTemplateRequest = v.InferOutput<typeof updateIncomeTemplateSchema>;
+
+export const deleteIncomeTemplateSchema = v.object({
+    id: v.string(),
+    vaultId: v.string(),
+});
+export type DeleteIncomeTemplateRequest = v.InferOutput<typeof deleteIncomeTemplateSchema>;
+
 // ─── Commands — entries ───────────────────────────────────────────────────
 
 export const createIncomeEntrySchema = v.object({
     vaultId: v.string(),
+    templateId: v.optional(v.nullable(v.string())),
+    // sourceId is optional when templateId is provided (derived); required for
+    // ad-hoc-with-source entries (no template, but tagged with a source kind).
     sourceId: v.optional(v.nullable(v.string())),
     amount: v.pipe(
         v.number('Amount is required'),
@@ -99,13 +147,15 @@ export const createIncomeEntrySchema = v.object({
 });
 export type CreateIncomeEntryRequest = v.InferOutput<typeof createIncomeEntrySchema>;
 
-// Combined create — makes both a new source AND a new entry in one batch.
-// Used by the new-entry form when the user picks "+ New source" inline.
-export const createIncomeEntryWithSourceSchema = v.object({
+// Combined create — makes both a new template AND a new entry in one batch.
+// Source must already exist (sources are a small taxonomy; you pick from existing
+// kinds rather than coining new ones inline).
+export const createIncomeEntryWithTemplateSchema = v.object({
     vaultId: v.string(),
-    // Source fields
-    sourceName: v.pipe(v.string(), v.minLength(1, 'Source name is required')),
-    sourceIcon: v.optional(v.nullable(v.string()), '💰'),
+    // Template fields
+    sourceId: v.pipe(v.string(), v.minLength(1, 'Source is required')),
+    templateName: v.pipe(v.string(), v.minLength(1, 'Template name is required')),
+    templateIcon: v.optional(v.nullable(v.string()), '💰'),
     // Entry fields
     amount: v.pipe(
         v.number('Amount is required'),
@@ -116,11 +166,12 @@ export const createIncomeEntryWithSourceSchema = v.object({
     note: v.optional(v.nullable(v.string())),
     fundId: v.optional(v.nullable(v.string())),
 });
-export type CreateIncomeEntryWithSourceRequest = v.InferOutput<typeof createIncomeEntryWithSourceSchema>;
+export type CreateIncomeEntryWithTemplateRequest = v.InferOutput<typeof createIncomeEntryWithTemplateSchema>;
 
 export const updateIncomeEntrySchema = v.object({
     id: v.string(),
     vaultId: v.string(),
+    templateId: v.optional(v.nullable(v.string())),
     sourceId: v.optional(v.nullable(v.string())),
     amount: v.optional(v.pipe(
         v.number(),
@@ -152,11 +203,24 @@ export const getIncomeSourceQuerySchema = v.object({
 });
 export type GetIncomeSourceQuery = v.InferOutput<typeof getIncomeSourceQuerySchema>;
 
+export const getIncomeTemplatesQuerySchema = v.object({
+    vaultId: v.string(),
+    sourceId: v.optional(v.string()), // Filter to templates under one source
+});
+export type GetIncomeTemplatesQuery = v.InferOutput<typeof getIncomeTemplatesQuerySchema>;
+
+export const getIncomeTemplateQuerySchema = v.object({
+    vaultId: v.string(),
+    id: v.string(),
+});
+export type GetIncomeTemplateQuery = v.InferOutput<typeof getIncomeTemplateQuerySchema>;
+
 export const getIncomeEntriesQuerySchema = v.object({
     vaultId: v.string(),
     startDate: v.optional(v.string()),
     endDate: v.optional(v.string()),
     sourceId: v.optional(v.string()),
+    templateId: v.optional(v.string()),
 });
 export type GetIncomeEntriesQuery = v.InferOutput<typeof getIncomeEntriesQuerySchema>;
 

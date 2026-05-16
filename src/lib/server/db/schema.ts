@@ -202,18 +202,41 @@ export const pendingRecurringOccurrences = sqliteTable('pending_recurring_occurr
     statusIdx: index('idx_pending_occurrences_status').on(table.vaultId, table.status),
 }));
 
-// IncomeSources — reusable named income definitions (Salary - Firdaus, EPF withdrawal, etc.)
-// Mirrors the role expenseTemplates plays for expenses, but income doesn't need a category
-// taxonomy — a household has a handful of named sources and that's the grouping axis.
+// IncomeSources — taxonomy of income KINDS (Salary, EPF, Refund, Gift, Side-income).
+// Vault-scoped, user-defined, small. Mirrors the role categories play for expenses,
+// except sources are user-defined (income kinds vary too much across households for
+// a fixed app-wide list).
 export const incomeSources = sqliteTable('income_sources', {
     id: text('id').primaryKey().$defaultFn(() => createId()),
     vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     icon: text('icon').default('💰'),
     iconType: text('icon_type').default('emoji'),
+    // Audit fields
+    createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
+    createdBy: text('created_by').notNull(),
+    updatedAt: text('updated_at').$defaultFn(() => formatISO(new UTCDate())),
+    updatedBy: text('updated_by'),
+    deletedAt: text('deleted_at'),
+    deletedBy: text('deleted_by'),
+}, (table) => ({
+    vaultIdIdx: index('idx_income_sources_vault').on(table.vaultId),
+}));
+
+// IncomeTemplates — reusable pre-fills referencing a source. Direct parallel to
+// expenseTemplates. Example: 'Salary - Firdaus' (source: Salary, amount: 24000,
+// paidTo: firdaus, fundId: main-account). One template per recurring real-world
+// stream; multiple templates can share a source.
+export const incomeTemplates = sqliteTable('income_templates', {
+    id: text('id').primaryKey().$defaultFn(() => createId()),
+    vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
+    sourceId: text('source_id').notNull().references(() => incomeSources.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    icon: text('icon').default('💰'),
+    iconType: text('icon_type').default('emoji'),
     defaultAmount: real('default_amount'),
-    defaultPaidTo: text('default_paid_to'), // Vault member ID (today); widens to household members later
-    defaultFundId: text('default_fund_id'), // When set, entries default to top-up this fund
+    defaultPaidTo: text('default_paid_to'),
+    defaultFundId: text('default_fund_id'),
     defaultNote: text('default_note'),
     // Usage tracking (powers "most-used first" in pickers, mirrors expenseTemplates)
     usageCount: integer('usage_count').notNull().default(0),
@@ -226,16 +249,22 @@ export const incomeSources = sqliteTable('income_sources', {
     deletedAt: text('deleted_at'),
     deletedBy: text('deleted_by'),
 }, (table) => ({
-    vaultIdIdx: index('idx_income_sources_vault').on(table.vaultId),
+    vaultIdIdx: index('idx_income_templates_vault').on(table.vaultId),
+    sourceIdx: index('idx_income_templates_source').on(table.sourceId),
 }));
 
 // IncomeEntries — per-occurrence income rows. Mirrors expenses minus the category
 // and unidentified-expense plumbing. amount is always positive — sign convention is
 // implicit in the table identity (this table = inflow, expenses = outflow).
+//
+// templateId is the primary attribution; sourceId is denormalized for stats so
+// breakdowns can group by source without a join. When a template is selected on
+// create, sourceId is auto-populated from template.sourceId. Both are nullable to
+// allow ad-hoc entries (refunds, one-off gifts) that don't fit any taxonomy.
 export const incomeEntries = sqliteTable('income_entries', {
     id: text('id').primaryKey().$defaultFn(() => createId()),
     vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
-    // Source is optional — ad-hoc one-off income (e.g. a refund, gift) doesn't need a template.
+    templateId: text('template_id').references(() => incomeTemplates.id, { onDelete: 'set null' }),
     sourceId: text('source_id').references(() => incomeSources.id, { onDelete: 'set null' }),
     amount: real('amount').notNull(),
     date: text('date').notNull().$defaultFn(() => formatISO(new UTCDate())),
@@ -260,6 +289,7 @@ export const incomeEntries = sqliteTable('income_entries', {
     vaultIdIdx: index('idx_income_entries_vault').on(table.vaultId),
     vaultDateIdx: index('idx_income_entries_vault_date').on(table.vaultId, table.date),
     vaultSourceIdx: index('idx_income_entries_vault_source').on(table.vaultId, table.sourceId),
+    vaultTemplateIdx: index('idx_income_entries_vault_template').on(table.vaultId, table.templateId),
     fundIdx: index('idx_income_entries_fund').on(table.fundId),
     recurringIdx: index('idx_income_entries_recurring').on(table.recurringIncomeId),
 }));

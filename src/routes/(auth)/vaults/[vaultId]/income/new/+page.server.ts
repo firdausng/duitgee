@@ -7,6 +7,7 @@ import type { PageServerLoad } from './$types';
 import { getVault } from '$lib/server/api/vaults/getVaultHandler';
 import { getFunds } from '$lib/server/api/funds/getFundsHandler';
 import { getIncomeSources } from '$lib/server/api/income/getIncomeSourcesHandler';
+import { getIncomeTemplates } from '$lib/server/api/income/getIncomeTemplatesHandler';
 
 export const load: PageServerLoad = async ({ params, locals, platform }) => {
     if (platform === undefined) throw new Error('No platform');
@@ -16,7 +17,7 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
     const session = locals.currentSession;
     const env = platform.env;
 
-    const [vaultResult, fundRows, sourceRows] = await Promise.all([
+    const [vaultResult, fundRows, sourceRows, templateRows] = await Promise.all([
         getVault(session, vaultId, env).catch((err) => {
             console.error('Failed to load vault:', err);
             return null;
@@ -29,12 +30,17 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
             console.error('Failed to load income sources:', err);
             return [];
         }),
+        getIncomeTemplates(session, { vaultId }, env).catch((err) => {
+            console.error('Failed to load income templates:', err);
+            return [];
+        }),
     ]);
 
     const form = await superValidate(
         valibot(createIncomeEntrySchema, {
             defaults: {
                 vaultId,
+                templateId: null,
                 sourceId: null,
                 amount: 0,
                 date: formatDatetimeLocal(new Date()),
@@ -65,11 +71,18 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
         id: s.id,
         name: s.name,
         icon: s.icon,
-        defaultAmount: s.defaultAmount,
-        defaultPaidTo: s.defaultPaidTo,
-        defaultFundId: s.defaultFundId,
-        defaultNote: s.defaultNote,
     }));
 
-    return { form, vaultId, members, funds, sources };
+    const templates = (templateRows ?? []).map((t: any) => ({
+        id: t.id,
+        sourceId: t.sourceId,
+        name: t.name,
+        icon: t.icon,
+        defaultAmount: t.defaultAmount,
+        defaultPaidTo: t.defaultPaidTo,
+        defaultFundId: t.defaultFundId,
+        defaultNote: t.defaultNote,
+    }));
+
+    return { form, vaultId, members, funds, sources, templates };
 };

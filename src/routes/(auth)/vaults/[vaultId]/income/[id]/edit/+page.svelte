@@ -50,6 +50,25 @@
 
     let deleting = $state(false);
 
+    const filteredTemplates = $derived(
+        $form.sourceId ? data.templates.filter((t) => t.sourceId === $form.sourceId) : [],
+    );
+
+    function pickSource(sourceId: string | null) {
+        $form.sourceId = sourceId;
+        if ($form.templateId && !data.templates.find((t) => t.id === $form.templateId && t.sourceId === sourceId)) {
+            $form.templateId = null;
+        }
+    }
+
+    function pickTemplate(templateId: string | null) {
+        $form.templateId = templateId;
+        if (templateId) {
+            const tpl = data.templates.find((t) => t.id === templateId);
+            if (tpl) $form.sourceId = tpl.sourceId;
+        }
+    }
+
     async function handleDelete() {
         if (!confirm('Delete this income entry? If it topped up a fund, that top-up will be reversed.')) return;
         deleting = true;
@@ -89,16 +108,17 @@
             <form method="POST" use:enhance class="space-y-6">
                 <input type="hidden" name="id" bind:value={$form.id} />
                 <input type="hidden" name="vaultId" bind:value={$form.vaultId} />
+                <input type="hidden" name="sourceId" value={$form.sourceId ?? ''} />
+                <input type="hidden" name="templateId" value={$form.templateId ?? ''} />
 
                 <!-- Source picker -->
                 {#if data.sources.length > 0}
                     <div class="space-y-2">
                         <Label>Source</Label>
-                        <input type="hidden" name="sourceId" value={$form.sourceId ?? ''} />
-                        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
                             <button
                                 type="button"
-                                onclick={() => ($form.sourceId = null)}
+                                onclick={() => pickSource(null)}
                                 disabled={$delayed}
                                 class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
                                     {!$form.sourceId ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-input'}"
@@ -109,7 +129,7 @@
                             {#each data.sources as src}
                                 <button
                                     type="button"
-                                    onclick={() => ($form.sourceId = src.id)}
+                                    onclick={() => pickSource(src.id)}
                                     disabled={$delayed}
                                     class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
                                         {$form.sourceId === src.id ? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-1' : 'border-input'}"
@@ -120,6 +140,36 @@
                             {/each}
                         </div>
                     </div>
+
+                    {#if $form.sourceId && filteredTemplates.length > 0}
+                        <div class="space-y-2">
+                            <Label>Template</Label>
+                            <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                <button
+                                    type="button"
+                                    onclick={() => pickTemplate(null)}
+                                    disabled={$delayed}
+                                    class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+                                        {!$form.templateId ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-input'}"
+                                >
+                                    <span class="text-xl">—</span>
+                                    <span class="leading-tight">No template</span>
+                                </button>
+                                {#each filteredTemplates as tpl}
+                                    <button
+                                        type="button"
+                                        onclick={() => pickTemplate(tpl.id)}
+                                        disabled={$delayed}
+                                        class="flex flex-col items-center gap-1 rounded-md border-2 px-1 py-2 text-center text-xs transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50
+                                            {$form.templateId === tpl.id ? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-1' : 'border-input'}"
+                                    >
+                                        <span class="text-xl">{tpl.icon ?? '💰'}</span>
+                                        <span class="leading-tight line-clamp-2">{tpl.name}</span>
+                                    </button>
+                                {/each}
+                            </div>
+                        </div>
+                    {/if}
                 {/if}
 
                 <!-- Amount -->
