@@ -525,8 +525,8 @@
                             <p class="text-[11px] text-muted-foreground italic">No allowances.</p>
                         {/if}
                         {#each formAllowances as line, i (i)}
-                            <div class="grid grid-cols-[1fr_70px_100px_auto] gap-2 items-center">
-                                <Input bind:value={line.label} placeholder="e.g. Elaun" disabled={saving} class="h-8 text-sm" />
+                            <div class="grid grid-cols-[70px_minmax(0,1fr)_auto] items-center gap-2 sm:grid-cols-[1fr_70px_100px_auto]">
+                                <Input bind:value={line.label} placeholder="e.g. Elaun" disabled={saving} class="col-span-3 h-8 text-sm sm:col-span-1" />
                                 <select bind:value={line.mode} disabled={saving} class="h-8 rounded-md border border-input bg-background px-2 text-xs">
                                     <option value="fixed">RM</option>
                                     <option value="percent">%</option>
@@ -552,8 +552,8 @@
                             <p class="text-[11px] text-muted-foreground italic">No deductions.</p>
                         {/if}
                         {#each formDeductions as line, i (i)}
-                            <div class="grid grid-cols-[1fr_70px_100px_140px_auto] gap-2 items-center">
-                                <Input bind:value={line.label} placeholder="e.g. Tax" disabled={saving} class="h-8 text-sm" />
+                            <div class="grid grid-cols-[70px_minmax(0,1fr)_auto] items-center gap-2 sm:grid-cols-[1fr_70px_100px_140px_auto]">
+                                <Input bind:value={line.label} placeholder="e.g. Tax" disabled={saving} class="col-span-3 h-8 text-sm sm:col-span-1" />
                                 <select bind:value={line.mode} disabled={saving} class="h-8 rounded-md border border-input bg-background px-2 text-xs">
                                     <option value="percent">%</option>
                                     <option value="fixed">RM</option>
@@ -563,8 +563,8 @@
                                 {:else}
                                     <Input type="number" step="0.01" min="0" bind:value={line.amount} disabled={saving} class="h-8 text-sm" placeholder="0.00" />
                                 {/if}
-                                <Input bind:value={line.categoryName} placeholder="Salary deductions" disabled={saving} class="h-8 text-sm" />
                                 <button type="button" onclick={() => removeFormDeduction(i)} disabled={saving} class="text-muted-foreground hover:text-destructive p-1" aria-label="Remove deduction">×</button>
+                                <Input bind:value={line.categoryName} placeholder="Salary deductions" disabled={saving} class="col-span-3 h-8 text-sm sm:col-span-1 sm:col-start-4 sm:row-start-1" />
                             </div>
                         {/each}
                     </div>

@@ -463,8 +463,8 @@
                             {/if}
                             {#each allowanceLines as line, i (i)}
                                 {@const computed = resolvedAllowances[i]?.computed ?? 0}
-                                <div class="grid grid-cols-[1fr_70px_100px_70px_auto] gap-2 items-center">
-                                    <Input bind:value={line.label} placeholder="e.g. Elaun" disabled={$delayed} class="h-8 text-sm" />
+                                <div class="grid grid-cols-[70px_minmax(0,1fr)_auto_auto] items-center gap-2 sm:grid-cols-[1fr_70px_100px_70px_auto]">
+                                    <Input bind:value={line.label} placeholder="e.g. Elaun" disabled={$delayed} class="col-span-4 h-8 text-sm sm:col-span-1" />
                                     <select bind:value={line.mode} disabled={$delayed} class="h-8 rounded-md border border-input bg-background px-2 text-xs">
                                         <option value="fixed">RM</option>
                                         <option value="percent">%</option>
@@ -518,8 +518,8 @@
                             </p>
                             {#each deductionLines as line, i (i)}
                                 {@const computed = resolvedDeductions[i]?.computed ?? 0}
-                                <div class="grid grid-cols-[1fr_70px_100px_140px_70px_auto] gap-2 items-center">
-                                    <Input bind:value={line.label} placeholder="e.g. Tax" disabled={$delayed} class="h-8 text-sm" />
+                                <div class="grid grid-cols-[70px_minmax(0,1fr)_auto_auto] items-center gap-2 sm:grid-cols-[1fr_70px_100px_140px_70px_auto]">
+                                    <Input bind:value={line.label} placeholder="e.g. Tax" disabled={$delayed} class="col-span-4 h-8 text-sm sm:col-span-1" />
                                     <select bind:value={line.mode} disabled={$delayed} class="h-8 rounded-md border border-input bg-background px-2 text-xs">
                                         <option value="percent">%</option>
                                         <option value="fixed">RM</option>
@@ -547,16 +547,16 @@
                                             placeholder="0.00"
                                         />
                                     {/if}
-                                    <Input
-                                        bind:value={line.categoryName}
-                                        placeholder="Salary deductions"
-                                        disabled={$delayed}
-                                        class="h-8 text-sm"
-                                    />
                                     <span class="text-xs text-right tabular-nums text-muted-foreground">{computed.toFixed(2)}</span>
                                     <button type="button" onclick={() => removeDeduction(i)} disabled={$delayed} class="text-muted-foreground hover:text-destructive p-1" aria-label="Remove deduction">
                                         ×
                                     </button>
+                                    <Input
+                                        bind:value={line.categoryName}
+                                        placeholder="Salary deductions"
+                                        disabled={$delayed}
+                                        class="col-span-4 h-8 text-sm sm:col-span-1 sm:col-start-4 sm:row-start-1"
+                                    />
                                 </div>
                             {/each}
                         </div>
