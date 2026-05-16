@@ -91,23 +91,25 @@
                     </span>
                 {/if}
             </Drawer.Trigger>
-            <Drawer.Content class="px-2 pb-4">
-                <Drawer.Header class="text-left">
+            <Drawer.Content class="flex flex-col max-h-[85dvh]">
+                <Drawer.Header class="text-left shrink-0">
                     <Drawer.Title>Switch vault</Drawer.Title>
                 </Drawer.Header>
-                <VaultSwitcherList
-                    {vaults}
-                    {currentVaultId}
-                    onSelect={selectVault}
-                    onAllVaults={() => {
-                        switcherOpen = false;
-                        goto('/vaults');
-                    }}
-                    onNewVault={() => {
-                        switcherOpen = false;
-                        goto('/vaults/new');
-                    }}
-                />
+                <div class="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
+                    <VaultSwitcherList
+                        {vaults}
+                        {currentVaultId}
+                        onSelect={selectVault}
+                        onAllVaults={() => {
+                            switcherOpen = false;
+                            goto('/vaults');
+                        }}
+                        onNewVault={() => {
+                            switcherOpen = false;
+                            goto('/vaults/new');
+                        }}
+                    />
+                </div>
             </Drawer.Content>
         </Drawer.Root>
 

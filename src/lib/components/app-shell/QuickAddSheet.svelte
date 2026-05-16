@@ -61,12 +61,12 @@
 </script>
 
 <Drawer.Root {open} onOpenChange={onOpenChange}>
-    <Drawer.Content class="px-2 pb-6 max-h-[80vh]">
-        <Drawer.Header class="text-left">
+    <Drawer.Content class="flex flex-col max-h-[85dvh]">
+        <Drawer.Header class="text-left shrink-0">
             <Drawer.Title>Add expense</Drawer.Title>
         </Drawer.Header>
 
-        <div class="px-2">
+        <div class="flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
             {#if hasTemplates}
                 <p class="px-2 mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Start from a template

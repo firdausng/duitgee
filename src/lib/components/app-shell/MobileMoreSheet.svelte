@@ -35,12 +35,12 @@
 </script>
 
 <Drawer.Root {open} onOpenChange={onOpenChange}>
-    <Drawer.Content class="px-2 pb-6 max-h-[80vh]">
-        <Drawer.Header class="text-left">
+    <Drawer.Content class="flex flex-col max-h-[85dvh]">
+        <Drawer.Header class="text-left shrink-0">
             <Drawer.Title>More</Drawer.Title>
         </Drawer.Header>
 
-        <nav class="px-2">
+        <nav class="flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
             <ul class="space-y-0.5">
                 {#each MOBILE_MORE_ITEMS as item (item.id)}
                     {@const Icon = item.icon}

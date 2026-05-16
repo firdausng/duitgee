@@ -125,8 +125,8 @@
 </script>
 
 <Drawer {open} {onOpenChange}>
-    <DrawerContent>
-        <DrawerHeader class="text-left">
+    <DrawerContent class="flex flex-col max-h-[85dvh]">
+        <DrawerHeader class="text-left shrink-0">
             <DrawerTitle>Transfer funds</DrawerTitle>
             <DrawerDescription>
                 {#if fromFund}
@@ -137,7 +137,7 @@
             </DrawerDescription>
         </DrawerHeader>
 
-        <form onsubmit={handleSubmit} class="px-4 pb-2 space-y-4">
+        <form onsubmit={handleSubmit} class="flex-1 overflow-y-auto overscroll-contain px-4 pb-2 space-y-4">
             <!-- From fund (read-only summary) -->
             <div class="rounded-[var(--radius-md)] border bg-muted/40 px-3 py-2">
                 <p class="text-xs text-muted-foreground">From</p>
@@ -222,7 +222,7 @@
             {/if}
         </form>
 
-        <DrawerFooter>
+        <DrawerFooter class="shrink-0">
             <div class="flex gap-2">
                 <Button
                     type="button"
