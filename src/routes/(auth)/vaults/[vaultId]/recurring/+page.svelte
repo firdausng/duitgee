@@ -728,7 +728,7 @@
                         </p>
                     </div>
 
-                    <div class="border-l md:pl-4 md:border-l border-border/60">
+                    <div class="md:pl-4 md:border-l border-border/60">
                         <p class="text-xs text-muted-foreground uppercase tracking-wide">Subscriptions</p>
                         <p class="text-lg font-semibold font-mono">
                             {fmt.currency(subSummary.monthlyCommit)}<span class="text-xs text-muted-foreground font-normal">/mo</span>
@@ -738,7 +738,7 @@
                         </p>
                     </div>
 
-                    <div class="border-l md:pl-4 md:border-l border-border/60">
+                    <div class="md:pl-4 md:border-l border-border/60">
                         <p class="text-xs text-muted-foreground uppercase tracking-wide">Installments</p>
                         <p class="text-lg font-semibold font-mono">
                             {fmt.currency(instSummary.monthlyCommit)}<span class="text-xs text-muted-foreground font-normal">/mo</span>
