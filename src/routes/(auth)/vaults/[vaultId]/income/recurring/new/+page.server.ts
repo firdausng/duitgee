@@ -40,6 +40,7 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
                 anchorDate: formatDatetimeLocal(new Date()),
                 generationMode: 'queue',
                 endDate: null,
+                backfill: false,
             },
         }),
     );

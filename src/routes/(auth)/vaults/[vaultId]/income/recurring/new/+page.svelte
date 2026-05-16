@@ -13,9 +13,11 @@
     import { DateTimePicker } from '$lib/components/ui/date-time-picker';
     import * as Select from '$lib/components/ui/select';
     import * as RadioGroup from '$lib/components/ui/radio-group';
+    import { CheckboxRow } from '$lib/components/ui/checkbox-row';
     import { Toaster } from '$lib/components/ui/sonner';
     import { toast } from 'svelte-sonner';
     import { localDatetimeToUtcIso } from '$lib/utils';
+    import { computeNextOccurrence, type ScheduleUnit } from '$lib/utils/recurringSchedule';
 
     const FREQUENCY_LABEL: Record<'day' | 'week' | 'month' | 'year', string> = {
         day: 'Daily',
@@ -23,6 +25,7 @@
         month: 'Monthly',
         year: 'Yearly',
     };
+    const BACKFILL_CAP = 50;
 
     let { data } = $props();
 
@@ -52,12 +55,50 @@
                     toast.error(response.error || 'Failed to create');
                     return;
                 }
-                toast.success('Recurring income rule created');
+                const backfilled = response.data?.backfilled ?? 0;
+                const suffix =
+                    backfilled > 0
+                        ? form.data.generationMode === 'auto'
+                            ? ` · ${backfilled} entr${backfilled === 1 ? 'y' : 'ies'} back-filled`
+                            : ` · ${backfilled} pending approval${backfilled === 1 ? '' : 's'} created`
+                        : '';
+                toast.success(`Recurring income rule created${suffix}`);
                 await goto(`/vaults/${data.vaultId}/income/recurring`);
             } catch (e: any) {
                 toast.error(e?.data?.error || e?.message || 'Failed');
             }
         },
+    });
+
+    // Anchor-in-past detection drives the back-fill checkbox visibility.
+    const anchorIsPast = $derived.by(() => {
+        if (!$form.anchorDate) return false;
+        const a = new Date($form.anchorDate);
+        if (isNaN(a.getTime())) return false;
+        return a.getTime() < Date.now();
+    });
+    const backfillAvailable = $derived(anchorIsPast);
+    // Estimate how many occurrences will materialize between anchor and now.
+    // Bounded by BACKFILL_CAP so the preview matches the engine's cap.
+    const backfillPreviewCount = $derived.by(() => {
+        if (!backfillAvailable || !$form.backfill || !$form.anchorDate) return 0;
+        const anchor = new Date($form.anchorDate);
+        if (isNaN(anchor.getTime())) return 0;
+        const now = new Date();
+        let cursor = anchor;
+        let count = 0;
+        while (count < BACKFILL_CAP && cursor.getTime() <= now.getTime()) {
+            count++;
+            const next = computeNextOccurrence(
+                anchor,
+                $form.scheduleUnit as ScheduleUnit,
+                $form.scheduleInterval,
+                cursor,
+            );
+            if (next.getTime() <= cursor.getTime()) break;
+            cursor = next;
+        }
+        return count;
     });
 </script>
 
@@ -185,6 +226,38 @@
                         {#if $errors.anchorDate}
                             <p class="text-sm text-destructive">{$errors.anchorDate}</p>
                         {/if}
+                    </div>
+
+                    <!-- Back-fill (only meaningful when anchor is in the past) -->
+                    <div class="rounded-md border border-dashed bg-muted/30 p-3 space-y-2">
+                        <CheckboxRow
+                            name="backfill"
+                            bind:checked={$form.backfill}
+                            disabled={$delayed || !backfillAvailable}
+                        >
+                            {#snippet label()}
+                                {#if $form.generationMode === 'auto'}
+                                    Back-fill missed occurrences as real income entries
+                                {:else}
+                                    Back-fill missed occurrences as pending approvals
+                                {/if}
+                            {/snippet}
+                            {#snippet description()}
+                                {#if !backfillAvailable}
+                                    <span class="text-muted-foreground">Only applies when "First occurrence" is in the past. Set an earlier date to enable.</span>
+                                {:else if $form.backfill && backfillPreviewCount > 0}
+                                    {#if $form.generationMode === 'auto'}
+                                        <span class="font-medium text-foreground">This rule will record {backfillPreviewCount} income entr{backfillPreviewCount === 1 ? 'y' : 'ies'}</span> immediately, dated at each past occurrence (with their breakdown + linked deduction expenses).
+                                    {:else}
+                                        <span class="font-medium text-foreground">This rule will create {backfillPreviewCount} pending approval{backfillPreviewCount === 1 ? '' : 's'}</span> for you to confirm.
+                                    {/if}
+                                {:else if $form.generationMode === 'auto'}
+                                    Records one income entry per missed occurrence (up to {BACKFILL_CAP}). Use this if salary/income has already been hitting your account.
+                                {:else}
+                                    Creates one pending approval per missed occurrence (up to {BACKFILL_CAP}).
+                                {/if}
+                            {/snippet}
+                        </CheckboxRow>
                     </div>
 
                     <div class="space-y-2">

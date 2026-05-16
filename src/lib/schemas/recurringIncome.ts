@@ -47,6 +47,11 @@ export const createRecurringIncomeSchema = v.object({
     anchorDate: v.pipe(v.string(), v.minLength(1, 'Anchor date is required')),
     generationMode: incomeGenerationModeSchema,
     endDate: v.optional(v.nullable(v.string())),
+    // When true AND anchor is in the past, the engine materializes missed
+    // occurrences from anchor to now. Auto mode → real income entries (with
+    // breakdown + linked deduction expenses). Queue mode → pending approvals.
+    // Hard-capped by the engine's MAX_CATCHUP_PER_RULE (50).
+    backfill: v.optional(v.boolean(), false),
 });
 export type CreateRecurringIncomeRequest = v.InferOutput<typeof createRecurringIncomeSchema>;
 

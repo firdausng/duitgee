@@ -11,6 +11,7 @@ import {
     computeNextOccurrence,
     type ScheduleUnit,
 } from '$lib/utils/recurringSchedule';
+import { processDueRecurringIncome } from './processDueRecurringIncome';
 import type { CreateRecurringIncomeRequest } from '$lib/schemas/recurringIncome';
 
 export const createRecurringIncome = async (
@@ -42,19 +43,28 @@ export const createRecurringIncome = async (
         await requireVaultEntitlement(session, data.vaultId, 'income:auto_generation', env);
     }
 
-    // First occurrence = anchor; if anchor is past, jump to the next future one
-    // so the engine doesn't immediately catch-up a stale history.
     const anchor = parseISO(data.anchorDate);
     const now = new UTCDate();
-    const nextOccurrence =
-        anchor.getTime() > now.getTime()
-            ? anchor
-            : computeNextOccurrence(
-                  anchor,
-                  data.scheduleUnit as ScheduleUnit,
-                  data.scheduleInterval,
-                  now,
-              );
+    const anchorIsPast = anchor.getTime() <= now.getTime();
+    const shouldBackfill = data.backfill === true && anchorIsPast;
+
+    // Three starting-point cases:
+    //   - backfill + past anchor → start AT anchor; engine catches up to now
+    //   - past anchor, no backfill → skip ahead to next future occurrence
+    //   - future anchor → start AT anchor
+    let nextOccurrence: Date;
+    if (shouldBackfill) {
+        nextOccurrence = anchor;
+    } else if (anchorIsPast) {
+        nextOccurrence = computeNextOccurrence(
+            anchor,
+            data.scheduleUnit as ScheduleUnit,
+            data.scheduleInterval,
+            now,
+        );
+    } else {
+        nextOccurrence = anchor;
+    }
 
     const [rule] = await client
         .insert(recurringIncome)
@@ -75,5 +85,21 @@ export const createRecurringIncome = async (
         })
         .returning();
 
-    return rule;
+    // Materialize back-fill synchronously via the engine. Same code path as
+    // the cron / lazy catch-up, so fund integration + breakdown materialization
+    // are uniformly handled. Engine's MAX_CATCHUP_PER_RULE (50) caps the run.
+    let backfilled = 0;
+    if (shouldBackfill) {
+        try {
+            const result = await processDueRecurringIncome(env, { ruleId: rule.id });
+            backfilled = result.autoCreated + result.queued;
+        } catch (err) {
+            // Don't fail the create on a back-fill error — the rule exists,
+            // future occurrences will fire normally, and the user can retry
+            // back-fill semantics by lazy-read (engine runs on list fetch).
+            console.error('[createRecurringIncome] back-fill failed', { ruleId: rule.id, err });
+        }
+    }
+
+    return { ...rule, backfilled };
 };
