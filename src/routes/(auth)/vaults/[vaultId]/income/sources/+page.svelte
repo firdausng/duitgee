@@ -134,7 +134,7 @@
             </button>
             <Eyebrow tone="muted">— The household ledger —</Eyebrow>
             <h1 class="dg-page-title">Income <em>sources</em>.</h1>
-            <p class="dg-page-sub">Taxonomy of income kinds — Salary, EPF, Refund, Gift, Side-income.</p>
+            <p class="dg-page-sub">Taxonomy of income kinds — e.g. Salary, Side income, Refund, Gift.</p>
         </header>
         {#if !isCreating && editingId === null}
             <Button size="sm" onclick={startCreate}>
@@ -183,7 +183,7 @@
                 <EmptyState
                     icon={Tags}
                     title="No sources yet"
-                    description="Sources are the small taxonomy of income kinds (Salary, EPF, Refund). Create one to start recording income."
+                    description="Sources are the small taxonomy of income kinds (e.g. Salary, Side income, Refund). Create one to start recording income."
                 >
                     {#snippet primary()}
                         <Button size="sm" onclick={startCreate}>

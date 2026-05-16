@@ -190,7 +190,7 @@
             </button>
             <Eyebrow tone="muted">— The household ledger —</Eyebrow>
             <h1 class="dg-page-title">Income <em>templates</em>.</h1>
-            <p class="dg-page-sub">Reusable pre-fills tied to a source. Salary - Firdaus, EPF Q3 withdrawal, etc.</p>
+            <p class="dg-page-sub">Reusable pre-fills tied to a source. One per recurring stream — e.g. "Salary — main job", "Quarterly bonus".</p>
         </header>
         {#if !isCreating && editingId === null}
             <Button size="sm" onclick={startCreate} disabled={sources.length === 0}>
@@ -321,7 +321,7 @@
                 <EmptyState
                     icon={FileText}
                     title="No templates yet"
-                    description="Templates pre-fill the new-income form. Useful for recurring streams like salary or regular EPF withdrawals."
+                    description="Templates pre-fill the new-income form. Useful for recurring streams like salary, retirement withdrawals, or regular side income."
                 >
                     {#snippet primary()}
                         <Button size="sm" onclick={startCreate}>

@@ -202,7 +202,7 @@ export const pendingRecurringOccurrences = sqliteTable('pending_recurring_occurr
     statusIdx: index('idx_pending_occurrences_status').on(table.vaultId, table.status),
 }));
 
-// IncomeSources — taxonomy of income KINDS (Salary, EPF, Refund, Gift, Side-income).
+// IncomeSources — taxonomy of income KINDS (e.g. Salary, Side income, Refund, Gift).
 // Vault-scoped, user-defined, small. Mirrors the role categories play for expenses,
 // except sources are user-defined (income kinds vary too much across households for
 // a fixed app-wide list).

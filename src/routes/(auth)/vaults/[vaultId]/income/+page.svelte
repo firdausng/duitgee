@@ -161,7 +161,7 @@
                 <EmptyState
                     icon={TrendingUp}
                     title="No income yet"
-                    description="Record salary, side income, EPF withdrawals, refunds, or gifts to see your full cash-flow picture."
+                    description="Record salary, side income, refunds, gifts, or any other money coming in to see your full cash-flow picture."
                 >
                     {#snippet primary()}
                         <Button size="sm" onclick={() => goto(`/vaults/${vaultId}/income/new`)}>
