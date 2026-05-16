@@ -10,6 +10,7 @@ import HandCoins from '@lucide/svelte/icons/hand-coins';
 import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
 import Calendar from '@lucide/svelte/icons/calendar';
 import Tag from '@lucide/svelte/icons/tag';
+import TrendingUp from '@lucide/svelte/icons/trending-up';
 
 export type BadgeKey = 'pendingRecurring';
 
@@ -40,6 +41,7 @@ export const VAULT_NAV: NavSection[] = [
         items: [
             { id: 'home', label: 'Ledger', icon: House, path: '', exact: true },
             { id: 'expenses', label: 'Chronicle', icon: Receipt, path: 'expenses' },
+            { id: 'income', label: 'Income', icon: TrendingUp, path: 'income' },
             { id: 'funds', label: 'Funds', icon: Wallet, path: 'funds' },
         ],
     },
@@ -77,9 +79,14 @@ export const MOBILE_BOTTOM_PRIMARY: NavItem[] = [
     { id: 'funds', label: 'Funds', icon: Wallet, path: 'funds' },
 ];
 
-/** Items shown inside the mobile "More" bottom sheet. */
-export const MOBILE_MORE_ITEMS: NavItem[] =
-    VAULT_NAV.find((s) => s.id === 'manage')?.items ?? [];
+/** Items shown inside the mobile "More" bottom sheet — everything not on the bottom bar. */
+export const MOBILE_MORE_ITEMS: NavItem[] = (() => {
+    const bottomIds = new Set(MOBILE_BOTTOM_PRIMARY.map((i) => i.id));
+    const overflowFromPrimary = (VAULT_NAV.find((s) => s.id === 'primary')?.items ?? [])
+        .filter((i) => !bottomIds.has(i.id));
+    const manageItems = VAULT_NAV.find((s) => s.id === 'manage')?.items ?? [];
+    return [...overflowFromPrimary, ...manageItems];
+})();
 
 export function vaultItemHref(vaultId: string, item: NavItem, search = ''): string {
     const base = item.path ? `/vaults/${vaultId}/${item.path}` : `/vaults/${vaultId}`;

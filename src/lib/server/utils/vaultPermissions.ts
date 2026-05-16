@@ -14,6 +14,10 @@ export interface VaultPermissions {
     canDeleteVault: boolean;
     canManageFunds: boolean;
     canManageRecurring: boolean;
+    // Income — privacy-sensitive. View is gated separately so households can let
+    // members log expenses without exposing household income totals.
+    canViewIncome: boolean;
+    canManageIncome: boolean;
 }
 
 export const getUserVaultRole = async (userId: string, vaultId: string, env: Cloudflare.Env): Promise<VaultRole | null> => {
@@ -51,7 +55,9 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
             canEditVault: false,
             canDeleteVault: false,
             canManageFunds: false,
-            canManageRecurring: false
+            canManageRecurring: false,
+            canViewIncome: false,
+            canManageIncome: false,
         };
     }
 
@@ -66,7 +72,9 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
                 canEditVault: true,
                 canDeleteVault: true,
                 canManageFunds: true,
-                canManageRecurring: true
+                canManageRecurring: true,
+                canViewIncome: true,
+                canManageIncome: true,
             };
 
         case 'admin':
@@ -79,11 +87,14 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
                 canEditVault: true,
                 canDeleteVault: false,
                 canManageFunds: true,
-                canManageRecurring: true
+                canManageRecurring: true,
+                canViewIncome: true,
+                canManageIncome: true,
             };
 
         case 'member':
-            // Member can only create expenses
+            // Member can create expenses; income is privacy-fail-closed by default.
+            // Owners can grant canViewIncome to specific members via vault settings.
             return {
                 canCreateExpenses: true,
                 canEditExpenses: false,
@@ -92,7 +103,9 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
                 canEditVault: false,
                 canDeleteVault: false,
                 canManageFunds: false,
-                canManageRecurring: false
+                canManageRecurring: false,
+                canViewIncome: false,
+                canManageIncome: false,
             };
 
         default:

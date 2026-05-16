@@ -12,6 +12,7 @@ import {expenseTemplatesApi} from "$lib/server/api/expense-templates/expense-tem
 import {userApi} from "$lib/server/api/user/user-api";
 import {fundsApi} from "$lib/server/api/funds/funds-api";
 import {recurringExpensesApi} from "$lib/server/api/recurring-expenses/recurring-expenses-api";
+import {incomeApi} from "$lib/server/api/income/income-api";
 import {adminApi} from "$lib/server/api/admin/admin-api";
 import {tagsApi} from "$lib/server/api/tags/tags-api";
 import {attachmentsApi} from "$lib/server/api/attachments/attachments-api";
@@ -43,6 +44,7 @@ const router = new Hono<App.Api>()
     .route('/', userApi)
     .route('/', fundsApi)
     .route('/', recurringExpensesApi)
+    .route('/', incomeApi)
     .route('/', adminApi)
     .route('/', tagsApi)
     .route('/', attachmentsApi)
