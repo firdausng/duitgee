@@ -27,6 +27,8 @@
     import TrendingUp from '@lucide/svelte/icons/trending-up';
     import TrendingDown from '@lucide/svelte/icons/trending-down';
     import FlaskConical from '@lucide/svelte/icons/flask-conical';
+    import ChevronRight from '@lucide/svelte/icons/chevron-right';
+    import ChevronDown from '@lucide/svelte/icons/chevron-down';
 
     const { vaultId } = page.params;
 
@@ -103,12 +105,16 @@
 
     let incomeOverrides = $state<Record<string, IncomeOverride>>({});
     let expenseOverrides = $state<Record<string, ExpenseOverride>>({});
-    /** One-off expense overrides, keyed by group key. Cleared whenever the
-     *  grouping mode changes so the visible toggles always fully explain the
-     *  current Scenario number. Templates/categories partition cleanly; tags
-     *  overlap so amount edits aren't offered in tag mode. */
+    /** Group-level overrides, keyed by group key (template id, category name,
+     *  or tag id). Partition modes offer toggle + amount; tag mode is toggle
+     *  only since amount overrides are ambiguous under overlap. */
     type GroupOverride = { disabled: boolean; amount: number | null };
     let oneOffOverrides = $state<Record<string, GroupOverride>>({});
+    /** Row-level overrides for individual one-off expenses inside a group.
+     *  Toggle only — for "drop this one dinner" without nuking the group. */
+    let expenseRowOverrides = $state<Record<string, { disabled: boolean }>>({});
+    /** Which group rows are expanded to reveal their expense list. */
+    let expandedGroups = $state<Record<string, boolean>>({});
 
     type GroupingMode = 'template' | 'category' | 'tag';
     let groupingMode = $state<GroupingMode>('template');
@@ -117,12 +123,28 @@
         incomeOverrides = {};
         expenseOverrides = {};
         oneOffOverrides = {};
+        expenseRowOverrides = {};
     }
 
     function changeGrouping(next: GroupingMode) {
         if (next === groupingMode) return;
         groupingMode = next;
+        // Group keys mean different things in each mode, and row toggles
+        // become invisible when their group moves — clear both so the
+        // toggles you see fully explain the Scenario number.
         oneOffOverrides = {};
+        expenseRowOverrides = {};
+        expandedGroups = {};
+    }
+
+    function toggleExpanded(key: string) {
+        expandedGroups = { ...expandedGroups, [key]: !expandedGroups[key] };
+    }
+    function toggleExpenseRow(id: string, enabled: boolean) {
+        expenseRowOverrides = {
+            ...expenseRowOverrides,
+            [id]: { disabled: !enabled },
+        };
     }
 
     // When the period changes, clear overrides — rule set may differ.
@@ -132,6 +154,7 @@
         if (key !== lastRangeKey) {
             lastRangeKey = key;
             resetOverrides();
+            expandedGroups = {};
         }
     });
 
@@ -195,6 +218,16 @@
         });
     });
 
+    /** A single one-off expense as it appears inside an expanded group. */
+    type ExpenseChild = {
+        id: string;
+        name: string;
+        icon: string | null;
+        date: string;
+        amount: number;
+        disabled: boolean;
+    };
+
     /** Visual row for the grouped one-off expense panel. One per group key. */
     type GroupRow = {
         key: string;
@@ -207,85 +240,87 @@
         /** Tag mode hides amount edit because expenses can appear in multiple
          *  tag groups, making a single override ambiguous. */
         editable: boolean;
+        /** Child expenses inside this group (already row-override-aware). */
+        children: ExpenseChild[];
     };
 
     const UNGROUPED_KEY = '__ungrouped__';
+
+    function buildChild(r: NonNullable<typeof baseline>['oneOffExpenses'][number]): ExpenseChild {
+        return {
+            id: r.id,
+            name: r.name,
+            icon: r.icon,
+            date: r.date,
+            amount: r.amount,
+            disabled: expenseRowOverrides[r.id]?.disabled ?? false,
+        };
+    }
 
     const groupRows = $derived.by<GroupRow[]>(() => {
         const rows = baseline?.oneOffExpenses ?? [];
         if (rows.length === 0) return [];
 
-        if (groupingMode === 'template') {
-            const map = new Map<string, { name: string; icon: string | null; total: number; count: number }>();
+        type Bucket = {
+            name: string;
+            icon: string | null;
+            total: number;
+            children: ExpenseChild[];
+        };
+
+        if (groupingMode === 'template' || groupingMode === 'category') {
+            const map = new Map<string, Bucket>();
             for (const r of rows) {
-                const key = r.templateId ?? UNGROUPED_KEY;
-                const name = r.templateName ?? 'Uncategorized';
-                const entry = map.get(key) ?? { name, icon: r.icon, total: 0, count: 0 };
+                const key = groupingMode === 'template'
+                    ? (r.templateId ?? UNGROUPED_KEY)
+                    : (r.categoryName || UNGROUPED_KEY);
+                const name = groupingMode === 'template'
+                    ? (r.templateName ?? 'Uncategorized')
+                    : (r.categoryName || 'Uncategorized');
+                const icon = groupingMode === 'template' ? r.icon : null;
+                const entry = map.get(key) ?? { name, icon, total: 0, children: [] };
                 entry.total += r.amount;
-                entry.count += 1;
+                entry.children.push(buildChild(r));
                 map.set(key, entry);
             }
             return [...map.entries()]
                 .map(([key, g]) => {
                     const o = oneOffOverrides[key];
                     const disabled = o?.disabled ?? false;
-                    const amount = o?.amount ?? g.total;
+                    const activeChildSum = g.children.reduce(
+                        (s, c) => s + (c.disabled ? 0 : c.amount),
+                        0,
+                    );
+                    const amount = o?.amount ?? activeChildSum;
                     return {
                         key,
                         name: g.name,
                         icon: g.icon,
-                        count: g.count,
+                        count: g.children.length,
                         realTotal: g.total,
                         scenarioTotal: disabled ? 0 : amount,
                         disabled,
                         editable: true,
-                    };
-                })
-                .sort((a, b) => b.realTotal - a.realTotal);
-        }
-
-        if (groupingMode === 'category') {
-            const map = new Map<string, { name: string; total: number; count: number }>();
-            for (const r of rows) {
-                const key = r.categoryName || UNGROUPED_KEY;
-                const name = r.categoryName || 'Uncategorized';
-                const entry = map.get(key) ?? { name, total: 0, count: 0 };
-                entry.total += r.amount;
-                entry.count += 1;
-                map.set(key, entry);
-            }
-            return [...map.entries()]
-                .map(([key, g]) => {
-                    const o = oneOffOverrides[key];
-                    const disabled = o?.disabled ?? false;
-                    const amount = o?.amount ?? g.total;
-                    return {
-                        key,
-                        name: g.name,
-                        icon: null,
-                        count: g.count,
-                        realTotal: g.total,
-                        scenarioTotal: disabled ? 0 : amount,
-                        disabled,
-                        editable: true,
+                        children: g.children.sort((a, b) => b.amount - a.amount),
                     };
                 })
                 .sort((a, b) => b.realTotal - a.realTotal);
         }
 
         // Tag mode — expense may appear in multiple tag groups.
-        const map = new Map<string, { name: string; total: number; count: number }>();
+        const map = new Map<string, Bucket>();
         for (const r of rows) {
+            const child = buildChild(r);
             if (r.tags.length === 0) {
-                const entry = map.get(UNGROUPED_KEY) ?? { name: 'Untagged', total: 0, count: 0 };
+                const entry = map.get(UNGROUPED_KEY) ?? { name: 'Untagged', icon: null, total: 0, children: [] };
                 entry.total += r.amount;
-                entry.count += 1;
+                entry.children.push(child);
                 map.set(UNGROUPED_KEY, entry);
             } else {
                 for (const t of r.tags) {
-                    const entry = map.get(t.id) ?? { name: t.name, total: 0, count: 0 };
+                    const entry = map.get(t.id) ?? { name: t.name, icon: null, total: 0, children: [] };
                     entry.total += r.amount;
-                    entry.count += 1;
+                    entry.children.push(child);
                     map.set(t.id, entry);
                 }
             }
@@ -298,26 +333,30 @@
                     key,
                     name: g.name,
                     icon: null,
-                    count: g.count,
+                    count: g.children.length,
                     realTotal: g.total,
-                    // Tag mode is toggle-only — see note on `editable`.
+                    // Tag-group total is informational only — the real
+                    // exclusion math runs over individual expenses in
+                    // oneOffScenarioTotal.
                     scenarioTotal: disabled ? 0 : g.total,
                     disabled,
                     editable: false,
+                    children: g.children.sort((a, b) => b.amount - a.amount),
                 };
             })
             .sort((a, b) => b.realTotal - a.realTotal);
     });
 
-    /** Tag-mode scenario sum: any expense bearing a disabled tag is excluded
-     *  (union semantic). Partition modes (template/category) can sum the
-     *  group rows directly. */
+    /** Tag mode runs the exclusion math directly over individual rows
+     *  (union semantic + row-level toggle). Partition modes already account
+     *  for both group amount overrides and child toggles via groupRows. */
     const oneOffScenarioTotal = $derived.by(() => {
         const rows = baseline?.oneOffExpenses ?? [];
         if (rows.length === 0) return 0;
 
         if (groupingMode === 'tag') {
             return rows.reduce((sum, r) => {
+                if (expenseRowOverrides[r.id]?.disabled) return sum;
                 const groupKeys = r.tags.length === 0
                     ? [UNGROUPED_KEY]
                     : r.tags.map((t) => t.id);
@@ -399,7 +438,8 @@
     const hasAnyOverride = $derived(
         Object.keys(incomeOverrides).length > 0
             || Object.keys(expenseOverrides).length > 0
-            || Object.keys(oneOffOverrides).length > 0,
+            || Object.keys(oneOffOverrides).length > 0
+            || Object.keys(expenseRowOverrides).length > 0,
     );
 
     function deltaSignClass(n: number, positiveIsGood: boolean): string {
@@ -648,36 +688,71 @@
                     </p>
                 {:else}
                     {#each groupRows as row (row.key)}
-                        <div class="flex items-center gap-3 rounded-md border p-3" class:opacity-60={row.disabled}>
-                            <IconRenderer icon={row.icon} size={20} emojiClass="text-lg" />
-                            <div class="min-w-0 flex-1">
-                                <div class="truncate text-sm font-medium">{row.name}</div>
-                                <div class="text-xs text-muted-foreground">
-                                    {row.count} {row.count === 1 ? 'expense' : 'expenses'} · Real {fmt.currency(row.realTotal)}
+                        {@const expanded = expandedGroups[row.key] === true}
+                        <div class="rounded-md border" class:opacity-60={row.disabled}>
+                            <div class="flex items-center gap-3 p-3">
+                                <button
+                                    type="button"
+                                    class="-m-1 inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-muted"
+                                    aria-label={expanded ? 'Collapse group' : 'Expand group'}
+                                    aria-expanded={expanded}
+                                    onclick={() => toggleExpanded(row.key)}
+                                >
+                                    {#if expanded}
+                                        <ChevronDown class="size-4" />
+                                    {:else}
+                                        <ChevronRight class="size-4" />
+                                    {/if}
+                                </button>
+                                <IconRenderer icon={row.icon} size={20} emojiClass="text-lg" />
+                                <div class="min-w-0 flex-1">
+                                    <div class="truncate text-sm font-medium">{row.name}</div>
+                                    <div class="text-xs text-muted-foreground">
+                                        {row.count} {row.count === 1 ? 'expense' : 'expenses'} · Real {fmt.currency(row.realTotal)}
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    {#if row.editable}
+                                        <Label class="sr-only" for="grp-amt-{row.key}">Group total</Label>
+                                        <Input
+                                            id="grp-amt-{row.key}"
+                                            type="number"
+                                            inputmode="decimal"
+                                            step="0.01"
+                                            min="0"
+                                            disabled={row.disabled}
+                                            class="w-28"
+                                            value={oneOffOverrides[row.key]?.amount ?? ''}
+                                            placeholder={String(row.realTotal.toFixed(2))}
+                                            oninput={(e) => setGroupAmount(row.key, (e.currentTarget as HTMLInputElement).value)}
+                                        />
+                                    {/if}
+                                    <Checkbox
+                                        checked={!row.disabled}
+                                        onCheckedChange={(v) => toggleGroup(row.key, v === true)}
+                                        aria-label="Include in scenario"
+                                    />
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2">
-                                {#if row.editable}
-                                    <Label class="sr-only" for="grp-amt-{row.key}">Group total</Label>
-                                    <Input
-                                        id="grp-amt-{row.key}"
-                                        type="number"
-                                        inputmode="decimal"
-                                        step="0.01"
-                                        min="0"
-                                        disabled={row.disabled}
-                                        class="w-28"
-                                        value={oneOffOverrides[row.key]?.amount ?? ''}
-                                        placeholder={String(row.realTotal.toFixed(2))}
-                                        oninput={(e) => setGroupAmount(row.key, (e.currentTarget as HTMLInputElement).value)}
-                                    />
-                                {/if}
-                                <Checkbox
-                                    checked={!row.disabled}
-                                    onCheckedChange={(v) => toggleGroup(row.key, v === true)}
-                                    aria-label="Include in scenario"
-                                />
-                            </div>
+                            {#if expanded}
+                                <ul class="divide-y border-t bg-muted/30">
+                                    {#each row.children as child (child.id)}
+                                        <li class="flex items-center gap-3 px-3 py-2 pl-12" class:opacity-60={child.disabled}>
+                                            <div class="min-w-0 flex-1">
+                                                <div class="truncate text-sm">{child.name}</div>
+                                                <div class="text-[11px] text-muted-foreground">
+                                                    {fmt.date(child.date)} · {fmt.currency(child.amount)}
+                                                </div>
+                                            </div>
+                                            <Checkbox
+                                                checked={!child.disabled}
+                                                onCheckedChange={(v) => toggleExpenseRow(child.id, v === true)}
+                                                aria-label="Include this expense"
+                                            />
+                                        </li>
+                                    {/each}
+                                </ul>
+                            {/if}
                         </div>
                     {/each}
                 {/if}
