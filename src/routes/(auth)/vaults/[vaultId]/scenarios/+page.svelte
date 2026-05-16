@@ -570,18 +570,20 @@
                     <p class="text-sm text-muted-foreground">No active recurring income for this period.</p>
                 {:else}
                     {#each incomeRows as row (row.ruleId)}
-                        <div class="flex items-center gap-3 rounded-md border p-3" class:opacity-60={row.disabled}>
-                            <IconRenderer icon={row.icon} size={20} emojiClass="text-lg" />
-                            <div class="min-w-0 flex-1">
-                                <div class="truncate text-sm font-medium">{row.name}</div>
-                                <div class="text-xs text-muted-foreground">
-                                    Real {fmt.currency(row.realPerPeriod)}
-                                    {#if !row.disabled && row.scenarioPerPeriod !== row.realPerPeriod}
-                                        <span class="text-foreground"> → {fmt.currency(row.scenarioPerPeriod)}</span>
-                                    {/if}
+                        <div class="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center sm:gap-3" class:opacity-60={row.disabled}>
+                            <div class="flex min-w-0 items-center gap-3">
+                                <IconRenderer icon={row.icon} size={20} emojiClass="text-lg" />
+                                <div class="min-w-0 flex-1">
+                                    <div class="truncate text-sm font-medium">{row.name}</div>
+                                    <div class="text-xs text-muted-foreground">
+                                        Real {fmt.currency(row.realPerPeriod)}
+                                        {#if !row.disabled && row.scenarioPerPeriod !== row.realPerPeriod}
+                                            <span class="text-foreground"> → {fmt.currency(row.scenarioPerPeriod)}</span>
+                                        {/if}
+                                    </div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center justify-end gap-2 sm:ml-auto">
                                 <Label class="sr-only" for="inc-amt-{row.ruleId}">Base amount</Label>
                                 <Input
                                     id="inc-amt-{row.ruleId}"
@@ -620,18 +622,20 @@
                     <p class="text-sm text-muted-foreground">No active recurring expenses for this period.</p>
                 {:else}
                     {#each expenseRows as row (row.ruleId)}
-                        <div class="flex items-center gap-3 rounded-md border p-3" class:opacity-60={row.disabled}>
-                            <IconRenderer icon={row.icon} size={20} emojiClass="text-lg" />
-                            <div class="min-w-0 flex-1">
-                                <div class="truncate text-sm font-medium">{row.name}</div>
-                                <div class="text-xs text-muted-foreground">
-                                    Real {fmt.currency(row.realPerPeriod)}
-                                    {#if !row.disabled && row.scenarioPerPeriod !== row.realPerPeriod}
-                                        <span class="text-foreground"> → {fmt.currency(row.scenarioPerPeriod)}</span>
-                                    {/if}
+                        <div class="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center sm:gap-3" class:opacity-60={row.disabled}>
+                            <div class="flex min-w-0 items-center gap-3">
+                                <IconRenderer icon={row.icon} size={20} emojiClass="text-lg" />
+                                <div class="min-w-0 flex-1">
+                                    <div class="truncate text-sm font-medium">{row.name}</div>
+                                    <div class="text-xs text-muted-foreground">
+                                        Real {fmt.currency(row.realPerPeriod)}
+                                        {#if !row.disabled && row.scenarioPerPeriod !== row.realPerPeriod}
+                                            <span class="text-foreground"> → {fmt.currency(row.scenarioPerPeriod)}</span>
+                                        {/if}
+                                    </div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center justify-end gap-2 sm:ml-auto">
                                 <Label class="sr-only" for="exp-amt-{row.ruleId}">Amount</Label>
                                 <Input
                                     id="exp-amt-{row.ruleId}"
@@ -692,28 +696,30 @@
                     {#each groupRows as row (row.key)}
                         {@const expanded = expandedGroups[row.key] === true}
                         <div class="rounded-md border" class:opacity-60={row.disabled}>
-                            <div class="flex items-center gap-3 p-3">
-                                <button
-                                    type="button"
-                                    class="-m-1 inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-muted"
-                                    aria-label={expanded ? 'Collapse group' : 'Expand group'}
-                                    aria-expanded={expanded}
-                                    onclick={() => toggleExpanded(row.key)}
-                                >
-                                    {#if expanded}
-                                        <ChevronDown class="size-4" />
-                                    {:else}
-                                        <ChevronRight class="size-4" />
-                                    {/if}
-                                </button>
-                                <IconRenderer icon={row.icon} size={20} emojiClass="text-lg" />
-                                <div class="min-w-0 flex-1">
-                                    <div class="truncate text-sm font-medium">{row.name}</div>
-                                    <div class="text-xs text-muted-foreground">
-                                        {row.count} {row.count === 1 ? 'expense' : 'expenses'} · Real {fmt.currency(row.realTotal)}
+                            <div class="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3">
+                                <div class="flex min-w-0 items-center gap-3">
+                                    <button
+                                        type="button"
+                                        class="-m-1 inline-flex size-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted"
+                                        aria-label={expanded ? 'Collapse group' : 'Expand group'}
+                                        aria-expanded={expanded}
+                                        onclick={() => toggleExpanded(row.key)}
+                                    >
+                                        {#if expanded}
+                                            <ChevronDown class="size-4" />
+                                        {:else}
+                                            <ChevronRight class="size-4" />
+                                        {/if}
+                                    </button>
+                                    <IconRenderer icon={row.icon} size={20} emojiClass="text-lg" />
+                                    <div class="min-w-0 flex-1">
+                                        <div class="truncate text-sm font-medium">{row.name}</div>
+                                        <div class="text-xs text-muted-foreground">
+                                            {row.count} {row.count === 1 ? 'expense' : 'expenses'} · Real {fmt.currency(row.realTotal)}
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-3">
+                                <div class="flex items-center justify-end gap-3 sm:ml-auto">
                                     <div class="text-right">
                                         <div class="text-[10px] uppercase tracking-wider text-muted-foreground">Scenario</div>
                                         <div class="font-mono text-sm tabular-nums">{fmt.currency(row.scenarioTotal)}</div>
@@ -728,7 +734,10 @@
                             {#if expanded}
                                 <ul class="divide-y border-t bg-muted/30">
                                     {#each row.children as child (child.id)}
-                                        <li class="flex items-center gap-3 px-3 py-2 pl-12" class:opacity-60={child.disabled}>
+                                        <li
+                                            class="flex flex-col gap-2 px-3 py-2 pl-6 sm:flex-row sm:items-center sm:gap-3 sm:pl-12"
+                                            class:opacity-60={child.disabled}
+                                        >
                                             <div class="min-w-0 flex-1">
                                                 <div class="truncate text-sm">{child.name}</div>
                                                 <div class="text-[11px] text-muted-foreground">
@@ -738,24 +747,26 @@
                                                     {/if}
                                                 </div>
                                             </div>
-                                            <Label class="sr-only" for="row-amt-{child.id}">Amount</Label>
-                                            <Input
-                                                id="row-amt-{child.id}"
-                                                type="number"
-                                                inputmode="decimal"
-                                                step="0.01"
-                                                min="0"
-                                                disabled={child.disabled}
-                                                class="h-8 w-24 text-sm"
-                                                value={expenseRowOverrides[child.id]?.amount ?? ''}
-                                                placeholder={String(child.realAmount.toFixed(2))}
-                                                oninput={(e) => setExpenseRowAmount(child.id, (e.currentTarget as HTMLInputElement).value)}
-                                            />
-                                            <Checkbox
-                                                checked={!child.disabled}
-                                                onCheckedChange={(v) => toggleExpenseRow(child.id, v === true)}
-                                                aria-label="Include this expense"
-                                            />
+                                            <div class="flex items-center justify-end gap-2 sm:ml-auto">
+                                                <Label class="sr-only" for="row-amt-{child.id}">Amount</Label>
+                                                <Input
+                                                    id="row-amt-{child.id}"
+                                                    type="number"
+                                                    inputmode="decimal"
+                                                    step="0.01"
+                                                    min="0"
+                                                    disabled={child.disabled}
+                                                    class="h-8 w-24 text-sm"
+                                                    value={expenseRowOverrides[child.id]?.amount ?? ''}
+                                                    placeholder={String(child.realAmount.toFixed(2))}
+                                                    oninput={(e) => setExpenseRowAmount(child.id, (e.currentTarget as HTMLInputElement).value)}
+                                                />
+                                                <Checkbox
+                                                    checked={!child.disabled}
+                                                    onCheckedChange={(v) => toggleExpenseRow(child.id, v === true)}
+                                                    aria-label="Include this expense"
+                                                />
+                                            </div>
                                         </li>
                                     {/each}
                                 </ul>
