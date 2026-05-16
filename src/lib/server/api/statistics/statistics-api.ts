@@ -17,6 +17,7 @@ import { getPaymentTypeBreakdown } from './getPaymentTypeBreakdownHandler';
 import { getFundSpendTrend } from './getFundSpendTrendHandler';
 import { getTemplateBreakdown } from './getTemplateBreakdownHandler';
 import { getStatisticsDashboard } from './getStatisticsDashboardHandler';
+import { getScenarioBaseline } from './getScenarioBaselineHandler';
 import { getStatisticsInsights } from './getStatisticsInsightsHandler';
 import { getStatisticsInsightsQuerySchema } from '$lib/schemas/statisticsInsights';
 
@@ -129,6 +130,22 @@ export const statisticsApi = new Hono<App.Api>()
             const session = c.get('currentSession');
             const query = c.req.valid('query');
             return handle(c, () => getCategoryTrend(query.vaultId, session, c.env, query));
+        },
+    )
+    .get(
+        '/getScenarioBaseline',
+        describeRoute({
+            ...commonConfig,
+            description: 'Real cash flow + active recurring rule configurations for the /scenarios planner.',
+            responses: {
+                200: { description: 'Scenario baseline', content: { 'application/json': { schema: resolver(v.any()) } } },
+            },
+        }),
+        vValidator('query', breakdownQuerySchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const query = c.req.valid('query');
+            return handle(c, () => getScenarioBaseline(query.vaultId, session, c.env, query));
         },
     )
     .get(

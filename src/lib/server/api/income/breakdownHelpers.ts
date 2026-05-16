@@ -1,65 +1,30 @@
-import type {
-    AllowanceLine,
-    DeductionLine,
-    EntryBreakdownLine,
-} from '$lib/schemas/income';
+import type { EntryBreakdownLine } from '$lib/schemas/income';
+import {
+    resolveLines as resolveLinesCore,
+    resolveBreakdown as resolveBreakdownCore,
+} from '$lib/utils/breakdown';
 
-// Structural shape the helper actually needs — keeps generic inference
-// out of valibot's union/optional gymnastics.
-type BreakdownLineLike = {
-    mode: 'percent' | 'fixed';
-    rate?: number;
-    amount?: number;
-};
+// Re-export the shared client-safe math under the original names so existing
+// server callers (handlers + cron engine) need no changes. The wrappers cast
+// the generic result back to the snapshot type the JSON columns expect.
 
-/**
- * Resolve a breakdown line's effective amount against a base figure.
- *   - mode='percent' → round(base * rate, 2)
- *   - mode='fixed'   → amount as-is
- *
- * Returns a new array of lines stamped with `computedAmount`. Used for both
- * allowances (base = baseAmount) and deductions (base = gross).
- */
-export function resolveLines<T extends BreakdownLineLike>(
-    lines: T[],
-    base: number,
-): Array<T & { computedAmount: number }> {
-    return lines.map((l) => ({
-        ...l,
-        computedAmount:
-            l.mode === 'percent'
-                ? Math.round(base * (l.rate ?? 0) * 100) / 100
-                : (l.amount ?? 0),
-    }));
-}
+export const resolveLines = resolveLinesCore;
 
-/**
- * Resolve a full salary breakdown in the right order:
- *   1. Allowances compute against `baseAmount`
- *   2. Gross = baseAmount + sum(allowances.computedAmount)
- *   3. Deductions compute against `gross`
- *
- * Returns the computed gross and both resolved line sets ready to snapshot
- * onto the income entry. `baseAmount`, `allowances`, `deductions` are all
- * optional — when omitted (entry has no breakdown), gross falls back to the
- * caller's responsibility (typically the user-entered amount).
- */
 export function resolveBreakdown(
     baseAmount: number,
-    allowances: AllowanceLine[] = [],
-    deductions: DeductionLine[] = [],
+    allowances: Parameters<typeof resolveBreakdownCore>[1] = [],
+    deductions: Parameters<typeof resolveBreakdownCore>[2] = [],
 ): {
     gross: number;
     resolvedAllowances: EntryBreakdownLine[];
     resolvedDeductions: EntryBreakdownLine[];
 } {
-    const resolvedAllowances = resolveLines(allowances, baseAmount) as EntryBreakdownLine[];
-    const gross =
-        Math.round(
-            (baseAmount + resolvedAllowances.reduce((s, a) => s + a.computedAmount, 0)) * 100,
-        ) / 100;
-    const resolvedDeductions = resolveLines(deductions, gross) as EntryBreakdownLine[];
-    return { gross, resolvedAllowances, resolvedDeductions };
+    const r = resolveBreakdownCore(baseAmount, allowances, deductions);
+    return {
+        gross: r.gross,
+        resolvedAllowances: r.resolvedAllowances as EntryBreakdownLine[],
+        resolvedDeductions: r.resolvedDeductions as EntryBreakdownLine[],
+    };
 }
 
 /**

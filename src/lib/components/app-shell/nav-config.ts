@@ -11,6 +11,7 @@ import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
 import Calendar from '@lucide/svelte/icons/calendar';
 import Tag from '@lucide/svelte/icons/tag';
 import TrendingUp from '@lucide/svelte/icons/trending-up';
+import FlaskConical from '@lucide/svelte/icons/flask-conical';
 
 export type BadgeKey = 'pendingRecurring';
 
@@ -57,6 +58,7 @@ export const VAULT_NAV: NavSection[] = [
                 path: 'recurring',
                 badgeKey: 'pendingRecurring',
             },
+            { id: 'scenarios', label: 'Scenarios', icon: FlaskConical, path: 'scenarios' },
             { id: 'templates', label: 'Templates', icon: FileText, path: 'templates' },
             { id: 'tags', label: 'Tags', icon: Tag, path: 'tags' },
             { id: 'members', label: 'Family', icon: Users, path: 'members' },
