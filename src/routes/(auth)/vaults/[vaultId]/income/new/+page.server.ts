@@ -82,6 +82,9 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
         defaultPaidTo: t.defaultPaidTo,
         defaultFundId: t.defaultFundId,
         defaultNote: t.defaultNote,
+        // JSON-stringified breakdown defaults; client parses on demand.
+        defaultAllowances: t.defaultAllowances as string | null,
+        defaultDeductions: t.defaultDeductions as string | null,
     }));
 
     return { form, vaultId, members, funds, sources, templates };

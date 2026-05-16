@@ -70,6 +70,8 @@ export const getExpense = async (
         category: categoryData.categories.find(c => c.name === expenseResult.categoryName) || null,
         fundId: expenseResult.fundId ?? null,
         fundPaymentMode: expenseResult.fundPaymentMode ?? null,
+        // Surface income provenance so the edit page can lock + link back.
+        incomeEntryId: expenseResult.incomeEntryId ?? null,
         tags: tagRows,
         attachments: attachmentRows,
     };

@@ -26,6 +26,14 @@ export const deleteExpense = async (
 
     if (!existing) throw new Error('Expense not found');
 
+    // Income-deduction lock — these rows belong to their parent income entry
+    // and can only be removed by deleting (or editing) the income.
+    if (existing.incomeEntryId) {
+        throw new Error(
+            'This expense is generated from an income entry. Edit it on the income page.',
+        );
+    }
+
     // If the expense was paid by fund, create an expense_reversal and restore balance.
     // If it was pending_reimbursement, no balance action is needed — the pending
     // reimbursement view filters expenses where deletedAt IS NOT NULL.

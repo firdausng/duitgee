@@ -32,6 +32,13 @@
     const vaultId = $derived(page.params.vaultId);
 
     type Source = { id: string; name: string; icon: string | null };
+    type BreakdownLine = {
+        label: string;
+        mode: 'percent' | 'fixed';
+        rate?: number;
+        amount?: number;
+        categoryName?: string | null;
+    };
     type Template = {
         id: string;
         sourceId: string;
@@ -41,6 +48,8 @@
         defaultPaidTo: string | null;
         defaultFundId: string | null;
         defaultNote: string | null;
+        defaultAllowances: string | null;
+        defaultDeductions: string | null;
         previousTemplateId: string | null;
         endedAt: string | null;
         usageCount: number;
@@ -48,6 +57,16 @@
         source: { name: string | null; icon: string | null };
         previousTemplate: { id: string; name: string; icon: string | null; endedAt: string | null } | null;
     };
+
+    function parseLineJson(raw: string | null | undefined): BreakdownLine[] {
+        if (!raw) return [];
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? (parsed as BreakdownLine[]) : [];
+        } catch {
+            return [];
+        }
+    }
 
     let refetchKey = $state(0);
 
@@ -89,10 +108,28 @@
     let formPaidTo = $state<string | null>(null);
     let formFundId = $state<string | null>(null);
     let formNote = $state('');
+    let formAllowances = $state<BreakdownLine[]>([]);
+    let formDeductions = $state<BreakdownLine[]>([]);
     // Lineage — set when creating a continuation. Pre-filled by Replace flow
     // or by the `?continueFrom=<id>` query param.
     let formPreviousTemplateId = $state<string | null>(null);
     let saving = $state(false);
+
+    function addFormAllowance() {
+        formAllowances = [...formAllowances, { label: '', mode: 'fixed', amount: 0 }];
+    }
+    function removeFormAllowance(i: number) {
+        formAllowances = formAllowances.filter((_, idx) => idx !== i);
+    }
+    function addFormDeduction() {
+        formDeductions = [
+            ...formDeductions,
+            { label: '', mode: 'percent', rate: 0, categoryName: 'Salary deductions' },
+        ];
+    }
+    function removeFormDeduction(i: number) {
+        formDeductions = formDeductions.filter((_, idx) => idx !== i);
+    }
 
     // Link-to-previous picker (separate from the create-with-lineage flow)
     let linkingTemplate = $state<Template | null>(null);
@@ -110,6 +147,8 @@
         formPaidTo = from?.defaultPaidTo ?? null;
         formFundId = from?.defaultFundId ?? null;
         formNote = from?.defaultNote ?? '';
+        formAllowances = parseLineJson(from?.defaultAllowances);
+        formDeductions = parseLineJson(from?.defaultDeductions);
     }
 
     function startEdit(t: Template) {
@@ -123,6 +162,8 @@
         formPaidTo = t.defaultPaidTo;
         formFundId = t.defaultFundId;
         formNote = t.defaultNote ?? '';
+        formAllowances = parseLineJson(t.defaultAllowances);
+        formDeductions = parseLineJson(t.defaultDeductions);
     }
 
     function cancelEdit() {
@@ -152,6 +193,8 @@
                 defaultPaidTo: formPaidTo,
                 defaultFundId: formFundId,
                 defaultNote: formNote.trim() || null,
+                defaultAllowances: formAllowances.length > 0 ? formAllowances : null,
+                defaultDeductions: formDeductions.length > 0 ? formDeductions : null,
             };
             if (isCreating) {
                 body.previousTemplateId = formPreviousTemplateId;
@@ -461,6 +504,69 @@
                     <div class="space-y-1">
                         <Label for="tpl-note">Default note</Label>
                         <Textarea id="tpl-note" bind:value={formNote} disabled={saving} rows={2} placeholder="Optional context" />
+                    </div>
+                </div>
+
+                <!-- Default salary breakdown -->
+                <div class="space-y-2 pt-2 border-t">
+                    <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Default breakdown (optional)</p>
+                    <p class="text-[11px] text-muted-foreground italic">
+                        Allowances and deductions seed new income entries from this template. Edit per-entry as needed.
+                    </p>
+
+                    <div class="rounded-md border bg-card p-3 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Default allowances</p>
+                            <button type="button" onclick={addFormAllowance} disabled={saving} class="text-xs text-primary hover:underline inline-flex items-center gap-1">
+                                <Plus class="size-3" /> Add line
+                            </button>
+                        </div>
+                        {#if formAllowances.length === 0}
+                            <p class="text-[11px] text-muted-foreground italic">No allowances.</p>
+                        {/if}
+                        {#each formAllowances as line, i (i)}
+                            <div class="grid grid-cols-[1fr_70px_100px_auto] gap-2 items-center">
+                                <Input bind:value={line.label} placeholder="e.g. Elaun" disabled={saving} class="h-8 text-sm" />
+                                <select bind:value={line.mode} disabled={saving} class="h-8 rounded-md border border-input bg-background px-2 text-xs">
+                                    <option value="fixed">RM</option>
+                                    <option value="percent">%</option>
+                                </select>
+                                {#if line.mode === 'percent'}
+                                    <Input type="number" step="0.01" min="0" max="100" value={line.rate ? line.rate * 100 : 0} oninput={(e) => (line.rate = Number((e.currentTarget as HTMLInputElement).value) / 100)} disabled={saving} class="h-8 text-sm" placeholder="0.00" />
+                                {:else}
+                                    <Input type="number" step="0.01" min="0" bind:value={line.amount} disabled={saving} class="h-8 text-sm" placeholder="0.00" />
+                                {/if}
+                                <button type="button" onclick={() => removeFormAllowance(i)} disabled={saving} class="text-muted-foreground hover:text-destructive p-1" aria-label="Remove allowance">×</button>
+                            </div>
+                        {/each}
+                    </div>
+
+                    <div class="rounded-md border bg-card p-3 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Default deductions</p>
+                            <button type="button" onclick={addFormDeduction} disabled={saving} class="text-xs text-primary hover:underline inline-flex items-center gap-1">
+                                <Plus class="size-3" /> Add line
+                            </button>
+                        </div>
+                        {#if formDeductions.length === 0}
+                            <p class="text-[11px] text-muted-foreground italic">No deductions.</p>
+                        {/if}
+                        {#each formDeductions as line, i (i)}
+                            <div class="grid grid-cols-[1fr_70px_100px_140px_auto] gap-2 items-center">
+                                <Input bind:value={line.label} placeholder="e.g. Tax" disabled={saving} class="h-8 text-sm" />
+                                <select bind:value={line.mode} disabled={saving} class="h-8 rounded-md border border-input bg-background px-2 text-xs">
+                                    <option value="percent">%</option>
+                                    <option value="fixed">RM</option>
+                                </select>
+                                {#if line.mode === 'percent'}
+                                    <Input type="number" step="0.01" min="0" max="100" value={line.rate ? line.rate * 100 : 0} oninput={(e) => (line.rate = Number((e.currentTarget as HTMLInputElement).value) / 100)} disabled={saving} class="h-8 text-sm" placeholder="0.00" />
+                                {:else}
+                                    <Input type="number" step="0.01" min="0" bind:value={line.amount} disabled={saving} class="h-8 text-sm" placeholder="0.00" />
+                                {/if}
+                                <Input bind:value={line.categoryName} placeholder="Salary deductions" disabled={saving} class="h-8 text-sm" />
+                                <button type="button" onclick={() => removeFormDeduction(i)} disabled={saving} class="text-muted-foreground hover:text-destructive p-1" aria-label="Remove deduction">×</button>
+                            </div>
+                        {/each}
                     </div>
                 </div>
 

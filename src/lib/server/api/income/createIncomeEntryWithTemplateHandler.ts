@@ -1,12 +1,13 @@
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/server/db/schema';
-import { incomeEntries, incomeSources, incomeTemplates } from '$lib/server/db/schema';
+import { expenses, incomeEntries, incomeSources, incomeTemplates } from '$lib/server/db/schema';
 import { and, eq, isNull, count } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { initialAuditFields } from '$lib/server/utils/audit';
 import { requireVaultPermission } from '$lib/server/utils/vaultPermissions';
 import { getVaultPlanLimit } from '$lib/server/utils/entitlements';
 import { attachFundToIncome } from '$lib/server/api/funds/fundIncomeHelpers';
+import { resolveBreakdown, serializeBreakdown } from './breakdownHelpers';
 import type { CreateIncomeEntryWithTemplateRequest } from '$lib/schemas/income';
 
 /**
@@ -14,6 +15,12 @@ import type { CreateIncomeEntryWithTemplateRequest } from '$lib/schemas/income';
  * The source must already exist — sources are a small vault taxonomy you pick
  * from, not something you coin inline. To create a new source, hit the source
  * management page first.
+ *
+ * Breakdown handling is symmetric with createIncomeEntry: if the caller passes
+ * baseAmount, the breakdown lines (allowances/deductions) are resolved and
+ * snapshotted onto the entry, deduction expense rows are spawned, and the
+ * new template's defaultAllowances/defaultDeductions are seeded so future
+ * entries from this template pre-fill correctly.
  */
 export const createIncomeEntryWithTemplate = async (
     session: App.AuthSession,
@@ -62,9 +69,35 @@ export const createIncomeEntryWithTemplate = async (
     const entryId = createId();
     const audit = initialAuditFields({ userId });
 
-    // Batch the two inserts so they commit atomically.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await client.batch([
+    // Resolve breakdown if baseAmount + lines were supplied.
+    const allowances = data.allowances ?? [];
+    const deductions = data.deductions ?? [];
+    let amount = data.amount;
+    let baseAmount: number | null = null;
+    let allowancesJson: string | null = null;
+    let deductionsJson: string | null = null;
+    let resolvedDeductionsForExpenses: ReturnType<typeof resolveBreakdown>['resolvedDeductions'] = [];
+
+    if (data.baseAmount !== undefined && data.baseAmount !== null) {
+        const { gross, resolvedAllowances, resolvedDeductions } = resolveBreakdown(
+            data.baseAmount,
+            allowances,
+            deductions,
+        );
+        baseAmount = data.baseAmount;
+        amount = gross;
+        allowancesJson = serializeBreakdown(resolvedAllowances);
+        deductionsJson = serializeBreakdown(resolvedDeductions);
+        resolvedDeductionsForExpenses = resolvedDeductions;
+    }
+
+    // Template stores the config-only line lists so future entries seed correctly.
+    const templateAllowancesJson = serializeBreakdown(allowances);
+    const templateDeductionsJson = serializeBreakdown(deductions);
+
+    const labelPrefix = data.templateName;
+
+    const inserts = [
         client.insert(incomeTemplates).values({
             id: templateId,
             vaultId: data.vaultId,
@@ -72,10 +105,12 @@ export const createIncomeEntryWithTemplate = async (
             name: data.templateName,
             icon: data.templateIcon ?? '💰',
             iconType: 'emoji',
-            defaultAmount: data.amount,
+            defaultAmount: baseAmount ?? amount,
             defaultPaidTo: data.paidTo ?? null,
             defaultFundId: data.fundId ?? null,
             defaultNote: null,
+            defaultAllowances: templateAllowancesJson,
+            defaultDeductions: templateDeductionsJson,
             usageCount: 1,
             lastUsedAt: data.date,
             ...audit,
@@ -85,7 +120,10 @@ export const createIncomeEntryWithTemplate = async (
             vaultId: data.vaultId,
             templateId,
             sourceId: data.sourceId,
-            amount: data.amount,
+            amount,
+            baseAmount,
+            allowances: allowancesJson,
+            deductions: deductionsJson,
             date: data.date,
             paidTo: data.paidTo ?? null,
             note: data.note ?? null,
@@ -93,7 +131,25 @@ export const createIncomeEntryWithTemplate = async (
             fundTransactionId: null,
             ...audit,
         }),
-    ] as any);
+        ...resolvedDeductionsForExpenses.map((line) =>
+            client.insert(expenses).values({
+                id: createId(),
+                vaultId: data.vaultId,
+                amount: line.computedAmount,
+                categoryName: line.categoryName ?? 'Salary deductions',
+                paymentType: 'transfer',
+                date: data.date,
+                paidBy: data.paidTo ?? null,
+                note: `${labelPrefix} — ${line.label}`,
+                incomeEntryId: entryId,
+                status: 'confirmed',
+                ...audit,
+            }),
+        ),
+    ];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await client.batch(inserts as any);
 
     // Fund routing runs after the batch so the entry row exists for the
     // transaction's reverse pointer.
@@ -103,7 +159,7 @@ export const createIncomeEntryWithTemplate = async (
             entryId,
             data.vaultId,
             data.fundId,
-            data.amount,
+            amount,
             userId,
             env,
         );

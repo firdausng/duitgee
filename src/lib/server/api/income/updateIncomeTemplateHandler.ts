@@ -4,6 +4,7 @@ import { incomeSources, incomeTemplates } from '$lib/server/db/schema';
 import { and, eq, isNull } from 'drizzle-orm';
 import { updateAuditFields } from '$lib/server/utils/audit';
 import { requireVaultPermission } from '$lib/server/utils/vaultPermissions';
+import { serializeBreakdown } from './breakdownHelpers';
 import type { UpdateIncomeTemplateRequest } from '$lib/schemas/income';
 
 export const updateIncomeTemplate = async (
@@ -54,6 +55,14 @@ export const updateIncomeTemplate = async (
             defaultPaidTo: data.defaultPaidTo !== undefined ? data.defaultPaidTo : existing.defaultPaidTo,
             defaultFundId: data.defaultFundId !== undefined ? data.defaultFundId : existing.defaultFundId,
             defaultNote: data.defaultNote !== undefined ? data.defaultNote : existing.defaultNote,
+            defaultAllowances:
+                data.defaultAllowances !== undefined
+                    ? serializeBreakdown(data.defaultAllowances)
+                    : existing.defaultAllowances,
+            defaultDeductions:
+                data.defaultDeductions !== undefined
+                    ? serializeBreakdown(data.defaultDeductions)
+                    : existing.defaultDeductions,
             ...updateAuditFields({ userId }),
         })
         .where(eq(incomeTemplates.id, data.id))

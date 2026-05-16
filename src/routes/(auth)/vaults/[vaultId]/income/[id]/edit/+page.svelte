@@ -9,14 +9,75 @@
     import { Textarea } from '$lib/components/ui/textarea';
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
     import { Eyebrow, Rule } from '$lib/components/almanac';
+    import { Input } from '$lib/components/ui/input';
     import { CalculatorInput } from '$lib/components/ui/calculator-input';
     import { DateTimePicker } from '$lib/components/ui/date-time-picker';
     import { Toaster } from '$lib/components/ui/sonner';
     import { toast } from 'svelte-sonner';
     import { localDatetimeToUtcIso } from '$lib/utils';
     import Trash2 from '@lucide/svelte/icons/trash-2';
+    import Plus from '@lucide/svelte/icons/plus';
 
     let { data } = $props();
+
+    // ─── Salary breakdown — same shape as the new-income form ────────────
+    type BreakdownLine = {
+        label: string;
+        mode: 'percent' | 'fixed';
+        rate?: number;
+        amount?: number;
+        categoryName?: string | null;
+    };
+
+    function parseLineJson(raw: string | null | undefined): BreakdownLine[] {
+        if (!raw) return [];
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? (parsed as BreakdownLine[]) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    // Strip computedAmount from the snapshot — the editor uses the config-only shape.
+    function stripComputed(lines: any[]): BreakdownLine[] {
+        return lines.map(({ computedAmount, ...rest }) => rest as BreakdownLine);
+    }
+
+    let allowanceLines = $state<BreakdownLine[]>(
+        stripComputed(parseLineJson(data.entry.allowances as unknown as string | null)),
+    );
+    let deductionLines = $state<BreakdownLine[]>(
+        stripComputed(parseLineJson(data.entry.deductions as unknown as string | null)),
+    );
+    let showBreakdown = $state(
+        (data.entry.allowances && data.entry.allowances !== '[]') ||
+        (data.entry.deductions && data.entry.deductions !== '[]') ||
+        data.entry.baseAmount !== null,
+    );
+
+    function lineEffective(l: BreakdownLine, base: number): number {
+        const v = l.mode === 'percent' ? base * (l.rate ?? 0) : (l.amount ?? 0);
+        return Math.round(v * 100) / 100;
+    }
+
+    function addAllowance() {
+        allowanceLines = [...allowanceLines, { label: '', mode: 'fixed', amount: 0 }];
+        if (!showBreakdown) showBreakdown = true;
+    }
+    function removeAllowance(i: number) {
+        allowanceLines = allowanceLines.filter((_, idx) => idx !== i);
+    }
+    function addDeduction() {
+        deductionLines = [
+            ...deductionLines,
+            { label: '', mode: 'percent', rate: 0, categoryName: 'Salary deductions' },
+        ];
+        if (!showBreakdown) showBreakdown = true;
+    }
+    function removeDeduction(i: number) {
+        deductionLines = deductionLines.filter((_, idx) => idx !== i);
+    }
 
     const { form, errors, enhance, delayed } = superForm(data.form, {
         validators: valibotClient(updateIncomeEntrySchema),
@@ -27,9 +88,24 @@
                 return;
             }
             try {
+                // When breakdown is shown, include the lines so the server
+                // re-resolves + diffs against the existing snapshot.
+                const breakdownPayload = showBreakdown
+                    ? {
+                          baseAmount: form.data.amount,
+                          allowances: allowanceLines,
+                          deductions: deductionLines,
+                      }
+                    : {
+                          // Explicitly clear the breakdown if user toggled it off.
+                          baseAmount: null,
+                          allowances: [],
+                          deductions: [],
+                      };
                 const payload = {
                     ...form.data,
                     date: form.data.date ? localDatetimeToUtcIso(form.data.date) : undefined,
+                    ...breakdownPayload,
                 };
                 const response = await ofetch('/api/updateIncomeEntry', {
                     method: 'POST',
@@ -49,6 +125,22 @@
     });
 
     let deleting = $state(false);
+
+    // ─── Breakdown derived computations (after $form is in scope) ────────
+    const baseSalary = $derived($form.amount || 0);
+    const resolvedAllowances = $derived(
+        allowanceLines.map((l) => ({ ...l, computed: lineEffective(l, baseSalary) })),
+    );
+    const grossAmount = $derived(
+        Math.round((baseSalary + resolvedAllowances.reduce((s, a) => s + a.computed, 0)) * 100) / 100,
+    );
+    const resolvedDeductions = $derived(
+        deductionLines.map((l) => ({ ...l, computed: lineEffective(l, grossAmount) })),
+    );
+    const totalDeductions = $derived(
+        Math.round(resolvedDeductions.reduce((s, d) => s + d.computed, 0) * 100) / 100,
+    );
+    const netTakeHome = $derived(Math.round((grossAmount - totalDeductions) * 100) / 100);
 
     const filteredTemplates = $derived(
         $form.sourceId ? data.templates.filter((t) => t.sourceId === $form.sourceId) : [],
@@ -263,6 +355,98 @@
                         </div>
                     </div>
                 {/if}
+
+                <!-- Salary breakdown -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <Label class="m-0">Salary breakdown <span class="font-normal text-muted-foreground">(optional)</span></Label>
+                        {#if !showBreakdown}
+                            <button type="button" class="text-xs text-primary hover:underline" onclick={() => (showBreakdown = true)}>
+                                Add breakdown
+                            </button>
+                        {:else}
+                            <button type="button" class="text-xs text-muted-foreground hover:text-foreground" onclick={() => { showBreakdown = false; allowanceLines = []; deductionLines = []; }}>
+                                Hide
+                            </button>
+                        {/if}
+                    </div>
+
+                    {#if showBreakdown}
+                        <p class="text-xs text-muted-foreground">
+                            The Amount above is the base salary; allowances add on top to compute gross; deductions create linked expense rows. Edits cascade — saving here updates the linked expenses.
+                        </p>
+
+                        <!-- Allowances -->
+                        <div class="rounded-md border bg-card p-3 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Allowances</p>
+                                <button type="button" onclick={addAllowance} disabled={$delayed} class="text-xs text-primary hover:underline inline-flex items-center gap-1">
+                                    <Plus class="size-3" /> Add line
+                                </button>
+                            </div>
+                            {#if allowanceLines.length === 0}
+                                <p class="text-[11px] text-muted-foreground italic">No allowances.</p>
+                            {/if}
+                            {#each allowanceLines as line, i (i)}
+                                {@const computed = resolvedAllowances[i]?.computed ?? 0}
+                                <div class="grid grid-cols-[1fr_70px_100px_70px_auto] gap-2 items-center">
+                                    <Input bind:value={line.label} placeholder="e.g. Elaun" disabled={$delayed} class="h-8 text-sm" />
+                                    <select bind:value={line.mode} disabled={$delayed} class="h-8 rounded-md border border-input bg-background px-2 text-xs">
+                                        <option value="fixed">RM</option>
+                                        <option value="percent">%</option>
+                                    </select>
+                                    {#if line.mode === 'percent'}
+                                        <Input type="number" step="0.01" min="0" max="100" value={line.rate ? line.rate * 100 : 0} oninput={(e) => (line.rate = Number((e.currentTarget as HTMLInputElement).value) / 100)} disabled={$delayed} class="h-8 text-sm" placeholder="0.00" />
+                                    {:else}
+                                        <Input type="number" step="0.01" min="0" bind:value={line.amount} disabled={$delayed} class="h-8 text-sm" placeholder="0.00" />
+                                    {/if}
+                                    <span class="text-xs text-right tabular-nums text-muted-foreground">{computed.toFixed(2)}</span>
+                                    <button type="button" onclick={() => removeAllowance(i)} disabled={$delayed} class="text-muted-foreground hover:text-destructive p-1" aria-label="Remove allowance">×</button>
+                                </div>
+                            {/each}
+                        </div>
+
+                        <div class="text-xs text-muted-foreground text-center">
+                            Computed gross: <span class="font-mono tabular-nums text-foreground">{grossAmount.toFixed(2)}</span>
+                            <span class="opacity-60">(base {baseSalary.toFixed(2)} + allowances {(grossAmount - baseSalary).toFixed(2)})</span>
+                        </div>
+
+                        <!-- Deductions -->
+                        <div class="rounded-md border bg-card p-3 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Deductions</p>
+                                <button type="button" onclick={addDeduction} disabled={$delayed} class="text-xs text-primary hover:underline inline-flex items-center gap-1">
+                                    <Plus class="size-3" /> Add line
+                                </button>
+                            </div>
+                            <p class="text-[11px] text-muted-foreground italic">Each row creates a linked expense.</p>
+                            {#each deductionLines as line, i (i)}
+                                {@const computed = resolvedDeductions[i]?.computed ?? 0}
+                                <div class="grid grid-cols-[1fr_70px_100px_140px_70px_auto] gap-2 items-center">
+                                    <Input bind:value={line.label} placeholder="e.g. Tax" disabled={$delayed} class="h-8 text-sm" />
+                                    <select bind:value={line.mode} disabled={$delayed} class="h-8 rounded-md border border-input bg-background px-2 text-xs">
+                                        <option value="percent">%</option>
+                                        <option value="fixed">RM</option>
+                                    </select>
+                                    {#if line.mode === 'percent'}
+                                        <Input type="number" step="0.01" min="0" max="100" value={line.rate ? line.rate * 100 : 0} oninput={(e) => (line.rate = Number((e.currentTarget as HTMLInputElement).value) / 100)} disabled={$delayed} class="h-8 text-sm" placeholder="0.00" />
+                                    {:else}
+                                        <Input type="number" step="0.01" min="0" bind:value={line.amount} disabled={$delayed} class="h-8 text-sm" placeholder="0.00" />
+                                    {/if}
+                                    <Input bind:value={line.categoryName} placeholder="Salary deductions" disabled={$delayed} class="h-8 text-sm" />
+                                    <span class="text-xs text-right tabular-nums text-muted-foreground">{computed.toFixed(2)}</span>
+                                    <button type="button" onclick={() => removeDeduction(i)} disabled={$delayed} class="text-muted-foreground hover:text-destructive p-1" aria-label="Remove deduction">×</button>
+                                </div>
+                            {/each}
+                        </div>
+
+                        <div class="rounded-md bg-muted/40 px-3 py-2 text-xs space-y-0.5">
+                            <div class="flex justify-between"><span>Gross</span><span class="font-mono tabular-nums">{grossAmount.toFixed(2)}</span></div>
+                            <div class="flex justify-between"><span>Deductions</span><span class="font-mono tabular-nums text-destructive">−{totalDeductions.toFixed(2)}</span></div>
+                            <div class="flex justify-between border-t pt-1 font-medium"><span>Net to take-home</span><span class="font-mono tabular-nums">{netTakeHome.toFixed(2)}</span></div>
+                        </div>
+                    {/if}
+                </div>
 
                 <!-- Note -->
                 <div class="space-y-2">

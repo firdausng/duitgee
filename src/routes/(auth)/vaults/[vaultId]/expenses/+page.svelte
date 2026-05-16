@@ -73,6 +73,7 @@
         fundName: string | null;
         fundIcon: string | null;
         recurringExpenseId: string | null;
+        incomeEntryId: string | null;
         date: string;
         /** 'unidentified' rows are placeholders awaiting details. */
         status?: 'confirmed' | 'unidentified';
@@ -614,12 +615,21 @@
         tabindex="0"
         onclick={(e) => {
             const t = e.target as HTMLElement;
-            if (t.closest('button, [role="menuitem"], [data-no-nav]')) return;
+            if (t.closest('button, a, [role="menuitem"], [data-no-nav]')) return;
+            // Locked rows (income-deduction children) jump to the parent income entry instead.
+            if (expense.incomeEntryId) {
+                window.location.href = `/vaults/${vaultId}/income/${expense.incomeEntryId}/edit`;
+                return;
+            }
             handleEditExpense(expense.id);
         }}
         onkeydown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
+                if (expense.incomeEntryId) {
+                    window.location.href = `/vaults/${vaultId}/income/${expense.incomeEntryId}/edit`;
+                    return;
+                }
                 handleEditExpense(expense.id);
             }
         }}
@@ -695,25 +705,36 @@
             {/if}
         </div>
 
-        <DropdownMenu.Root>
-            <DropdownMenu.Trigger
-                class="p-1 rounded-[var(--radius-sm)] hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center shrink-0"
-                aria-label="More actions"
-                title="More"
+        {#if expense.incomeEntryId}
+            <a
+                href={`/vaults/${vaultId}/income/${expense.incomeEntryId}/edit`}
+                class="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-sm)] text-[10px] font-medium uppercase tracking-wide bg-muted text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                title="Generated from an income entry — edit on the income page"
+                onclick={(e) => e.stopPropagation()}
             >
-                <MoreVertical class="size-4" />
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Content align="end" class="min-w-[11rem]">
-                <DropdownMenu.Item onclick={() => handleEditExpense(expense.id)}>
-                    <Pencil class="size-3.5" />
-                    <span>Edit</span>
-                </DropdownMenu.Item>
-                <DropdownMenu.Separator />
-                <DropdownMenu.Item destructive onclick={() => handleDeleteExpense(expense.id)}>
-                    <Trash2 class="size-3.5" />
-                    <span>Delete</span>
-                </DropdownMenu.Item>
-            </DropdownMenu.Content>
-        </DropdownMenu.Root>
+                🔒 From income
+            </a>
+        {:else}
+            <DropdownMenu.Root>
+                <DropdownMenu.Trigger
+                    class="p-1 rounded-[var(--radius-sm)] hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center shrink-0"
+                    aria-label="More actions"
+                    title="More"
+                >
+                    <MoreVertical class="size-4" />
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Content align="end" class="min-w-[11rem]">
+                    <DropdownMenu.Item onclick={() => handleEditExpense(expense.id)}>
+                        <Pencil class="size-3.5" />
+                        <span>Edit</span>
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Separator />
+                    <DropdownMenu.Item destructive onclick={() => handleDeleteExpense(expense.id)}>
+                        <Trash2 class="size-3.5" />
+                        <span>Delete</span>
+                    </DropdownMenu.Item>
+                </DropdownMenu.Content>
+            </DropdownMenu.Root>
+        {/if}
     </div>
 {/snippet}

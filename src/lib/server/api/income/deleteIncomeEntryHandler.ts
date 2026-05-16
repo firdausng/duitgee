@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/server/db/schema';
-import { incomeEntries } from '$lib/server/db/schema';
+import { expenses, incomeEntries } from '$lib/server/db/schema';
 import { and, eq, isNull } from 'drizzle-orm';
 import { deleteAuditFields } from '$lib/server/utils/audit';
 import { requireVaultPermission } from '$lib/server/utils/vaultPermissions';
@@ -33,10 +33,27 @@ export const deleteIncomeEntry = async (
     // Reverse any fund top-up before the soft delete so balances stay honest.
     await detachFundFromIncome(existing.fundTransactionId, userId, env);
 
-    await client
-        .update(incomeEntries)
-        .set(deleteAuditFields({ userId }))
-        .where(eq(incomeEntries.id, existing.id));
+    const audit = deleteAuditFields({ userId });
+
+    // Soft-delete the entry + every linked deduction expense in one batch.
+    // The coupling rule (deductions are children of the income) demands the
+    // linked rows don't outlive their parent.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await client.batch([
+        client
+            .update(incomeEntries)
+            .set(audit)
+            .where(eq(incomeEntries.id, existing.id)),
+        client
+            .update(expenses)
+            .set(audit)
+            .where(
+                and(
+                    eq(expenses.incomeEntryId, existing.id),
+                    isNull(expenses.deletedAt),
+                ),
+            ),
+    ] as any);
 
     return { id: existing.id };
 };

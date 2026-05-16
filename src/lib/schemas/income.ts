@@ -11,6 +11,53 @@ export const INCOME_TEMPLATES_MAX_PER_VAULT_FREE = getPlanLimit(
     'maxIncomeTemplatesPerVault',
 );
 
+// ─── Breakdown lines (allowances + deductions) ────────────────────────────
+//
+// Shared shape — only `categoryName` requirement differs (mandatory for
+// deductions because each deduction creates a linked expense row; optional
+// for allowances because they stay as breakdown metadata).
+//
+// Stored as JSON in the text columns. Allowances bump the income amount;
+// deductions auto-generate linked expense rows.
+
+// Cross-field invariant: percent lines need a rate; fixed lines need an amount.
+// The check is enforced at handler boundaries by the simple object schemas
+// below; v.pipe + v.check would unionise the inferred type in ways valibot's
+// type-side currently doesn't handle well. Runtime validation on submit is
+// fine — handlers also defend with defaults (rate ?? 0, amount ?? 0).
+export const allowanceLineSchema = v.object({
+    label: v.pipe(v.string(), v.minLength(1, 'Label required')),
+    mode: v.picklist(['percent', 'fixed']),
+    rate: v.optional(v.pipe(v.number(), v.minValue(0), v.maxValue(1, 'Rate is a fraction, 0–1'))),
+    amount: v.optional(v.pipe(v.number(), v.minValue(0, 'Amount must be >= 0'))),
+    categoryName: v.optional(v.nullable(v.string())),
+    note: v.optional(v.nullable(v.string())),
+});
+export type AllowanceLine = v.InferOutput<typeof allowanceLineSchema>;
+
+export const deductionLineSchema = v.object({
+    label: v.pipe(v.string(), v.minLength(1, 'Label required')),
+    mode: v.picklist(['percent', 'fixed']),
+    rate: v.optional(v.pipe(v.number(), v.minValue(0), v.maxValue(1, 'Rate is a fraction, 0–1'))),
+    amount: v.optional(v.pipe(v.number(), v.minValue(0, 'Amount must be >= 0'))),
+    categoryName: v.pipe(v.string(), v.minLength(1, 'Category required')),
+    note: v.optional(v.nullable(v.string())),
+});
+export type DeductionLine = v.InferOutput<typeof deductionLineSchema>;
+
+// Snapshotted on incomeEntries — same shape plus the resolved computedAmount.
+// One schema for both since the snapshot fields are identical at this layer.
+export const entryBreakdownLineSchema = v.object({
+    label: v.string(),
+    mode: v.picklist(['percent', 'fixed']),
+    rate: v.optional(v.number()),
+    amount: v.optional(v.number()),
+    categoryName: v.optional(v.nullable(v.string())),
+    note: v.optional(v.nullable(v.string())),
+    computedAmount: v.pipe(v.number(), v.minValue(0)),
+});
+export type EntryBreakdownLine = v.InferOutput<typeof entryBreakdownLineSchema>;
+
 // ─── Runtime shapes ────────────────────────────────────────────────────────
 
 export const incomeSourceSchema = v.object({
@@ -39,6 +86,8 @@ export const incomeTemplateSchema = v.object({
     defaultPaidTo: v.nullable(v.string()),
     defaultFundId: v.nullable(v.string()),
     defaultNote: v.nullable(v.string()),
+    defaultAllowances: v.nullable(v.array(allowanceLineSchema)),
+    defaultDeductions: v.nullable(v.array(deductionLineSchema)),
     previousTemplateId: v.nullable(v.string()),
     endedAt: v.nullable(v.string()),
     usageCount: v.number(),
@@ -58,6 +107,9 @@ export const incomeEntrySchema = v.object({
     templateId: v.nullable(v.string()),
     sourceId: v.nullable(v.string()),
     amount: v.number(),
+    baseAmount: v.nullable(v.number()),
+    allowances: v.nullable(v.array(entryBreakdownLineSchema)),
+    deductions: v.nullable(v.array(entryBreakdownLineSchema)),
     date: v.string(),
     paidTo: v.nullable(v.string()),
     note: v.nullable(v.string()),
@@ -108,6 +160,8 @@ export const createIncomeTemplateSchema = v.object({
     defaultPaidTo: v.optional(v.nullable(v.string())),
     defaultFundId: v.optional(v.nullable(v.string())),
     defaultNote: v.optional(v.nullable(v.string())),
+    defaultAllowances: v.optional(v.nullable(v.array(allowanceLineSchema))),
+    defaultDeductions: v.optional(v.nullable(v.array(deductionLineSchema))),
     // Optional lineage — set when this template continues a prior one (e.g.
     // salary stream after a job change).
     previousTemplateId: v.optional(v.nullable(v.string())),
@@ -124,6 +178,8 @@ export const updateIncomeTemplateSchema = v.object({
     defaultPaidTo: v.optional(v.nullable(v.string())),
     defaultFundId: v.optional(v.nullable(v.string())),
     defaultNote: v.optional(v.nullable(v.string())),
+    defaultAllowances: v.optional(v.nullable(v.array(allowanceLineSchema))),
+    defaultDeductions: v.optional(v.nullable(v.array(deductionLineSchema))),
     // previousTemplateId is intentionally NOT in the update schema — use the
     // dedicated linkIncomeTemplate endpoint (cycle prevention).
 });
@@ -170,10 +226,18 @@ export const createIncomeEntrySchema = v.object({
     // sourceId is optional when templateId is provided (derived); required for
     // ad-hoc-with-source entries (no template, but tagged with a source kind).
     sourceId: v.optional(v.nullable(v.string())),
+    // amount is what gets stored on the row (= total income, including any
+    // allowances). When a breakdown is provided, the server can either trust
+    // the client's amount or recompute as baseAmount + sum(allowances).
     amount: v.pipe(
         v.number('Amount is required'),
         v.minValue(0.01, 'Amount must be greater than 0'),
     ),
+    // Optional breakdown. baseAmount + allowances + deductions are all opt-in;
+    // omitting them keeps the entry as a simple total-income row.
+    baseAmount: v.optional(v.nullable(v.number())),
+    allowances: v.optional(v.nullable(v.array(allowanceLineSchema))),
+    deductions: v.optional(v.nullable(v.array(deductionLineSchema))),
     date: v.pipe(v.string(), v.minLength(1, 'Date is required')),
     paidTo: v.optional(v.nullable(v.string())),
     note: v.optional(v.nullable(v.string())),
@@ -195,6 +259,9 @@ export const createIncomeEntryWithTemplateSchema = v.object({
         v.number('Amount is required'),
         v.minValue(0.01, 'Amount must be greater than 0'),
     ),
+    baseAmount: v.optional(v.nullable(v.number())),
+    allowances: v.optional(v.nullable(v.array(allowanceLineSchema))),
+    deductions: v.optional(v.nullable(v.array(deductionLineSchema))),
     date: v.pipe(v.string(), v.minLength(1, 'Date is required')),
     paidTo: v.optional(v.nullable(v.string())),
     note: v.optional(v.nullable(v.string())),
@@ -211,6 +278,9 @@ export const updateIncomeEntrySchema = v.object({
         v.number(),
         v.minValue(0.01, 'Amount must be greater than 0'),
     )),
+    baseAmount: v.optional(v.nullable(v.number())),
+    allowances: v.optional(v.nullable(v.array(allowanceLineSchema))),
+    deductions: v.optional(v.nullable(v.array(deductionLineSchema))),
     date: v.optional(v.string()),
     paidTo: v.optional(v.nullable(v.string())),
     note: v.optional(v.nullable(v.string())),

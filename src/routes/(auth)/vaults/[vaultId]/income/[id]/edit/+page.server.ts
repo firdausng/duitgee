@@ -47,7 +47,10 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
                 vaultId,
                 templateId: entryResult.templateId,
                 sourceId: entryResult.sourceId,
-                amount: entryResult.amount,
+                // When a breakdown exists, the user-facing "amount" input is the
+                // base salary (allowances stack on top to produce gross). For
+                // entries without breakdown, amount is the canonical total.
+                amount: entryResult.baseAmount ?? entryResult.amount,
                 date: utcToLocalDatetimeString(entryResult.date),
                 paidTo: entryResult.paidTo,
                 note: entryResult.note,

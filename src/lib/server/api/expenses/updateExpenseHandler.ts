@@ -27,6 +27,17 @@ export const updateExpense = async (
 
     if (!existing) throw new Error('Expense not found');
 
+    // ── Income-deduction lock ────────────────────────────────────────────
+    // Expenses auto-generated as children of an income entry are read-only
+    // from this endpoint. All mutations must go through the parent income
+    // (which re-resolves the breakdown and rewrites the deduction snapshot).
+    // Enforces the coupling rule at the API boundary.
+    if (existing.incomeEntryId) {
+        throw new Error(
+            'This expense is generated from an income entry. Edit it on the income page.',
+        );
+    }
+
     // ── Fund change detection ────────────────────────────────────────────
     // `fundId` being `undefined` means "not included in payload, no change".
     // `fundId` being `null` means "explicitly removing the fund tag".

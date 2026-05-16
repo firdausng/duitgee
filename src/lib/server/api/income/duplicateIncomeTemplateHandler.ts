@@ -72,6 +72,8 @@ export const duplicateIncomeTemplate = async (
             defaultPaidTo: source.defaultPaidTo,
             defaultFundId: source.defaultFundId,
             defaultNote: source.defaultNote,
+            defaultAllowances: source.defaultAllowances,
+            defaultDeductions: source.defaultDeductions,
             previousTemplateId: null,
             endedAt: null,
             usageCount: 0,

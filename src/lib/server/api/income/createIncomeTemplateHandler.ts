@@ -5,6 +5,7 @@ import { and, eq, isNull, count } from 'drizzle-orm';
 import { initialAuditFields } from '$lib/server/utils/audit';
 import { requireVaultPermission } from '$lib/server/utils/vaultPermissions';
 import { getVaultPlanLimit } from '$lib/server/utils/entitlements';
+import { serializeBreakdown } from './breakdownHelpers';
 import type { CreateIncomeTemplateRequest } from '$lib/schemas/income';
 
 export const createIncomeTemplate = async (
@@ -77,6 +78,8 @@ export const createIncomeTemplate = async (
             defaultPaidTo: data.defaultPaidTo ?? null,
             defaultFundId: data.defaultFundId ?? null,
             defaultNote: data.defaultNote ?? null,
+            defaultAllowances: serializeBreakdown(data.defaultAllowances ?? null),
+            defaultDeductions: serializeBreakdown(data.defaultDeductions ?? null),
             previousTemplateId: data.previousTemplateId ?? null,
             usageCount: 0,
             ...initialAuditFields({ userId }),
