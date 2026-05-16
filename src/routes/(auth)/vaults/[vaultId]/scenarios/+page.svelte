@@ -102,10 +102,13 @@
 
     let incomeOverrides = $state<Record<string, IncomeOverride>>({});
     let expenseOverrides = $state<Record<string, ExpenseOverride>>({});
+    /** Keyed by expense id — one-off expense rows that aren't tied to a recurring rule. */
+    let oneOffOverrides = $state<Record<string, ExpenseOverride>>({});
 
     function resetOverrides() {
         incomeOverrides = {};
         expenseOverrides = {};
+        oneOffOverrides = {};
     }
 
     // When the period changes, clear overrides — rule set may differ.
@@ -178,13 +181,41 @@
         });
     });
 
+    type OneOffRow = {
+        id: string;
+        name: string;
+        icon: string | null;
+        date: string;
+        realAmount: number;
+        scenarioAmount: number;
+        disabled: boolean;
+    };
+
+    const oneOffRows = $derived.by<OneOffRow[]>(() => {
+        const rows = baseline?.oneOffExpenses ?? [];
+        return rows.map((r) => {
+            const o = oneOffOverrides[r.id];
+            const disabled = o?.disabled ?? false;
+            const amount = o?.amount ?? r.amount;
+            return {
+                id: r.id,
+                name: r.name,
+                icon: r.icon,
+                date: r.date,
+                realAmount: r.amount,
+                scenarioAmount: disabled ? 0 : amount,
+                disabled,
+            };
+        });
+    });
+
     const scenarioIncome = $derived(
         incomeRows.reduce((s, r) => s + r.scenarioPerPeriod, 0) + (baseline?.oneOffIncome ?? 0),
     );
     const scenarioExpense = $derived(
         expenseRows.reduce((s, r) => s + r.scenarioPerPeriod, 0)
         + incomeDeductionsScenario
-        + (baseline?.oneOffExpense ?? 0),
+        + oneOffRows.reduce((s, r) => s + r.scenarioAmount, 0),
     );
     const scenarioNet = $derived(scenarioIncome - scenarioExpense);
 
@@ -228,9 +259,27 @@
             },
         };
     }
+    function toggleOneOff(id: string, enabled: boolean) {
+        oneOffOverrides = {
+            ...oneOffOverrides,
+            [id]: { ...(oneOffOverrides[id] ?? { amount: null }), disabled: !enabled },
+        };
+    }
+    function setOneOffAmount(id: string, raw: string) {
+        const n = raw === '' ? null : Number(raw);
+        oneOffOverrides = {
+            ...oneOffOverrides,
+            [id]: {
+                ...(oneOffOverrides[id] ?? { disabled: false, amount: null }),
+                amount: n != null && Number.isFinite(n) ? n : null,
+            },
+        };
+    }
 
     const hasAnyOverride = $derived(
-        Object.keys(incomeOverrides).length > 0 || Object.keys(expenseOverrides).length > 0,
+        Object.keys(incomeOverrides).length > 0
+            || Object.keys(expenseOverrides).length > 0
+            || Object.keys(oneOffOverrides).length > 0,
     );
 
     function deltaSignClass(n: number, positiveIsGood: boolean): string {
@@ -437,6 +486,58 @@
                                 <Checkbox
                                     checked={!row.disabled}
                                     onCheckedChange={(v) => toggleExpense(row.ruleId, v === true)}
+                                    aria-label="Include in scenario"
+                                />
+                            </div>
+                        </div>
+                    {/each}
+                {/if}
+            </CardContent>
+        </Card>
+
+        <!-- Other expenses panel — every non-recurring, non-deduction expense in the period -->
+        <Card>
+            <CardHeader>
+                <CardTitle class="flex items-center gap-2 text-base">
+                    <TrendingDown class="size-4 text-rose-600 dark:text-rose-400" />
+                    Other expenses
+                    <span class="text-xs font-normal text-muted-foreground">
+                        ({oneOffRows.length})
+                    </span>
+                </CardTitle>
+            </CardHeader>
+            <CardContent class="space-y-3">
+                {#if oneOffRows.length === 0}
+                    <p class="text-sm text-muted-foreground">
+                        No one-off expenses in this period.
+                    </p>
+                {:else}
+                    {#each oneOffRows as row (row.id)}
+                        <div class="flex items-center gap-3 rounded-md border p-3" class:opacity-60={row.disabled}>
+                            <IconRenderer icon={row.icon} size={20} emojiClass="text-lg" />
+                            <div class="min-w-0 flex-1">
+                                <div class="truncate text-sm font-medium">{row.name}</div>
+                                <div class="text-xs text-muted-foreground">
+                                    {fmt.date(row.date)} · Real {fmt.currency(row.realAmount)}
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <Label class="sr-only" for="off-amt-{row.id}">Amount</Label>
+                                <Input
+                                    id="off-amt-{row.id}"
+                                    type="number"
+                                    inputmode="decimal"
+                                    step="0.01"
+                                    min="0"
+                                    disabled={row.disabled}
+                                    class="w-28"
+                                    value={oneOffOverrides[row.id]?.amount ?? ''}
+                                    placeholder={String(row.realAmount)}
+                                    oninput={(e) => setOneOffAmount(row.id, (e.currentTarget as HTMLInputElement).value)}
+                                />
+                                <Checkbox
+                                    checked={!row.disabled}
+                                    onCheckedChange={(v) => toggleOneOff(row.id, v === true)}
                                     aria-label="Include in scenario"
                                 />
                             </div>
