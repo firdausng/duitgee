@@ -377,7 +377,7 @@
                         </p>
 
                         <!-- Allowances -->
-                        <div class="rounded-md border bg-card p-3 space-y-2">
+                        <div class="rounded-md border bg-card p-3 space-y-4 sm:space-y-2">
                             <div class="flex items-center justify-between">
                                 <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Allowances</p>
                                 <button type="button" onclick={addAllowance} disabled={$delayed} class="text-xs text-primary hover:underline inline-flex items-center gap-1">
@@ -412,7 +412,7 @@
                         </div>
 
                         <!-- Deductions -->
-                        <div class="rounded-md border bg-card p-3 space-y-2">
+                        <div class="rounded-md border bg-card p-3 space-y-4 sm:space-y-2">
                             <div class="flex items-center justify-between">
                                 <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Deductions</p>
                                 <button type="button" onclick={addDeduction} disabled={$delayed} class="text-xs text-primary hover:underline inline-flex items-center gap-1">

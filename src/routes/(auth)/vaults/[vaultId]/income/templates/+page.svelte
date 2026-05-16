@@ -514,7 +514,7 @@
                         Allowances and deductions seed new income entries from this template. Edit per-entry as needed.
                     </p>
 
-                    <div class="rounded-md border bg-card p-3 space-y-2">
+                    <div class="rounded-md border bg-card p-3 space-y-4 sm:space-y-2">
                         <div class="flex items-center justify-between">
                             <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Default allowances</p>
                             <button type="button" onclick={addFormAllowance} disabled={saving} class="text-xs text-primary hover:underline inline-flex items-center gap-1">
@@ -541,7 +541,7 @@
                         {/each}
                     </div>
 
-                    <div class="rounded-md border bg-card p-3 space-y-2">
+                    <div class="rounded-md border bg-card p-3 space-y-4 sm:space-y-2">
                         <div class="flex items-center justify-between">
                             <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Default deductions</p>
                             <button type="button" onclick={addFormDeduction} disabled={saving} class="text-xs text-primary hover:underline inline-flex items-center gap-1">
