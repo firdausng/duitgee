@@ -111,8 +111,9 @@
     type GroupOverride = { disabled: boolean };
     let oneOffOverrides = $state<Record<string, GroupOverride>>({});
     /** Row-level overrides for individual one-off expenses inside a group.
-     *  Toggle only — for "drop this one dinner" without nuking the group. */
-    let expenseRowOverrides = $state<Record<string, { disabled: boolean }>>({});
+     *  Toggle + amount edit — "drop this dinner" OR "what if it had been RM50". */
+    type RowOverride = { disabled: boolean; amount: number | null };
+    let expenseRowOverrides = $state<Record<string, RowOverride>>({});
     /** Which group rows are expanded to reveal their expense list. */
     let expandedGroups = $state<Record<string, boolean>>({});
 
@@ -143,7 +144,17 @@
     function toggleExpenseRow(id: string, enabled: boolean) {
         expenseRowOverrides = {
             ...expenseRowOverrides,
-            [id]: { disabled: !enabled },
+            [id]: { ...(expenseRowOverrides[id] ?? { amount: null }), disabled: !enabled },
+        };
+    }
+    function setExpenseRowAmount(id: string, raw: string) {
+        const n = raw === '' ? null : Number(raw);
+        expenseRowOverrides = {
+            ...expenseRowOverrides,
+            [id]: {
+                ...(expenseRowOverrides[id] ?? { disabled: false, amount: null }),
+                amount: n != null && Number.isFinite(n) ? n : null,
+            },
         };
     }
 
@@ -224,7 +235,9 @@
         name: string;
         icon: string | null;
         date: string;
-        amount: number;
+        realAmount: number;
+        /** Effective amount for scenario math — override if set, else real. */
+        scenarioAmount: number;
         disabled: boolean;
     };
 
@@ -244,13 +257,15 @@
     const UNGROUPED_KEY = '__ungrouped__';
 
     function buildChild(r: NonNullable<typeof baseline>['oneOffExpenses'][number]): ExpenseChild {
+        const o = expenseRowOverrides[r.id];
         return {
             id: r.id,
             name: r.name,
             icon: r.icon,
             date: r.date,
-            amount: r.amount,
-            disabled: expenseRowOverrides[r.id]?.disabled ?? false,
+            realAmount: r.amount,
+            scenarioAmount: o?.amount ?? r.amount,
+            disabled: o?.disabled ?? false,
         };
     }
 
@@ -284,7 +299,7 @@
                 .map(([key, g]) => {
                     const disabled = oneOffOverrides[key]?.disabled ?? false;
                     const activeChildSum = g.children.reduce(
-                        (s, c) => s + (c.disabled ? 0 : c.amount),
+                        (s, c) => s + (c.disabled ? 0 : c.scenarioAmount),
                         0,
                     );
                     return {
@@ -295,7 +310,7 @@
                         realTotal: g.total,
                         scenarioTotal: disabled ? 0 : activeChildSum,
                         disabled,
-                        children: g.children.sort((a, b) => b.amount - a.amount),
+                        children: g.children.sort((a, b) => b.realAmount - a.realAmount),
                     };
                 })
                 .sort((a, b) => b.realTotal - a.realTotal);
@@ -333,7 +348,7 @@
                     // oneOffScenarioTotal.
                     scenarioTotal: disabled ? 0 : g.total,
                     disabled,
-                    children: g.children.sort((a, b) => b.amount - a.amount),
+                    children: g.children.sort((a, b) => b.realAmount - a.realAmount),
                 };
             })
             .sort((a, b) => b.realTotal - a.realTotal);
@@ -348,12 +363,14 @@
 
         if (groupingMode === 'tag') {
             return rows.reduce((sum, r) => {
-                if (expenseRowOverrides[r.id]?.disabled) return sum;
+                const o = expenseRowOverrides[r.id];
+                if (o?.disabled) return sum;
                 const groupKeys = r.tags.length === 0
                     ? [UNGROUPED_KEY]
                     : r.tags.map((t) => t.id);
                 const excluded = groupKeys.some((k) => oneOffOverrides[k]?.disabled);
-                return excluded ? sum : sum + r.amount;
+                if (excluded) return sum;
+                return sum + (o?.amount ?? r.amount);
             }, 0);
         }
 
@@ -709,9 +726,22 @@
                                             <div class="min-w-0 flex-1">
                                                 <div class="truncate text-sm">{child.name}</div>
                                                 <div class="text-[11px] text-muted-foreground">
-                                                    {fmt.date(child.date)} · {fmt.currency(child.amount)}
+                                                    {fmt.date(child.date)} · Real {fmt.currency(child.realAmount)}
                                                 </div>
                                             </div>
+                                            <Label class="sr-only" for="row-amt-{child.id}">Amount</Label>
+                                            <Input
+                                                id="row-amt-{child.id}"
+                                                type="number"
+                                                inputmode="decimal"
+                                                step="0.01"
+                                                min="0"
+                                                disabled={child.disabled}
+                                                class="h-8 w-24 text-sm"
+                                                value={expenseRowOverrides[child.id]?.amount ?? ''}
+                                                placeholder={String(child.realAmount.toFixed(2))}
+                                                oninput={(e) => setExpenseRowAmount(child.id, (e.currentTarget as HTMLInputElement).value)}
+                                            />
                                             <Checkbox
                                                 checked={!child.disabled}
                                                 onCheckedChange={(v) => toggleExpenseRow(child.id, v === true)}
