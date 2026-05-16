@@ -32,7 +32,7 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
             console.error('Failed to load income sources:', err);
             return [];
         }),
-        getIncomeTemplates(session, { vaultId }, env).catch((err) => {
+        getIncomeTemplates(session, { vaultId, activeOnly: 'true' }, env).catch((err) => {
             console.error('Failed to load income templates:', err);
             return [];
         }),

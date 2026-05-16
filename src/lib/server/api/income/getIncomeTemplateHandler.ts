@@ -13,6 +13,7 @@ export const getIncomeTemplate = async (
     await requireVaultPermission(session, query.vaultId, 'canViewIncome', env);
 
     const client = drizzle(env.DB, { schema });
+
     const [row] = await client
         .select({
             template: incomeTemplates,
@@ -31,8 +32,25 @@ export const getIncomeTemplate = async (
         .limit(1);
 
     if (!row) return null;
+
+    let previousTemplate: { id: string; name: string; icon: string | null; endedAt: string | null } | null = null;
+    if (row.template.previousTemplateId) {
+        const [parent] = await client
+            .select({
+                id: incomeTemplates.id,
+                name: incomeTemplates.name,
+                icon: incomeTemplates.icon,
+                endedAt: incomeTemplates.endedAt,
+            })
+            .from(incomeTemplates)
+            .where(eq(incomeTemplates.id, row.template.previousTemplateId))
+            .limit(1);
+        if (parent) previousTemplate = parent;
+    }
+
     return {
         ...row.template,
         source: { name: row.sourceName, icon: row.sourceIcon },
+        previousTemplate,
     };
 };

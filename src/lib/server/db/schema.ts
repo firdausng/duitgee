@@ -227,6 +227,12 @@ export const incomeSources = sqliteTable('income_sources', {
 // expenseTemplates. Example: 'Salary - Firdaus' (source: Salary, amount: 24000,
 // paidTo: firdaus, fundId: main-account). One template per recurring real-world
 // stream; multiple templates can share a source.
+//
+// Lineage: when a salary stream ends (job change), the user "replaces" the
+// template — setting endedAt on the old row and creating a new template with
+// previousTemplateId pointing back. The chain forms a forest of trees identical
+// in shape to recurringExpenses.previousRuleId. previousTemplateId is a soft FK
+// (no DB-level cascade) so a hard-deleted parent doesn't break the child row.
 export const incomeTemplates = sqliteTable('income_templates', {
     id: text('id').primaryKey().$defaultFn(() => createId()),
     vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
@@ -238,6 +244,12 @@ export const incomeTemplates = sqliteTable('income_templates', {
     defaultPaidTo: text('default_paid_to'),
     defaultFundId: text('default_fund_id'),
     defaultNote: text('default_note'),
+    // Lineage — points at the predecessor template when this is a continuation
+    // (e.g. salary stream after a job change). Soft FK; tolerated as dangling.
+    previousTemplateId: text('previous_template_id'),
+    // Terminal marker — null = active (appears in pickers); non-null = ended
+    // (excluded from pickers but kept for history and lineage queries).
+    endedAt: text('ended_at'),
     // Usage tracking (powers "most-used first" in pickers, mirrors expenseTemplates)
     usageCount: integer('usage_count').notNull().default(0),
     lastUsedAt: text('last_used_at'),
@@ -251,6 +263,7 @@ export const incomeTemplates = sqliteTable('income_templates', {
 }, (table) => ({
     vaultIdIdx: index('idx_income_templates_vault').on(table.vaultId),
     sourceIdx: index('idx_income_templates_source').on(table.sourceId),
+    previousIdx: index('idx_income_templates_previous').on(table.previousTemplateId),
 }));
 
 // IncomeEntries — per-occurrence income rows. Mirrors expenses minus the category

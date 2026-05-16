@@ -39,6 +39,8 @@ export const incomeTemplateSchema = v.object({
     defaultPaidTo: v.nullable(v.string()),
     defaultFundId: v.nullable(v.string()),
     defaultNote: v.nullable(v.string()),
+    previousTemplateId: v.nullable(v.string()),
+    endedAt: v.nullable(v.string()),
     usageCount: v.number(),
     lastUsedAt: v.nullable(v.string()),
     createdAt: v.nullable(v.string()),
@@ -106,6 +108,9 @@ export const createIncomeTemplateSchema = v.object({
     defaultPaidTo: v.optional(v.nullable(v.string())),
     defaultFundId: v.optional(v.nullable(v.string())),
     defaultNote: v.optional(v.nullable(v.string())),
+    // Optional lineage — set when this template continues a prior one (e.g.
+    // salary stream after a job change).
+    previousTemplateId: v.optional(v.nullable(v.string())),
 });
 export type CreateIncomeTemplateRequest = v.InferOutput<typeof createIncomeTemplateSchema>;
 
@@ -119,6 +124,8 @@ export const updateIncomeTemplateSchema = v.object({
     defaultPaidTo: v.optional(v.nullable(v.string())),
     defaultFundId: v.optional(v.nullable(v.string())),
     defaultNote: v.optional(v.nullable(v.string())),
+    // previousTemplateId is intentionally NOT in the update schema — use the
+    // dedicated linkIncomeTemplate endpoint (cycle prevention).
 });
 export type UpdateIncomeTemplateRequest = v.InferOutput<typeof updateIncomeTemplateSchema>;
 
@@ -127,6 +134,23 @@ export const deleteIncomeTemplateSchema = v.object({
     vaultId: v.string(),
 });
 export type DeleteIncomeTemplateRequest = v.InferOutput<typeof deleteIncomeTemplateSchema>;
+
+// Replace: marks a template as ended (sets endedAt). Terminal — hides it from
+// pickers but keeps the row for history and lineage queries. Use when a salary
+// stream ends (job change). The follow-up new template carries previousTemplateId.
+export const replaceIncomeTemplateSchema = v.object({
+    id: v.string(),
+    vaultId: v.string(),
+});
+export type ReplaceIncomeTemplateRequest = v.InferOutput<typeof replaceIncomeTemplateSchema>;
+
+// Link: sets/clears previousTemplateId on a template. Cycle-prevented server-side.
+export const linkIncomeTemplateSchema = v.object({
+    id: v.string(),
+    vaultId: v.string(),
+    previousTemplateId: v.nullable(v.string()),
+});
+export type LinkIncomeTemplateRequest = v.InferOutput<typeof linkIncomeTemplateSchema>;
 
 // ─── Commands — entries ───────────────────────────────────────────────────
 
@@ -206,6 +230,9 @@ export type GetIncomeSourceQuery = v.InferOutput<typeof getIncomeSourceQuerySche
 export const getIncomeTemplatesQuerySchema = v.object({
     vaultId: v.string(),
     sourceId: v.optional(v.string()), // Filter to templates under one source
+    // 'true' (string from URL) → hide ended (endedAt IS NOT NULL) templates.
+    // Used by the new-income picker so ex-employer salaries don't show up.
+    activeOnly: v.optional(v.string()),
 });
 export type GetIncomeTemplatesQuery = v.InferOutput<typeof getIncomeTemplatesQuerySchema>;
 

@@ -49,6 +49,22 @@ export const createIncomeTemplate = async (
         }
     }
 
+    // Validate optional lineage pointer.
+    if (data.previousTemplateId) {
+        const [prev] = await client
+            .select({ id: incomeTemplates.id })
+            .from(incomeTemplates)
+            .where(
+                and(
+                    eq(incomeTemplates.id, data.previousTemplateId),
+                    eq(incomeTemplates.vaultId, data.vaultId),
+                    isNull(incomeTemplates.deletedAt),
+                ),
+            )
+            .limit(1);
+        if (!prev) throw new Error('Previous template not found in this vault');
+    }
+
     const [template] = await client
         .insert(incomeTemplates)
         .values({
@@ -61,6 +77,7 @@ export const createIncomeTemplate = async (
             defaultPaidTo: data.defaultPaidTo ?? null,
             defaultFundId: data.defaultFundId ?? null,
             defaultNote: data.defaultNote ?? null,
+            previousTemplateId: data.previousTemplateId ?? null,
             usageCount: 0,
             ...initialAuditFields({ userId }),
         })

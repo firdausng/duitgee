@@ -11,6 +11,8 @@ import {
     createIncomeTemplateSchema,
     updateIncomeTemplateSchema,
     deleteIncomeTemplateSchema,
+    replaceIncomeTemplateSchema,
+    linkIncomeTemplateSchema,
     getIncomeTemplatesQuerySchema,
     getIncomeTemplateQuerySchema,
     createIncomeEntrySchema,
@@ -28,6 +30,8 @@ import { getIncomeSource } from './getIncomeSourceHandler';
 import { createIncomeTemplate } from './createIncomeTemplateHandler';
 import { updateIncomeTemplate } from './updateIncomeTemplateHandler';
 import { deleteIncomeTemplate } from './deleteIncomeTemplateHandler';
+import { replaceIncomeTemplate } from './replaceIncomeTemplateHandler';
+import { linkIncomeTemplate } from './linkIncomeTemplateHandler';
 import { getIncomeTemplates } from './getIncomeTemplatesHandler';
 import { getIncomeTemplate } from './getIncomeTemplateHandler';
 import { createIncomeEntry } from './createIncomeEntryHandler';
@@ -219,6 +223,38 @@ export const incomeApi = new Hono<App.Api>()
                 return c.json({ success: true, data });
             } catch (error) {
                 const { message, status } = errorHandler('deleting income template')(error);
+                return c.json({ success: false, error: message }, status as 400);
+            }
+        },
+    )
+    .post(
+        '/replaceIncomeTemplate',
+        describeRoute({ ...common, description: 'Mark a template as ended (terminal, no row removal)' }),
+        vValidator('json', replaceIncomeTemplateSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const body = c.req.valid('json');
+            try {
+                const data = await replaceIncomeTemplate(session, body, c.env);
+                return c.json({ success: true, data });
+            } catch (error) {
+                const { message, status } = errorHandler('replacing income template')(error);
+                return c.json({ success: false, error: message }, status as 400);
+            }
+        },
+    )
+    .post(
+        '/linkIncomeTemplate',
+        describeRoute({ ...common, description: 'Set or clear previousTemplateId (lineage)' }),
+        vValidator('json', linkIncomeTemplateSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const body = c.req.valid('json');
+            try {
+                const data = await linkIncomeTemplate(session, body, c.env);
+                return c.json({ success: true, data });
+            } catch (error) {
+                const { message, status } = errorHandler('linking income template')(error);
                 return c.json({ success: false, error: message }, status as 400);
             }
         },
