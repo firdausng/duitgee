@@ -106,9 +106,9 @@
     let incomeOverrides = $state<Record<string, IncomeOverride>>({});
     let expenseOverrides = $state<Record<string, ExpenseOverride>>({});
     /** Group-level overrides, keyed by group key (template id, category name,
-     *  or tag id). Partition modes offer toggle + amount; tag mode is toggle
-     *  only since amount overrides are ambiguous under overlap. */
-    type GroupOverride = { disabled: boolean; amount: number | null };
+     *  or tag id). Toggle-only — total is derived from un-disabled children
+     *  so per-expense toggles always move the number. */
+    type GroupOverride = { disabled: boolean };
     let oneOffOverrides = $state<Record<string, GroupOverride>>({});
     /** Row-level overrides for individual one-off expenses inside a group.
      *  Toggle only — for "drop this one dinner" without nuking the group. */
@@ -237,9 +237,6 @@
         realTotal: number;
         scenarioTotal: number;
         disabled: boolean;
-        /** Tag mode hides amount edit because expenses can appear in multiple
-         *  tag groups, making a single override ambiguous. */
-        editable: boolean;
         /** Child expenses inside this group (already row-override-aware). */
         children: ExpenseChild[];
     };
@@ -285,22 +282,19 @@
             }
             return [...map.entries()]
                 .map(([key, g]) => {
-                    const o = oneOffOverrides[key];
-                    const disabled = o?.disabled ?? false;
+                    const disabled = oneOffOverrides[key]?.disabled ?? false;
                     const activeChildSum = g.children.reduce(
                         (s, c) => s + (c.disabled ? 0 : c.amount),
                         0,
                     );
-                    const amount = o?.amount ?? activeChildSum;
                     return {
                         key,
                         name: g.name,
                         icon: g.icon,
                         count: g.children.length,
                         realTotal: g.total,
-                        scenarioTotal: disabled ? 0 : amount,
+                        scenarioTotal: disabled ? 0 : activeChildSum,
                         disabled,
-                        editable: true,
                         children: g.children.sort((a, b) => b.amount - a.amount),
                     };
                 })
@@ -327,8 +321,7 @@
         }
         return [...map.entries()]
             .map(([key, g]) => {
-                const o = oneOffOverrides[key];
-                const disabled = o?.disabled ?? false;
+                const disabled = oneOffOverrides[key]?.disabled ?? false;
                 return {
                     key,
                     name: g.name,
@@ -340,7 +333,6 @@
                     // oneOffScenarioTotal.
                     scenarioTotal: disabled ? 0 : g.total,
                     disabled,
-                    editable: false,
                     children: g.children.sort((a, b) => b.amount - a.amount),
                 };
             })
@@ -419,20 +411,7 @@
         };
     }
     function toggleGroup(key: string, enabled: boolean) {
-        oneOffOverrides = {
-            ...oneOffOverrides,
-            [key]: { ...(oneOffOverrides[key] ?? { amount: null }), disabled: !enabled },
-        };
-    }
-    function setGroupAmount(key: string, raw: string) {
-        const n = raw === '' ? null : Number(raw);
-        oneOffOverrides = {
-            ...oneOffOverrides,
-            [key]: {
-                ...(oneOffOverrides[key] ?? { disabled: false, amount: null }),
-                amount: n != null && Number.isFinite(n) ? n : null,
-            },
-        };
+        oneOffOverrides = { ...oneOffOverrides, [key]: { disabled: !enabled } };
     }
 
     const hasAnyOverride = $derived(
@@ -676,8 +655,8 @@
                 </Tabs>
                 {#if groupingMode === 'tag'}
                     <p class="text-xs text-muted-foreground">
-                        Expenses can carry multiple tags. Turning off a group excludes every
-                        expense bearing that tag — amount edits aren't offered in tag mode.
+                        Expenses can carry multiple tags. Turning off a tag excludes every
+                        expense bearing it — even if it's also in another tag group.
                     </p>
                 {/if}
             </CardHeader>
@@ -711,22 +690,11 @@
                                         {row.count} {row.count === 1 ? 'expense' : 'expenses'} · Real {fmt.currency(row.realTotal)}
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2">
-                                    {#if row.editable}
-                                        <Label class="sr-only" for="grp-amt-{row.key}">Group total</Label>
-                                        <Input
-                                            id="grp-amt-{row.key}"
-                                            type="number"
-                                            inputmode="decimal"
-                                            step="0.01"
-                                            min="0"
-                                            disabled={row.disabled}
-                                            class="w-28"
-                                            value={oneOffOverrides[row.key]?.amount ?? ''}
-                                            placeholder={String(row.realTotal.toFixed(2))}
-                                            oninput={(e) => setGroupAmount(row.key, (e.currentTarget as HTMLInputElement).value)}
-                                        />
-                                    {/if}
+                                <div class="flex items-center gap-3">
+                                    <div class="text-right">
+                                        <div class="text-[10px] uppercase tracking-wider text-muted-foreground">Scenario</div>
+                                        <div class="font-mono text-sm tabular-nums">{fmt.currency(row.scenarioTotal)}</div>
+                                    </div>
                                     <Checkbox
                                         checked={!row.disabled}
                                         onCheckedChange={(v) => toggleGroup(row.key, v === true)}
