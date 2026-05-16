@@ -2,13 +2,15 @@ import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/server/db/schema';
 import {
     expenses,
+    expenseTags,
+    expenseTagAssignments,
     expenseTemplates,
     incomeEntries,
     incomeTemplates,
     recurringExpenses,
     recurringIncome,
 } from '$lib/server/db/schema';
-import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { requireVaultPermission } from '$lib/server/utils/vaultPermissions';
 import { parseBreakdown } from '$lib/server/api/income/breakdownHelpers';
 import { resolveBreakdown } from '$lib/utils/breakdown';
@@ -46,6 +48,11 @@ export type ScenarioOneOffExpense = {
     icon: string | null;
     amount: number;
     date: string;
+    /** Grouping dimensions — the page partitions/unions these client-side. */
+    templateId: string | null;
+    templateName: string | null;
+    categoryName: string;
+    tags: Array<{ id: string; name: string }>;
 };
 
 export interface ScenarioBaseline {
@@ -203,6 +210,7 @@ export const getScenarioBaseline = async (
             date: expenses.date,
             note: expenses.note,
             categoryName: expenses.categoryName,
+            templateId: expenses.expenseTemplateId,
             templateName: expenseTemplates.name,
             templateIcon: expenseTemplates.icon,
         })
@@ -219,12 +227,44 @@ export const getScenarioBaseline = async (
             ),
         );
 
+    // ─── Tags for those expenses ─────────────────────────────────────────
+    // Separate query so the main select stays flat. M2M means we can't fold
+    // tags into the main projection without GROUP_CONCAT gymnastics.
+    const expenseIds = oneOffExpenseRows.map((r) => r.id);
+    const tagRows = expenseIds.length > 0
+        ? await client
+            .select({
+                expenseId: expenseTagAssignments.expenseId,
+                tagId: expenseTags.id,
+                tagName: expenseTags.name,
+            })
+            .from(expenseTagAssignments)
+            .innerJoin(expenseTags, eq(expenseTagAssignments.tagId, expenseTags.id))
+            .where(
+                and(
+                    inArray(expenseTagAssignments.expenseId, expenseIds),
+                    isNull(expenseTags.deletedAt),
+                ),
+            )
+        : [];
+
+    const tagsByExpense = new Map<string, Array<{ id: string; name: string }>>();
+    for (const t of tagRows) {
+        const arr = tagsByExpense.get(t.expenseId) ?? [];
+        arr.push({ id: t.tagId, name: t.tagName });
+        tagsByExpense.set(t.expenseId, arr);
+    }
+
     const oneOffExpensesResult: ScenarioOneOffExpense[] = oneOffExpenseRows.map((row) => ({
         id: row.id,
         name: row.templateName ?? row.note ?? row.categoryName ?? 'Expense',
         icon: row.templateIcon ?? null,
         amount: Number(row.amount ?? 0),
         date: row.date,
+        templateId: row.templateId ?? null,
+        templateName: row.templateName ?? null,
+        categoryName: row.categoryName,
+        tags: tagsByExpense.get(row.id) ?? [],
     }));
 
     // ─── One-off income aggregate (income side stays rolled up for now) ──

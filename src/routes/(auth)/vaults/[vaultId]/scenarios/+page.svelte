@@ -9,6 +9,7 @@
     import { Input } from '$lib/components/ui/input';
     import { Checkbox } from '$lib/components/ui/checkbox';
     import { Label } from '$lib/components/ui/label';
+    import { Tabs, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
     import { DateRangeFilter } from '$lib/components/ui/date-range-filter';
     import { Eyebrow, Rule } from '$lib/components/almanac';
     import { Amount } from '$lib/components/ui/amount';
@@ -102,12 +103,25 @@
 
     let incomeOverrides = $state<Record<string, IncomeOverride>>({});
     let expenseOverrides = $state<Record<string, ExpenseOverride>>({});
-    /** Keyed by expense id — one-off expense rows that aren't tied to a recurring rule. */
-    let oneOffOverrides = $state<Record<string, ExpenseOverride>>({});
+    /** One-off expense overrides, keyed by group key. Cleared whenever the
+     *  grouping mode changes so the visible toggles always fully explain the
+     *  current Scenario number. Templates/categories partition cleanly; tags
+     *  overlap so amount edits aren't offered in tag mode. */
+    type GroupOverride = { disabled: boolean; amount: number | null };
+    let oneOffOverrides = $state<Record<string, GroupOverride>>({});
+
+    type GroupingMode = 'template' | 'category' | 'tag';
+    let groupingMode = $state<GroupingMode>('template');
 
     function resetOverrides() {
         incomeOverrides = {};
         expenseOverrides = {};
+        oneOffOverrides = {};
+    }
+
+    function changeGrouping(next: GroupingMode) {
+        if (next === groupingMode) return;
+        groupingMode = next;
         oneOffOverrides = {};
     }
 
@@ -181,32 +195,138 @@
         });
     });
 
-    type OneOffRow = {
-        id: string;
+    /** Visual row for the grouped one-off expense panel. One per group key. */
+    type GroupRow = {
+        key: string;
         name: string;
         icon: string | null;
-        date: string;
-        realAmount: number;
-        scenarioAmount: number;
+        count: number;
+        realTotal: number;
+        scenarioTotal: number;
         disabled: boolean;
+        /** Tag mode hides amount edit because expenses can appear in multiple
+         *  tag groups, making a single override ambiguous. */
+        editable: boolean;
     };
 
-    const oneOffRows = $derived.by<OneOffRow[]>(() => {
+    const UNGROUPED_KEY = '__ungrouped__';
+
+    const groupRows = $derived.by<GroupRow[]>(() => {
         const rows = baseline?.oneOffExpenses ?? [];
-        return rows.map((r) => {
-            const o = oneOffOverrides[r.id];
-            const disabled = o?.disabled ?? false;
-            const amount = o?.amount ?? r.amount;
-            return {
-                id: r.id,
-                name: r.name,
-                icon: r.icon,
-                date: r.date,
-                realAmount: r.amount,
-                scenarioAmount: disabled ? 0 : amount,
-                disabled,
-            };
-        });
+        if (rows.length === 0) return [];
+
+        if (groupingMode === 'template') {
+            const map = new Map<string, { name: string; icon: string | null; total: number; count: number }>();
+            for (const r of rows) {
+                const key = r.templateId ?? UNGROUPED_KEY;
+                const name = r.templateName ?? 'Uncategorized';
+                const entry = map.get(key) ?? { name, icon: r.icon, total: 0, count: 0 };
+                entry.total += r.amount;
+                entry.count += 1;
+                map.set(key, entry);
+            }
+            return [...map.entries()]
+                .map(([key, g]) => {
+                    const o = oneOffOverrides[key];
+                    const disabled = o?.disabled ?? false;
+                    const amount = o?.amount ?? g.total;
+                    return {
+                        key,
+                        name: g.name,
+                        icon: g.icon,
+                        count: g.count,
+                        realTotal: g.total,
+                        scenarioTotal: disabled ? 0 : amount,
+                        disabled,
+                        editable: true,
+                    };
+                })
+                .sort((a, b) => b.realTotal - a.realTotal);
+        }
+
+        if (groupingMode === 'category') {
+            const map = new Map<string, { name: string; total: number; count: number }>();
+            for (const r of rows) {
+                const key = r.categoryName || UNGROUPED_KEY;
+                const name = r.categoryName || 'Uncategorized';
+                const entry = map.get(key) ?? { name, total: 0, count: 0 };
+                entry.total += r.amount;
+                entry.count += 1;
+                map.set(key, entry);
+            }
+            return [...map.entries()]
+                .map(([key, g]) => {
+                    const o = oneOffOverrides[key];
+                    const disabled = o?.disabled ?? false;
+                    const amount = o?.amount ?? g.total;
+                    return {
+                        key,
+                        name: g.name,
+                        icon: null,
+                        count: g.count,
+                        realTotal: g.total,
+                        scenarioTotal: disabled ? 0 : amount,
+                        disabled,
+                        editable: true,
+                    };
+                })
+                .sort((a, b) => b.realTotal - a.realTotal);
+        }
+
+        // Tag mode — expense may appear in multiple tag groups.
+        const map = new Map<string, { name: string; total: number; count: number }>();
+        for (const r of rows) {
+            if (r.tags.length === 0) {
+                const entry = map.get(UNGROUPED_KEY) ?? { name: 'Untagged', total: 0, count: 0 };
+                entry.total += r.amount;
+                entry.count += 1;
+                map.set(UNGROUPED_KEY, entry);
+            } else {
+                for (const t of r.tags) {
+                    const entry = map.get(t.id) ?? { name: t.name, total: 0, count: 0 };
+                    entry.total += r.amount;
+                    entry.count += 1;
+                    map.set(t.id, entry);
+                }
+            }
+        }
+        return [...map.entries()]
+            .map(([key, g]) => {
+                const o = oneOffOverrides[key];
+                const disabled = o?.disabled ?? false;
+                return {
+                    key,
+                    name: g.name,
+                    icon: null,
+                    count: g.count,
+                    realTotal: g.total,
+                    // Tag mode is toggle-only — see note on `editable`.
+                    scenarioTotal: disabled ? 0 : g.total,
+                    disabled,
+                    editable: false,
+                };
+            })
+            .sort((a, b) => b.realTotal - a.realTotal);
+    });
+
+    /** Tag-mode scenario sum: any expense bearing a disabled tag is excluded
+     *  (union semantic). Partition modes (template/category) can sum the
+     *  group rows directly. */
+    const oneOffScenarioTotal = $derived.by(() => {
+        const rows = baseline?.oneOffExpenses ?? [];
+        if (rows.length === 0) return 0;
+
+        if (groupingMode === 'tag') {
+            return rows.reduce((sum, r) => {
+                const groupKeys = r.tags.length === 0
+                    ? [UNGROUPED_KEY]
+                    : r.tags.map((t) => t.id);
+                const excluded = groupKeys.some((k) => oneOffOverrides[k]?.disabled);
+                return excluded ? sum : sum + r.amount;
+            }, 0);
+        }
+
+        return groupRows.reduce((s, g) => s + g.scenarioTotal, 0);
     });
 
     const scenarioIncome = $derived(
@@ -215,7 +335,7 @@
     const scenarioExpense = $derived(
         expenseRows.reduce((s, r) => s + r.scenarioPerPeriod, 0)
         + incomeDeductionsScenario
-        + oneOffRows.reduce((s, r) => s + r.scenarioAmount, 0),
+        + oneOffScenarioTotal,
     );
     const scenarioNet = $derived(scenarioIncome - scenarioExpense);
 
@@ -259,18 +379,18 @@
             },
         };
     }
-    function toggleOneOff(id: string, enabled: boolean) {
+    function toggleGroup(key: string, enabled: boolean) {
         oneOffOverrides = {
             ...oneOffOverrides,
-            [id]: { ...(oneOffOverrides[id] ?? { amount: null }), disabled: !enabled },
+            [key]: { ...(oneOffOverrides[key] ?? { amount: null }), disabled: !enabled },
         };
     }
-    function setOneOffAmount(id: string, raw: string) {
+    function setGroupAmount(key: string, raw: string) {
         const n = raw === '' ? null : Number(raw);
         oneOffOverrides = {
             ...oneOffOverrides,
-            [id]: {
-                ...(oneOffOverrides[id] ?? { disabled: false, amount: null }),
+            [key]: {
+                ...(oneOffOverrides[key] ?? { disabled: false, amount: null }),
                 amount: n != null && Number.isFinite(n) ? n : null,
             },
         };
@@ -495,49 +615,66 @@
             </CardContent>
         </Card>
 
-        <!-- Other expenses panel — every non-recurring, non-deduction expense in the period -->
+        <!-- Other expenses — grouped by template / category / tag -->
         <Card>
-            <CardHeader>
-                <CardTitle class="flex items-center gap-2 text-base">
-                    <TrendingDown class="size-4 text-rose-600 dark:text-rose-400" />
-                    Other expenses
-                    <span class="text-xs font-normal text-muted-foreground">
-                        ({oneOffRows.length})
-                    </span>
-                </CardTitle>
+            <CardHeader class="space-y-3">
+                <div class="flex items-center justify-between gap-3">
+                    <CardTitle class="flex items-center gap-2 text-base">
+                        <TrendingDown class="size-4 text-rose-600 dark:text-rose-400" />
+                        Other expenses
+                        <span class="text-xs font-normal text-muted-foreground">
+                            ({baseline.oneOffExpenses.length})
+                        </span>
+                    </CardTitle>
+                </div>
+                <Tabs value={groupingMode} onValueChange={(v) => changeGrouping(v as GroupingMode)}>
+                    <TabsList class="grid w-full grid-cols-3 md:w-auto md:inline-flex">
+                        <TabsTrigger value="template">By template</TabsTrigger>
+                        <TabsTrigger value="category">By category</TabsTrigger>
+                        <TabsTrigger value="tag">By tag</TabsTrigger>
+                    </TabsList>
+                </Tabs>
+                {#if groupingMode === 'tag'}
+                    <p class="text-xs text-muted-foreground">
+                        Expenses can carry multiple tags. Turning off a group excludes every
+                        expense bearing that tag — amount edits aren't offered in tag mode.
+                    </p>
+                {/if}
             </CardHeader>
             <CardContent class="space-y-3">
-                {#if oneOffRows.length === 0}
+                {#if groupRows.length === 0}
                     <p class="text-sm text-muted-foreground">
                         No one-off expenses in this period.
                     </p>
                 {:else}
-                    {#each oneOffRows as row (row.id)}
+                    {#each groupRows as row (row.key)}
                         <div class="flex items-center gap-3 rounded-md border p-3" class:opacity-60={row.disabled}>
                             <IconRenderer icon={row.icon} size={20} emojiClass="text-lg" />
                             <div class="min-w-0 flex-1">
                                 <div class="truncate text-sm font-medium">{row.name}</div>
                                 <div class="text-xs text-muted-foreground">
-                                    {fmt.date(row.date)} · Real {fmt.currency(row.realAmount)}
+                                    {row.count} {row.count === 1 ? 'expense' : 'expenses'} · Real {fmt.currency(row.realTotal)}
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                <Label class="sr-only" for="off-amt-{row.id}">Amount</Label>
-                                <Input
-                                    id="off-amt-{row.id}"
-                                    type="number"
-                                    inputmode="decimal"
-                                    step="0.01"
-                                    min="0"
-                                    disabled={row.disabled}
-                                    class="w-28"
-                                    value={oneOffOverrides[row.id]?.amount ?? ''}
-                                    placeholder={String(row.realAmount)}
-                                    oninput={(e) => setOneOffAmount(row.id, (e.currentTarget as HTMLInputElement).value)}
-                                />
+                                {#if row.editable}
+                                    <Label class="sr-only" for="grp-amt-{row.key}">Group total</Label>
+                                    <Input
+                                        id="grp-amt-{row.key}"
+                                        type="number"
+                                        inputmode="decimal"
+                                        step="0.01"
+                                        min="0"
+                                        disabled={row.disabled}
+                                        class="w-28"
+                                        value={oneOffOverrides[row.key]?.amount ?? ''}
+                                        placeholder={String(row.realTotal.toFixed(2))}
+                                        oninput={(e) => setGroupAmount(row.key, (e.currentTarget as HTMLInputElement).value)}
+                                    />
+                                {/if}
                                 <Checkbox
                                     checked={!row.disabled}
-                                    onCheckedChange={(v) => toggleOneOff(row.id, v === true)}
+                                    onCheckedChange={(v) => toggleGroup(row.key, v === true)}
                                     aria-label="Include in scenario"
                                 />
                             </div>
