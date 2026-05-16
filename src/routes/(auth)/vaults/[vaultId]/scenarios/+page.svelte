@@ -576,6 +576,9 @@
                                 <div class="truncate text-sm font-medium">{row.name}</div>
                                 <div class="text-xs text-muted-foreground">
                                     Real {fmt.currency(row.realPerPeriod)}
+                                    {#if !row.disabled && row.scenarioPerPeriod !== row.realPerPeriod}
+                                        <span class="text-foreground"> → {fmt.currency(row.scenarioPerPeriod)}</span>
+                                    {/if}
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
@@ -623,6 +626,9 @@
                                 <div class="truncate text-sm font-medium">{row.name}</div>
                                 <div class="text-xs text-muted-foreground">
                                     Real {fmt.currency(row.realPerPeriod)}
+                                    {#if !row.disabled && row.scenarioPerPeriod !== row.realPerPeriod}
+                                        <span class="text-foreground"> → {fmt.currency(row.scenarioPerPeriod)}</span>
+                                    {/if}
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
@@ -727,6 +733,9 @@
                                                 <div class="truncate text-sm">{child.name}</div>
                                                 <div class="text-[11px] text-muted-foreground">
                                                     {fmt.date(child.date)} · Real {fmt.currency(child.realAmount)}
+                                                    {#if !child.disabled && child.scenarioAmount !== child.realAmount}
+                                                        <span class="text-foreground"> → {fmt.currency(child.scenarioAmount)}</span>
+                                                    {/if}
                                                 </div>
                                             </div>
                                             <Label class="sr-only" for="row-amt-{child.id}">Amount</Label>
