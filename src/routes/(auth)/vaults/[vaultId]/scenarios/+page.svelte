@@ -177,6 +177,9 @@
         scenarioPerPeriod: number;
         disabled: boolean;
         baseValue: number;
+        /** Only set for income rules with deductions — net take-home. */
+        realNet?: number;
+        scenarioNet?: number;
     };
 
     const incomeRows = $derived.by<ScenarioRow[]>(() => {
@@ -185,17 +188,18 @@
             const o = incomeOverrides[r.ruleId];
             const disabled = o?.disabled ?? false;
             const base = o?.baseAmount ?? r.perPeriod.baseAmount;
-            const scen = disabled
-                ? 0
-                : resolveBreakdown(base, r.breakdown.allowances, r.breakdown.deductions).gross;
+            const resolved = resolveBreakdown(base, r.breakdown.allowances, r.breakdown.deductions);
+            const hasDeductions = r.breakdown.deductions.length > 0;
             return {
                 ruleId: r.ruleId,
                 name: r.name,
                 icon: r.icon,
                 realPerPeriod: r.perPeriod.gross,
-                scenarioPerPeriod: scen,
+                scenarioPerPeriod: disabled ? 0 : resolved.gross,
                 disabled,
                 baseValue: r.perPeriod.baseAmount,
+                realNet: hasDeductions ? r.perPeriod.net : undefined,
+                scenarioNet: hasDeductions ? (disabled ? 0 : resolved.net) : undefined,
             };
         });
     });
@@ -581,6 +585,14 @@
                                             <span class="text-foreground"> → {fmt.currency(row.scenarioPerPeriod)}</span>
                                         {/if}
                                     </div>
+                                    {#if row.realNet !== undefined}
+                                        <div class="text-[11px] text-muted-foreground">
+                                            Net {fmt.currency(row.realNet)}
+                                            {#if !row.disabled && row.scenarioNet !== undefined && row.scenarioNet !== row.realNet}
+                                                <span class="text-foreground"> → {fmt.currency(row.scenarioNet)}</span>
+                                            {/if}
+                                        </div>
+                                    {/if}
                                 </div>
                             </div>
                             <div class="flex items-center justify-end gap-2 sm:ml-auto">

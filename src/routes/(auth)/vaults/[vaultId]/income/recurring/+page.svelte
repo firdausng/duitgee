@@ -30,6 +30,7 @@
     import { Textarea } from '$lib/components/ui/textarea';
     import { DateTimePicker } from '$lib/components/ui/date-time-picker';
     import { localDatetimeToUtcIso, utcToLocalDatetimeString } from '$lib/utils';
+    import { resolveBreakdown, type BreakdownLineLike } from '$lib/utils/breakdown';
 
     const vaultId = $derived(page.params.vaultId);
 
@@ -48,7 +49,13 @@
         nextOccurrenceAt: string | null;
         lastGeneratedAt: string | null;
         occurrenceCount: number;
-        template: { name: string | null; icon: string | null; defaultAmount: number | null };
+        template: {
+            name: string | null;
+            icon: string | null;
+            defaultAmount: number | null;
+            defaultAllowances: string | null;
+            defaultDeductions: string | null;
+        };
     };
 
     type Pending = {
@@ -118,6 +125,27 @@
 
     function effectiveAmount(r: Rule): number {
         return r.amountOverride ?? r.template.defaultAmount ?? 0;
+    }
+
+    function parseLines(raw: string | null): BreakdownLineLike[] {
+        if (!raw) return [];
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? (parsed as BreakdownLineLike[]) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    /** Net take-home after the template's deductions (with allowances added
+     *  back into the base first). null when the rule has no breakdown. */
+    function effectiveNet(r: Rule): number | null {
+        const base = effectiveAmount(r);
+        if (base <= 0) return null;
+        const allowances = parseLines(r.template.defaultAllowances);
+        const deductions = parseLines(r.template.defaultDeductions);
+        if (allowances.length === 0 && deductions.length === 0) return null;
+        return resolveBreakdown(base, allowances, deductions).net;
     }
 
     async function call(path: string, body: Record<string, unknown>, okMsg: string) {
@@ -273,6 +301,7 @@
         </Card>
     {:else}
         {#snippet ruleRow(r: Rule)}
+            {@const net = effectiveNet(r)}
             <div
                 role="button"
                 tabindex="0"
@@ -301,6 +330,11 @@
                         <span class="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-mono tabular-nums align-middle ml-2">
                             {fmt.currency(effectiveAmount(r))}
                         </span>
+                        {#if net !== null && net !== effectiveAmount(r)}
+                            <span class="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-950/40 px-2 py-0.5 text-[11px] font-mono tabular-nums align-middle ml-1 text-emerald-700 dark:text-emerald-400">
+                                Net {fmt.currency(net)}
+                            </span>
+                        {/if}
                     </p>
                     <p class="text-xs text-muted-foreground mt-0.5">
                         {scheduleLabel(r)}

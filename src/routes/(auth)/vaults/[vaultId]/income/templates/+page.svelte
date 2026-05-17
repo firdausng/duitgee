@@ -26,6 +26,7 @@
     import Link2 from '@lucide/svelte/icons/link-2';
     import Repeat from '@lucide/svelte/icons/repeat';
     import Copy from '@lucide/svelte/icons/copy';
+    import { resolveBreakdown } from '$lib/utils/breakdown';
     import MoreVertical from '@lucide/svelte/icons/more-vertical';
 
     let { data } = $props();
@@ -66,6 +67,17 @@
         } catch {
             return [];
         }
+    }
+
+    /** Resolve a template's net take-home (base + allowances − deductions).
+     *  Returns null when the template has no breakdown — caller hides the row. */
+    function templateNet(tpl: Template): number | null {
+        const base = tpl.defaultAmount ?? 0;
+        if (base <= 0) return null;
+        const allowances = parseLineJson(tpl.defaultAllowances);
+        const deductions = parseLineJson(tpl.defaultDeductions);
+        if (allowances.length === 0 && deductions.length === 0) return null;
+        return resolveBreakdown(base, allowances, deductions).net;
     }
 
     let refetchKey = $state(0);
@@ -616,8 +628,13 @@
                             {tpl.source.name ?? 'Source'}
                         </span>
                         {#if tpl.defaultAmount}
+                            {@const net = templateNet(tpl)}
                             <span class="opacity-50">·</span>
                             <span class="font-mono">{tpl.defaultAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            {#if net !== null && net !== tpl.defaultAmount}
+                                <span class="opacity-50">·</span>
+                                <span>Net <span class="font-mono">{net.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></span>
+                            {/if}
                         {/if}
                         {#if tpl.usageCount > 0}
                             <span class="opacity-50">·</span>

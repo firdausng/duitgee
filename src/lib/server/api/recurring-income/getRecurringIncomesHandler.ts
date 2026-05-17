@@ -34,6 +34,8 @@ export const getRecurringIncomes = async (
             templateName: incomeTemplates.name,
             templateIcon: incomeTemplates.icon,
             templateDefaultAmount: incomeTemplates.defaultAmount,
+            templateAllowances: incomeTemplates.defaultAllowances,
+            templateDeductions: incomeTemplates.defaultDeductions,
         })
         .from(recurringIncome)
         .leftJoin(incomeTemplates, eq(recurringIncome.templateId, incomeTemplates.id))
@@ -46,6 +48,8 @@ export const getRecurringIncomes = async (
             name: r.templateName,
             icon: r.templateIcon,
             defaultAmount: r.templateDefaultAmount,
+            defaultAllowances: r.templateAllowances,
+            defaultDeductions: r.templateDeductions,
         },
     }));
 };

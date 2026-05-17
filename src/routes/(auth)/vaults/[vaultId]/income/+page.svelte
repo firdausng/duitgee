@@ -91,6 +91,13 @@
     const totalThisPeriod = $derived(
         entries.reduce((sum, e) => sum + e.amount, 0),
     );
+    /** Sum of take-home (amount minus deductions). Equals totalThisPeriod
+     *  when no entry has deductions — the UI hides this row in that case. */
+    const totalNetThisPeriod = $derived(
+        Math.round(
+            entries.reduce((sum, e) => sum + e.amount - sumBreakdown(e.deductions), 0) * 100,
+        ) / 100,
+    );
 
     const memberNameById = $derived(() => {
         const map = new Map<string, string>();
@@ -164,6 +171,12 @@
                     locale={vaultResource.current?.vaults.locale || 'en-US'}
                     currency={vaultResource.current?.vaults.currency || 'USD'}
                 />
+                {#if totalNetThisPeriod !== totalThisPeriod}
+                    <p class="text-xs text-muted-foreground mt-1">
+                        Net to take-home
+                        <span class="ml-1 font-mono tabular-nums text-foreground">{fmt.currency(totalNetThisPeriod)}</span>
+                    </p>
+                {/if}
                 <p class="text-xs text-muted-foreground mt-0.5">
                     {entries.length} entr{entries.length === 1 ? 'y' : 'ies'}
                 </p>
@@ -265,6 +278,12 @@
                                 formatted={fmt.currency(entry.amount)}
                                 size="sm"
                             />
+                            {#if sumBreakdown(entry.deductions) > 0}
+                                {@const net = Math.round((entry.amount - sumBreakdown(entry.deductions)) * 100) / 100}
+                                <p class="text-[10px] text-muted-foreground mt-0.5">
+                                    Net <span class="font-mono">{fmt.currency(net)}</span>
+                                </p>
+                            {/if}
                         </div>
                         <DropdownMenu.Root>
                             <DropdownMenu.Trigger
