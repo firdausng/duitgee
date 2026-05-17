@@ -35,7 +35,8 @@
     import { Label } from '$lib/components/ui/label';
     import { DateTimePicker } from '$lib/components/ui/date-time-picker';
     import { CheckboxRow } from '$lib/components/ui/checkbox-row';
-    import { formatDatetimeLocal, localDatetimeToUtcIso } from '$lib/utils';
+    import { Textarea } from '$lib/components/ui/textarea';
+    import { formatDatetimeLocal, localDatetimeToUtcIso, utcToLocalDatetimeString } from '$lib/utils';
     import Play from '@lucide/svelte/icons/play';
     import Pause from '@lucide/svelte/icons/pause';
     import SkipForward from '@lucide/svelte/icons/skip-forward';
@@ -229,6 +230,60 @@
             refetchKey++;
         } catch (error: any) {
             toast.error(error?.data?.error || error?.message || 'Failed to approve');
+        }
+    }
+
+    // ── Approve-with-edits flow ──────────────────────────────────────────
+    // For variable bills (utilities, fuel) the user often wants to tweak
+    // amount, date, or note at approval time instead of doing it in a
+    // second trip via the expense list.
+    let approveTarget = $state<PendingOccurrence | null>(null);
+    let approveAmount = $state('');
+    let approveDate = $state('');
+    let approveNote = $state('');
+    let approving = $state(false);
+
+    function openApprove(occ: PendingOccurrence) {
+        approveTarget = occ;
+        approveAmount = String(occ.suggestedAmount);
+        approveDate = utcToLocalDatetimeString(occ.dueDate);
+        approveNote = '';
+    }
+    function cancelApprove() {
+        approveTarget = null;
+    }
+    async function confirmApprove() {
+        if (!approveTarget) return;
+        const amountNum = Number(approveAmount);
+        if (!Number.isFinite(amountNum) || amountNum <= 0) {
+            toast.error('Amount must be greater than 0');
+            return;
+        }
+        if (!approveDate) {
+            toast.error('Date is required');
+            return;
+        }
+        approving = true;
+        try {
+            const trimmedNote = approveNote.trim();
+            await ofetch('/api/approvePendingOccurrence', {
+                method: 'POST',
+                body: {
+                    vaultId,
+                    occurrenceId: approveTarget.id,
+                    amountOverride: amountNum,
+                    dateOverride: localDatetimeToUtcIso(approveDate),
+                    noteOverride: trimmedNote.length > 0 ? trimmedNote : undefined,
+                },
+                headers: { 'Content-Type': 'application/json' },
+            });
+            toast.success('Expense created');
+            approveTarget = null;
+            refetchKey++;
+        } catch (error: any) {
+            toast.error(error?.data?.error || error?.message || 'Failed to approve');
+        } finally {
+            approving = false;
         }
     }
 
@@ -843,10 +898,19 @@
                                     type="button"
                                     onclick={() => handleApprove(occ)}
                                     class="p-1.5 rounded-[var(--radius-sm)] hover:bg-primary/10 text-muted-foreground hover:text-primary"
-                                    aria-label="Approve"
-                                    title="Approve"
+                                    aria-label="Approve at suggested amount"
+                                    title="Approve at suggested amount"
                                 >
                                     <Check class="size-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onclick={() => openApprove(occ)}
+                                    class="p-1.5 rounded-[var(--radius-sm)] hover:bg-primary/10 text-muted-foreground hover:text-primary"
+                                    aria-label="Approve with edits"
+                                    title="Approve with edits — adjust amount, date, or note"
+                                >
+                                    <Pencil class="size-4" />
                                 </button>
                                 {#if occ.ruleEndAfterCount === null}
                                     <button
@@ -1754,6 +1818,77 @@
                 </Button>
                 <Button size="sm" onclick={executeConfirm} disabled={confirming}>
                     {#if isSkip}Skip{:else}Pause{/if}
+                </Button>
+            </div>
+        </div>
+    </div>
+{/if}
+
+{#if approveTarget}
+    <div
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="approve-edits-title"
+    >
+        <button
+            type="button"
+            class="fixed inset-0 bg-black/50"
+            onclick={cancelApprove}
+            aria-label="Close"
+        ></button>
+        <div class="relative z-10 w-full max-w-md rounded-[var(--radius-md)] border bg-card shadow-lg">
+            <div class="p-5 space-y-4">
+                <div class="space-y-1">
+                    <h3 id="approve-edits-title" class="text-base font-semibold">
+                        Approve with edits
+                    </h3>
+                    <p class="text-xs text-muted-foreground">
+                        {approveTarget.ruleName || approveTarget.templateName || 'Recurring expense'}
+                        <span class="opacity-50">·</span> Suggested {fmt.currency(approveTarget.suggestedAmount)}
+                    </p>
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="approve-amount">Amount</Label>
+                    <Input
+                        id="approve-amount"
+                        type="number"
+                        inputmode="decimal"
+                        step="0.01"
+                        min="0"
+                        bind:value={approveAmount}
+                        disabled={approving}
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="approve-date">Date</Label>
+                    <DateTimePicker
+                        id="approve-date"
+                        bind:value={approveDate}
+                        disabled={approving}
+                        showTime={false}
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="approve-note">Note (optional)</Label>
+                    <Textarea
+                        id="approve-note"
+                        bind:value={approveNote}
+                        disabled={approving}
+                        placeholder="Leave blank to use the rule's default"
+                        rows={2}
+                    />
+                </div>
+            </div>
+            <div class="border-t p-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button variant="outline" size="sm" onclick={cancelApprove} disabled={approving}>
+                    Cancel
+                </Button>
+                <Button size="sm" onclick={confirmApprove} disabled={approving}>
+                    {approving ? 'Creating…' : 'Create expense'}
                 </Button>
             </div>
         </div>

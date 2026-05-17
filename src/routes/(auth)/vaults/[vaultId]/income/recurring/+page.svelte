@@ -25,6 +25,11 @@
     import ArrowLeft from '@lucide/svelte/icons/arrow-left';
     import Check from '@lucide/svelte/icons/check';
     import X from '@lucide/svelte/icons/x';
+    import { Input } from '$lib/components/ui/input';
+    import { Label } from '$lib/components/ui/label';
+    import { Textarea } from '$lib/components/ui/textarea';
+    import { DateTimePicker } from '$lib/components/ui/date-time-picker';
+    import { localDatetimeToUtcIso, utcToLocalDatetimeString } from '$lib/utils';
 
     const vaultId = $derived(page.params.vaultId);
 
@@ -132,6 +137,60 @@
             toast.error(e?.data?.error || e?.message || 'Failed');
         }
     }
+
+    // ── Approve-with-edits flow ──────────────────────────────────────────
+    // Lets the user tweak amount, date or note before materializing the
+    // income entry. The new date propagates to linked deduction expenses too
+    // (handled server-side in approvePendingIncomeOccurrenceHandler).
+    let approveTarget = $state<Pending | null>(null);
+    let approveAmount = $state('');
+    let approveDate = $state('');
+    let approveNote = $state('');
+    let approving = $state(false);
+
+    function openApprove(occ: Pending) {
+        approveTarget = occ;
+        approveAmount = String(occ.suggestedAmount);
+        approveDate = utcToLocalDatetimeString(occ.dueDate);
+        approveNote = '';
+    }
+    function cancelApprove() {
+        approveTarget = null;
+    }
+    async function confirmApprove() {
+        if (!approveTarget) return;
+        const amountNum = Number(approveAmount);
+        if (!Number.isFinite(amountNum) || amountNum <= 0) {
+            toast.error('Amount must be greater than 0');
+            return;
+        }
+        if (!approveDate) {
+            toast.error('Date is required');
+            return;
+        }
+        approving = true;
+        try {
+            const trimmedNote = approveNote.trim();
+            await ofetch('/api/approvePendingIncomeOccurrence', {
+                method: 'POST',
+                body: {
+                    vaultId,
+                    occurrenceId: approveTarget.id,
+                    amountOverride: amountNum,
+                    dateOverride: localDatetimeToUtcIso(approveDate),
+                    noteOverride: trimmedNote.length > 0 ? trimmedNote : undefined,
+                },
+                headers: { 'Content-Type': 'application/json' },
+            });
+            toast.success('Income recorded');
+            approveTarget = null;
+            refetchKey++;
+        } catch (e: any) {
+            toast.error(e?.data?.error || e?.message || 'Failed to approve');
+        } finally {
+            approving = false;
+        }
+    }
 </script>
 
 <svelte:head>
@@ -176,10 +235,13 @@
                             <Amount value={occ.suggestedAmount} sign="positive" showSign={false} formatted={fmt.currency(occ.suggestedAmount)} size="sm" />
                         </div>
                         <div class="flex gap-1 shrink-0">
-                            <button type="button" onclick={() => call('/api/approvePendingIncomeOccurrence', { vaultId, occurrenceId: occ.id }, 'Income recorded')} class="p-1.5 rounded-[var(--radius-sm)] hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Approve">
+                            <button type="button" onclick={() => call('/api/approvePendingIncomeOccurrence', { vaultId, occurrenceId: occ.id }, 'Income recorded')} class="p-1.5 rounded-[var(--radius-sm)] hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Approve at suggested amount" aria-label="Approve at suggested amount">
                                 <Check class="size-4" />
                             </button>
-                            <button type="button" onclick={() => call('/api/skipPendingIncomeOccurrence', { vaultId, occurrenceId: occ.id }, 'Skipped')} class="p-1.5 rounded-[var(--radius-sm)] hover:bg-muted text-muted-foreground hover:text-foreground" title="Skip">
+                            <button type="button" onclick={() => openApprove(occ)} class="p-1.5 rounded-[var(--radius-sm)] hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Approve with edits — adjust amount, date, or note" aria-label="Approve with edits">
+                                <Pencil class="size-4" />
+                            </button>
+                            <button type="button" onclick={() => call('/api/skipPendingIncomeOccurrence', { vaultId, occurrenceId: occ.id }, 'Skipped')} class="p-1.5 rounded-[var(--radius-sm)] hover:bg-muted text-muted-foreground hover:text-foreground" title="Skip" aria-label="Skip">
                                 <X class="size-4" />
                             </button>
                         </div>
@@ -327,5 +389,79 @@
         {/if}
     {/if}
 </div>
+
+{#if approveTarget}
+    <div
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="approve-income-edits-title"
+    >
+        <button
+            type="button"
+            class="fixed inset-0 bg-black/50"
+            onclick={cancelApprove}
+            aria-label="Close"
+        ></button>
+        <div class="relative z-10 w-full max-w-md rounded-[var(--radius-md)] border bg-card shadow-lg">
+            <div class="p-5 space-y-4">
+                <div class="space-y-1">
+                    <h3 id="approve-income-edits-title" class="text-base font-semibold">
+                        Approve with edits
+                    </h3>
+                    <p class="text-xs text-muted-foreground">
+                        {approveTarget.ruleName || approveTarget.templateName || 'Recurring income'}
+                        <span class="opacity-50">·</span> Suggested {fmt.currency(approveTarget.suggestedAmount)}
+                    </p>
+                    <p class="text-[11px] text-muted-foreground">
+                        Amount becomes the base — allowances and deductions recompute from it.
+                    </p>
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="approve-income-amount">Base amount</Label>
+                    <Input
+                        id="approve-income-amount"
+                        type="number"
+                        inputmode="decimal"
+                        step="0.01"
+                        min="0"
+                        bind:value={approveAmount}
+                        disabled={approving}
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="approve-income-date">Date</Label>
+                    <DateTimePicker
+                        id="approve-income-date"
+                        bind:value={approveDate}
+                        disabled={approving}
+                        showTime={false}
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="approve-income-note">Note (optional)</Label>
+                    <Textarea
+                        id="approve-income-note"
+                        bind:value={approveNote}
+                        disabled={approving}
+                        placeholder="Leave blank to use the rule's default"
+                        rows={2}
+                    />
+                </div>
+            </div>
+            <div class="border-t p-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button variant="outline" size="sm" onclick={cancelApprove} disabled={approving}>
+                    Cancel
+                </Button>
+                <Button size="sm" onclick={confirmApprove} disabled={approving}>
+                    {approving ? 'Recording…' : 'Record income'}
+                </Button>
+            </div>
+        </div>
+    </div>
+{/if}
 
 <Toaster />

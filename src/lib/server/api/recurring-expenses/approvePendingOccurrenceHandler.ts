@@ -117,7 +117,7 @@ export const approvePendingOccurrence = async (
             amount,
             categoryName: template.defaultCategoryName,
             paymentType: template.defaultPaymentType ?? 'cash',
-            date: occurrence.dueDate,
+            date: data.dateOverride ?? occurrence.dueDate,
             paidBy,
             vaultId: rule.vaultId,
             expenseTemplateId: rule.templateId,

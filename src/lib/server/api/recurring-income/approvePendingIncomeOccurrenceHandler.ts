@@ -95,6 +95,7 @@ export const approvePendingIncomeOccurrence = async (
     const audit = initialAuditFields({ userId });
     const labelPrefix = rule.name ?? template.name;
     const note = data.noteOverride ?? rule.name ?? template.defaultNote ?? null;
+    const effectiveDate = data.dateOverride ?? pending.dueDate;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const inserts: any[] = [
@@ -107,7 +108,7 @@ export const approvePendingIncomeOccurrence = async (
             baseAmount,
             allowances: serializeBreakdown(resolvedAllowances),
             deductions: serializeBreakdown(resolvedDeductions),
-            date: pending.dueDate,
+            date: effectiveDate,
             paidTo: template.defaultPaidTo ?? null,
             note,
             fundId: template.defaultFundId ?? null,
@@ -125,7 +126,7 @@ export const approvePendingIncomeOccurrence = async (
                 amount: line.computedAmount,
                 categoryName: line.categoryName ?? 'Salary deductions',
                 paymentType: 'transfer',
-                date: pending.dueDate,
+                date: effectiveDate,
                 paidBy: template.defaultPaidTo ?? null,
                 note: `${labelPrefix} — ${line.label}`,
                 incomeEntryId: entryId,

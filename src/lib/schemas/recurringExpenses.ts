@@ -242,6 +242,9 @@ export const approvePendingOccurrenceSchema = v.object({
     occurrenceId: v.string(),
     amountOverride: v.optional(v.number()),
     noteOverride: v.optional(v.string()),
+    /** ISO datetime. Lets the user reattach the expense to the actual payment
+     *  day at approval time (variable bills like utilities, fuel etc.). */
+    dateOverride: v.optional(v.string()),
 });
 export type ApprovePendingOccurrenceRequest = v.InferOutput<typeof approvePendingOccurrenceSchema>;
 

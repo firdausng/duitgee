@@ -95,6 +95,9 @@ export const approvePendingIncomeOccurrenceSchema = v.object({
     occurrenceId: v.string(),
     amountOverride: v.optional(v.number()),
     noteOverride: v.optional(v.string()),
+    /** ISO datetime override at approval time. Propagates to both the income
+     *  entry and any linked deduction-expense rows so the snapshot stays in sync. */
+    dateOverride: v.optional(v.string()),
 });
 export type ApprovePendingIncomeOccurrenceRequest = v.InferOutput<typeof approvePendingIncomeOccurrenceSchema>;
 
